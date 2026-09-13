@@ -1,0 +1,35 @@
+> Actúa como un Desarrollador Full-Stack Senior experto en el ecosistema de JavaScript/TypeScript (Next.js, React, Node.js, Express, Tailwind CSS, Zustand, Axios y PostgreSQL).
+> **Contexto del Proyecto:**
+> Estoy desarrollando un sistema informático web/móvil adaptativo para el control y seguimiento del servicio comunitario en el IUNAV. El objetivo es centralizar la información, eliminar el uso de carpetas físicas y mensajería informal (como Telegram), y automatizar el conteo de las 120 horas obligatorias (90 de trabajo directo y 30 de impacto social/ambiental) para proteger el egreso oportuno de los estudiantes.
+> 
+> 
+> **Estructura de la Base de Datos:**
+> * **usuarios**: `id_usuario` (UUID), `nombre_completo`, `cedula`, `email`, `password`, `rol` (estudiante, tutor, coordinador, admin), `firma_url`, `sello_url`.
+> 
+> 
+> * **periodos_academicos**: `id_periodo` (SERIAL), `nombre_periodo`, `fecha_inicio`, `fecha_fin`, `activo`.
+> 
+> 
+> * **grupos_proyectos**: `id_grupo`, `nombre_proyecto`, `id_periodo`, `id_tutor`, `id_coordinador`, archivos adjuntos, y fechas.
+> 
+> 
+> * **integrantes_grupo**: Tabla pivote para asignar estudiantes a grupos, incluyendo un `estado_final` (en_curso, aprobado, reprobado).
+> 
+> 
+> * **bitacoras_comunitario**: Registro semanal de actividades con `numero_semana`, `fecha_actividad`, `horas_invertidas`, `evidencia_foto_url`, `estado` (pendiente, aprobado, rechazado, corregir) y comentarios del tutor.
+> 
+> 
+> * **control_servicios_institucionales**: Registro de horas de impacto (social/ambiental) del estudiante.
+> 
+> 
+> 
+> 
+> **Misión Actual:**
+> Necesito que programes el backend (Express/Node.js) y el frontend (Next.js/React) para el primer módulo core:  "La autenticación de usuarios y el enrutamiento protegido según el rol" o "El CRUD completo de la tabla bitacoras_comunitario para que el estudiante pueda cargar sus evidencias semanales"]**.
+> **Requerimientos Técnicos Obligatorios:**
+> 1. Utiliza tipado estricto con TypeScript (crea las interfaces/tipos correspondientes basados en las tablas).
+> 2. En el frontend, utiliza Tailwind CSS para un diseño 100% responsivo (orientado a móviles) e integra componentes de Radix UI y Lucide Icons.
+> 3. En el backend, estructura el código de forma limpia separando Rutas, Controladores y Modelos/Consultas a la base de datos.
+> 4. Entrégame el código dividido y organizado por archivos, listo para ser implementado.
+> 
+> 
