@@ -1,0 +1,117 @@
+-- ============================================================
+-- Sistema de Gestión de Servicio Comunitario IUNAV
+-- Esquema de base de datos (Supabase PostgreSQL 15+)
+-- Ejecutar en: Supabase Dashboard -> SQL Editor -> New query
+-- ============================================================
+
+-- Extensión para generación de UUIDs
+create extension if not exists pgcrypto;
+
+-- ------------------------------------------------------------
+-- usuarios
+-- ------------------------------------------------------------
+create table if not exists usuarios (
+  id_usuario uuid primary key default gen_random_uuid(),
+  nombre_completo text not null,
+  cedula text not null unique,
+  email text not null unique,
+  password_hash text not null,
+  rol text not null check (rol in ('admin', 'coordinador', 'tutor', 'estudiante')),
+  firma_url text,
+  sello_url text,
+  activo boolean not null default true,
+  creado_en timestamptz not null default now()
+);
+
+-- ------------------------------------------------------------
+-- periodos_academicos
+-- ------------------------------------------------------------
+create table if not exists periodos_academicos (
+  id_periodo serial primary key,
+  nombre_periodo text not null,
+  fecha_inicio date not null,
+  fecha_fin date not null,
+  activo boolean not null default true
+);
+
+-- ------------------------------------------------------------
+-- grupos_proyectos
+-- ------------------------------------------------------------
+create table if not exists grupos_proyectos (
+  id_grupo uuid primary key default gen_random_uuid(),
+  nombre_proyecto text not null,
+  id_periodo int references periodos_academicos(id_periodo),
+  id_tutor uuid references usuarios(id_usuario),
+  id_coordinador uuid references usuarios(id_usuario),
+  proyecto_escrito_url text,
+  diapositivas_url text,
+  estado text not null default 'en_curso'
+    check (estado in ('en_curso', 'pendiente_aprobacion', 'finalizado', 'suspendido')),
+  creado_en timestamptz not null default now()
+);
+
+-- ------------------------------------------------------------
+-- integrantes_grupo (tabla pivote estudiante <-> grupo)
+-- ------------------------------------------------------------
+create table if not exists integrantes_grupo (
+  id_grupo uuid references grupos_proyectos(id_grupo) on delete cascade,
+  id_estudiante uuid references usuarios(id_usuario),
+  estado_final text check (estado_final in ('en_curso', 'aprobado', 'reprobado')),
+  primary key (id_grupo, id_estudiante)
+);
+
+-- ------------------------------------------------------------
+-- bitacoras_comunitario (trabajo directo -> meta 90h)
+-- ------------------------------------------------------------
+create table if not exists bitacoras_comunitario (
+  id_bitacora uuid primary key default gen_random_uuid(),
+  id_estudiante uuid not null references usuarios(id_usuario),
+  id_grupo uuid references grupos_proyectos(id_grupo),
+  numero_semana int not null check (numero_semana >= 1),
+  fecha_actividad date not null,
+  descripcion text not null,
+  horas_invertidas numeric(4, 1) not null check (horas_invertidas > 0),
+  evidencia_foto_url text,
+  estado text not null default 'pendiente'
+    check (estado in ('pendiente', 'aprobado', 'rechazado', 'corregir')),
+  comentario_tutor text,
+  creado_en timestamptz not null default now()
+);
+
+-- ------------------------------------------------------------
+-- control_servicios_institucionales (impacto social/ambiental -> meta 30h)
+-- ------------------------------------------------------------
+create table if not exists control_servicios_institucionales (
+  id_registro uuid primary key default gen_random_uuid(),
+  id_estudiante uuid not null references usuarios(id_usuario),
+  tipo text not null check (tipo in ('social', 'ambiental')),
+  fecha_actividad date not null,
+  descripcion text not null,
+  horas_invertidas numeric(4, 1) not null check (horas_invertidas > 0),
+  evidencia_foto_url text,
+  estado text not null default 'pendiente'
+    check (estado in ('pendiente', 'aprobado', 'rechazado', 'corregir')),
+  comentario_tutor text,
+  creado_en timestamptz not null default now()
+);
+
+-- ------------------------------------------------------------
+-- configuracion_sistema (reglas del programa)
+-- ------------------------------------------------------------
+create table if not exists configuracion_sistema (
+  id_config serial primary key,
+  horas_directas int not null default 90,
+  horas_impacto int not null default 30,
+  limite_horas_diarias int not null default 8,
+  periodo_activo int references periodos_academicos(id_periodo),
+  actualizado_en timestamptz not null default now()
+);
+
+-- ------------------------------------------------------------
+-- Índices
+-- ------------------------------------------------------------
+create index if not exists idx_usuarios_rol on usuarios(rol);
+create index if not exists idx_bitacoras_estudiante on bitacoras_comunitario(id_estudiante);
+create index if not exists idx_control_estudiante on control_servicios_institucionales(id_estudiante);
+create index if not exists idx_grupos_tutor on grupos_proyectos(id_tutor);
+create index if not exists idx_integrantes_estudiante on integrantes_grupo(id_estudiante);
