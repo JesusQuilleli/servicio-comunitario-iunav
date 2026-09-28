@@ -261,6 +261,58 @@ async function seedProyectos(
   console.log(`  + ${bitacorasSeed.length} bitácoras comunitarias y ${serviciosSeed.length} servicios sociales/ambientales`);
 }
 
+interface SeedPlantilla {
+  nombre: string;
+  descripcion: string;
+  tipo: 'bitacora' | 'acta' | 'informe' | 'certificado';
+}
+
+const plantillasSeed: SeedPlantilla[] = [
+  {
+    nombre: 'Bitácora semanal de servicio comunitario',
+    descripcion: 'Formato de registro de horas de trabajo directo por semana.',
+    tipo: 'bitacora',
+  },
+  {
+    nombre: 'Registro de servicio social y ambiental',
+    descripcion: 'Formato para las 30 horas de impacto social o ambiental.',
+    tipo: 'bitacora',
+  },
+  {
+    nombre: 'Acta de entrega de proyecto',
+    descripcion: 'Acta firmada por estudiante, tutor y Institución donde se realizó el servicio.',
+    tipo: 'acta',
+  },
+  {
+    nombre: 'Informe final de servicio comunitario',
+    descripcion: 'Informe de cierre con resultados, evidencias y horas consolidadas.',
+    tipo: 'informe',
+  },
+  {
+    nombre: 'Certificado de culminación',
+    descripcion: 'Certificado que acredita las 120 horas cumplidas.',
+    tipo: 'certificado',
+  },
+];
+
+async function seedPlantillas(): Promise<void> {
+  const { rows } = await pool.query<{ count: string }>('select count(*)::text as count from plantillas_documento');
+  if (Number(rows[0]?.count ?? 0) > 0) {
+    console.log('  = plantillas_documento ya tiene datos');
+    return;
+  }
+
+  for (const p of plantillasSeed) {
+    await pool.query(
+      `insert into plantillas_documento (nombre, descripcion, tipo)
+       values ($1, $2, $3)
+       on conflict (nombre) do nothing`,
+      [p.nombre, p.descripcion, p.tipo]
+    );
+  }
+  console.log(`  + ${plantillasSeed.length} plantillas documentales`);
+}
+
 async function main(): Promise<void> {
   console.log('Ejecutando seed de la base de datos...');
   try {
@@ -268,6 +320,7 @@ async function main(): Promise<void> {
     console.log(`Periodo académico 2026-I listo (id=${idPeriodo})`);
     const ids = await seedUsuarios();
     await seedConfiguracion(idPeriodo);
+    await seedPlantillas();
 
     const coordinadorId = ids.get('mlopez@iunav.edu.ve');
     if (!coordinadorId) {

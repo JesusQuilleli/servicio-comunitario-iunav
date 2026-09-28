@@ -108,8 +108,25 @@ create table if not exists configuracion_sistema (
 );
 
 -- ------------------------------------------------------------
+-- plantillas_documento (formatos base del programa)
+-- ------------------------------------------------------------
+create table if not exists plantillas_documento (
+  id_plantilla serial primary key,
+  nombre text not null unique,
+  descripcion text,
+  tipo text not null default 'bitacora'
+    check (tipo in ('bitacora', 'acta', 'informe', 'certificado')),
+  url_documento text,
+  activo boolean not null default true,
+  creado_en timestamptz not null default now(),
+  actualizado_en timestamptz not null default now()
+);
+
+-- ------------------------------------------------------------
 -- Índices
 -- ------------------------------------------------------------
+create unique index if not exists idx_configuracion_unica on configuracion_sistema ((true));
+create index if not exists idx_plantillas_tipo on plantillas_documento(tipo);
 create index if not exists idx_usuarios_rol on usuarios(rol);
 create index if not exists idx_bitacoras_estudiante on bitacoras_comunitario(id_estudiante);
 create index if not exists idx_control_estudiante on control_servicios_institucionales(id_estudiante);

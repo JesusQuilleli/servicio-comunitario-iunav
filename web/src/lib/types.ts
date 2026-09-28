@@ -193,3 +193,34 @@ export const ESTADOS_GRUPO: EstadoGrupo[] = [
 ];
 
 export const ESTADOS_FINAL: EstadoFinal[] = ["en_curso", "aprobado", "reprobado"];
+
+export interface ConfiguracionSistema {
+  horasDirectas: number;
+  horasImpacto: number;
+  limiteHorasDiarias: number;
+  periodoActivoId: number | null;
+  periodoActivoNombre: string | null;
+  actualizadoEn: string;
+}
+
+export type TipoPlantilla = "bitacora" | "acta" | "informe" | "certificado";
+
+export interface PlantillaDocumento {
+  idPlantilla: number;
+  nombre: string;
+  descripcion: string | null;
+  tipo: TipoPlantilla;
+  urlDocumento: string | null;
+  activo: boolean;
+  creadoEn: string;
+  actualizadoEn: string;
+}
+
+export const tipoPlantillaLabels: Record<TipoPlantilla, string> = {
+  bitacora: "Bitácora",
+  acta: "Acta",
+  informe: "Informe",
+  certificado: "Certificado",
+};
+
+export const TIPOS_PLANTILLA: TipoPlantilla[] = ["bitacora", "acta", "informe", "certificado"];

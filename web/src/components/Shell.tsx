@@ -10,6 +10,7 @@ import { UsuariosView } from "@/views/UsuariosView";
 import { ProyectosView } from "@/views/ProyectosView";
 import { RegistroHorasView } from "@/views/RegistroHorasView";
 import { ValidacionView } from "@/views/ValidacionView";
+import { ConfiguracionesView } from "@/views/ConfiguracionesView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/authStore";
@@ -50,6 +51,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
         return <RegistroHorasView tipo="servicio" />;
       case "validacion":
         return <ValidacionView />;
+      case "configuracion":
+        return <ConfiguracionesView />;
       default:
         return <ModuloEnConstruccion titulo={viewTitles[view]} />;
     }
