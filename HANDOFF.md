@@ -13,7 +13,9 @@
 |---|---|
 | Commit `849b7cf` | Prototipo Vite original (solo maquetación, sin backend) |
 | Commit `216b2e1` | Monorepo `web/` (Next.js 16.3.5) + `server/` (Express 4) |
-| Commit posterior | Módulo **Configuraciones y Plantillas** |
+| Commit `086b53c` | Módulo **Configuraciones y Plantillas** |
+| Commit `452ef12` | Este `HANDOFF.md` |
+| Commit `test: suite` | Vitest + Supertest: 191 pruebas de auth y permisos |
 
 **Módulos del menú (8):** los 8 están conectados a la API real. Ninguno queda pendiente de backend.
 
@@ -24,7 +26,8 @@
 ```
 web/     Next.js 16.3.5, React 19, Tailwind 4, axios, zustand
 server/  Express 4, TypeScript ESM (NodeNext), Zod, pg, jsonwebtoken, bcryptjs
-sql/     schema.sql (8 tablas) — se aplica con npm run db:schema
+server/sql/schema.sql   8 tablas — se aplica con npm run db:schema desde server/
+server/tests/           pruebas Vitest + Supertest (fuera de src/ a propósito)
 ```
 
 ---
@@ -39,9 +42,9 @@ sql/     schema.sql (8 tablas) — se aplica con npm run db:schema
 - **Dashboards** por rol, con datos reales.
 - Las 4 vistas que usaban datos falsos ya no quedan: `web/src/data/mockData.ts` no tiene importadores. **Es código muerto y se puede borrar.**
 
-**Cómo se verificó:** `typecheck` y `build` de ambos proyectos, ESLint y `tsc` de Next limpios, y 23 pruebas manuales contra la API en vivo (roles → `403`, duplicados → `409`, validaciones → `400` con mensaje por campo, IDs inexistentes → `404`).
+**Cómo se verificó:** `typecheck` y `build` de ambos proyectos, ESLint y `tsc` de Next limpios, **191 pruebas automatizadas en verde** (`cd server; npm test`) y 23 pruebas manuales contra la API en vivo (roles → `403`, duplicados → `409`, validaciones → `400` con mensaje por campo, IDs inexistentes → `404`).
 
-> Ese trabajo manual **solo existe en el historial del chat**. Por eso el paso 1 de la sección 5 es escribir pruebas automatizadas: es lo que va a proteger todo lo demás.
+> Ese trabajo manual ya no depende solo del historial del chat: la sección 5 está ejecutada y la matriz de permisos de la sección 4 está **codificada como dato** en `server/tests/permisos.test.ts`, no reescrita a mano.
 
 ---
 
@@ -65,7 +68,14 @@ Nada genera el consolidado de horas por estudiante, el acta de culminación ni e
 
 ### 🟡 Bloque 2 — Pruebas
 
-**6. Cero pruebas automatizadas.** No existe ni un archivo de test ni script `test` en ningún `package.json`. El plan acordado está en la sección 5.
+**6. ~~Cero pruebas automatizadas~~ → RESUELTO.** Vitest + Supertest sobre `app_iunav_test`, 191 pruebas: humo, auth (16) y matriz de 28 endpoints × 4 roles + ausencia de token. Ver sección 5.
+
+**6b. Lo que las pruebas aún no cubren** (siguiente tanda):
+
+- Reglas de negocio de bitácoras y grupos más allá del código `403`: límite diario, metas 90/30, veredicto del tutor sobre un registro de otro grupo.
+- Suites de `grupos`, `bitacoras`, `configuracion` y `periodos` (hoy solo se cubre la matriz de permisos, no el comportamiento).
+- Consistencia entre OpenAPI y la matriz.
+- Carga con 200+ estudiantes (ver 5.5).
 
 ### 🟠 Bloque 3 — Seguridad
 
@@ -124,7 +134,15 @@ Extraída de los 7 archivos de rutas de `server/src/routes/`. Se usa como base p
 
 ---
 
-## 5. Plan para hacer pruebas reales
+## 5. Pruebas automatizadas — ✅ IMPLEMENTADAS
+
+```powershell
+cd server
+npm test              # 191 pruebas, ~19 s
+npm run test:watch    # durante el desarrollo
+npm run typecheck:tests
+npm run db:test       # recrea app_iunav_test desde cero (aborta si el nombre no termina en _test)
+```
 
 ### Decisiones ya tomadas (no volver a abrir)
 
@@ -132,35 +150,26 @@ Extraída de los 7 archivos de rutas de `server/src/routes/`. Se usa como base p
   Se descartó usar la base de desarrollo: `bitacora.model.ts` toma su propia conexión y hace `BEGIN`, lo que hace incompatible envolver cada test en una transacción de rollback.
 - La **primera tanda cubre auth y permisos**, antes de agregar funcionalidad nueva.
 
-### 5.1 Infraestructura
-
-Los tests van en `server/tests/`, **fuera de `src/`**. Es deliberado: `server/tsconfig.json` tiene `rootDir: "src"` e `include: ["src"]`, así que `npm run build` sigue compilando solo producción sin tocar nada.
+### 5.1 Infraestructura — lista
 
 | Archivo | Responsabilidad |
 |---|---|
-| `tests/setup.ts` | Fija `DATABASE_URL` y `JWT_SECRET` **antes** de importar el pool. `src/db/pool.ts:4` lee `env` al importarse, así que el orden importa. |
-| `tests/helpers/db.ts` | Crea `app_iunav_test` desde cero, aplica `sql/schema.sql` y corre un seed mínimo de los 4 roles. |
-| `tests/helpers/app.ts` | `request(createApp())` — `createApp()` ya está exportada separada del `listen` (`src/app.ts:8` vs `src/index.ts:12`), así que no hace falta abrir un puerto. Incluye `loginComo(rol)`. |
-| `vitest.config.ts` | Aísla `tests/setup.ts` y cierra el pool al terminar. |
+| `tests/setup.ts` | Fija `DATABASE_URL` apuntando a `app_iunav_test` y un `JWT_SECRET` **antes** de importar el pool. `src/db/pool.ts:4` lee `env` al importarse, así que el orden importa. |
+| `tests/helpers/db.ts` | Crea `app_iunav_test` si falta, aplica `sql/schema.sql` y corre un seed de los 4 roles + 3 estudiantes de apoyo. |
+| `tests/helpers/app.ts` | `request(createApp())` — `createApp()` ya está exportada separada del `listen` (`src/app.ts:8` vs `src/index.ts:12`), así que no hace falta abrir un puerto. Incluye `tokenDe(rol)`. |
+| `scripts/reset-test-db.ts` | `npm run db:test`. **Se niega a tocar cualquier base que no termine en `_test`.** |
+| `vitest.config.ts` | Aísla `tests/setup.ts`; `maxWorkers: 1` y `fileParallelism: false` porque la base es única. |
+| `tsconfig.test.json` | `typecheck:tests`: typea `src` + `tests` juntos. `npm run typecheck` sigue viendo solo `src`. |
 
-Scripts a añadir en `server/package.json`: `test`, `test:watch`, `db:test`.
-Devdeps: `vitest`, `supertest`, `@types/supertest`.
+> **El riesgo de resolución `.js` → `.ts` quedó descartado.** Vitest lo resuelve solo; no hizo falta alias ni `node:test`. Un test de humo (`tests/humo.test.ts`) lo verifica en cada corrida, así que si una actualización lo rompe, se nota de inmediato.
 
-> ⚠️ **Riesgo conocido:** el código importa con extensión `.js` (`'../db/pool.js'`) por `module: NodeNext`. Vite puede no resolver `.js` → `.ts` de forma nativa. Verificar con un test de humo antes de escribir toda la batería. Plan B: alias en `vitest.config.ts`. Plan C: `node:test` + `tsx`, que ya es dependencia del proyecto y no requiere framework nuevo.
+### 5.2 Tests de auth — 16 casos, todos en verde
 
-### 5.2 Tests de auth
+Login correcto (y sin filtrar el hash), contraseña incorrecta, correo inexistente con el **mismo mensaje**, email malformado, cuenta desactivada, insensibilidad a mayúsculas, `/auth/me` con token válido / ausente / con firma manipulada / con rol alterado, y `/auth/register` (alta, duplicado, contraseña corta, rol inválido, sin token).
 
-- Login correcto → `200` con token y usuario.
-- Contraseña incorrecta → `401`.
-- Correo inexistente → `401` con el mismo mensaje (sin revelar cuál falló).
-- Email malformado → `400` señalando el campo.
-- Cuenta desactivada → `403`.
-- `/auth/me`: con token válido, sin token (`401`), con token falso (`401`).
-- `/auth/register`: exige admin, rechaza duplicados (`409`) y contraseña corta (`400`).
+### 5.3 Matriz de permisos — 112 + 56 casos
 
-### 5.3 Matriz de permisos
-
-Declarar la matriz de la sección 4 como dato y generar los casos con `it.each`, en vez de escribirlos a mano. Resultado: 4 roles × 26 endpoints, más la comprobación de que **ningún endpoint acepta un token ausente o inválido**.
+La matriz de la sección 4 está declarada como dato en `server/tests/permisos.test.ts` (constante `CASOS`) y los casos se generan con bucles, no escritos a mano: 28 endpoints × 4 roles, más los 56 casos de token ausente e inválido. Cambiar un permiso es editar una fila, no 28 pruebas.
 
 ### 5.4 Pruebas manuales con los 4 roles
 
@@ -179,6 +188,16 @@ El seed tiene 8 usuarios. Probar con **200+ estudiantes, 40+ grupos y miles de r
 ### 5.6 Seguridad (mínima)
 
 Intento masivo de login, manipulación del `idGrupo` en la URL para ver datos ajenos, y acceso directo a un endpoint sin token.
+
+---
+
+## 5-bis. Lo que las pruebas descubcieron
+
+Tres cosas que costaron una corrección y conviene no volver a pisar:
+
+1. **El login normaliza el correo con `toLowerCase()`.** Cualquier usuario guardado con mayúsculas (`tutorA@…`) queda permanentemente inalcanzable. El seed de pruebas usa solo minúsculas por eso. El seed real también, así que no hay bug activo, pero `findUsuarioPorEmail` depende de esa convención: si algún día se insertan correos a mano, se romperá en silencio.
+2. **`DELETE` de un integrante y `PATCH /grupos/:id` devuelven `409`** si el estudiante ya tiene horas registradas. Es la regla de negocio correcta, no un fallo. La matriz lo respeta, y el seed incluye un integrante sin horas (`sinhoras@test.local`) solo para poder probar el `DELETE`.
+3. **`PATCH /grupos/:id` reemplaza la lista de integrantes completa.** Enviar `integrantesIds: []` no vacía el grupo: intenta quitar a todos y salta el `409` de quien tenga horas.
 
 ---
 
@@ -215,7 +234,7 @@ Comprobación rápida de la API: <http://localhost:4000/api/health>
 
 ## 7. Orden sugerido de trabajo
 
-1. **Pruebas automatizadas** (sección 5) — antes de agregar funcionalidad, no después.
+1. ~~Pruebas automatizadas~~ — hecho. Siguiente tanda: 6b.
 2. Carga de archivos: evidencias → proyecto escrito y diapositivas → firma y sello.
 3. Editar/corregir bitácora propia.
 4. Seguridad: `helmet`, rate limit, JWT en cookie, `.env.example`.
@@ -233,3 +252,5 @@ Comprobación rápida de la API: <http://localhost:4000/api/health>
 - El proyecto Supabase `xsprlbjqrelqpbfyzhff` ya no resuelve sus hostnames. **La base local es la fuente de verdad.**
 - `server/.env` tiene un `?schema=public` al final de la URL que `pg` ignora; se puede limpiar sin riesgo.
 - Si se toca el esquema, siempre `npm run db:schema` (usa `create table if not exists`, es idempotente) y luego `npm run db:seed`.
+- **Las pruebas nunca tocan `app_iunav`.** `tests/setup.ts` reemplaza la base antes de que se importe el pool, y `npm run db:test` se niega a dropear cualquier nombre que no termine en `_test`. Verificado tras 191 pruebas: `app_iunav` seguía en 8 usuarios / 4 grupos / 12 bitácoras / 5 plantillas.
+- Para cambiar la matriz de permisos, edita la constante `CASOS` en `server/tests/permisos.test.ts` y la tabla de la sección 4. Los dos deben seguir diciendo lo mismo.
