@@ -15,7 +15,7 @@
 | Commit `216b2e1` | Monorepo `web/` (Next.js 16.3.5) + `server/` (Express 4) |
 | Commit `086b53c` | Módulo **Configuraciones y Plantillas** |
 | Commit `452ef12` | Este `HANDOFF.md` |
-| Commit `test: suite` | Vitest + Supertest: 191 pruebas de auth y permisos |
+| Commit `fff9d5b` | Vitest + Supertest: 191 pruebas de auth y permisos |
 
 **Módulos del menú (8):** los 8 están conectados a la API real. Ninguno queda pendiente de backend.
 
