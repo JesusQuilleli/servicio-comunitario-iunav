@@ -7,6 +7,8 @@ export interface UsuarioRow {
   cedula: string;
   email: string;
   password_hash: string;
+  password_temporal: boolean;
+  password_cambiado_en: Date | null;
   rol: UserRole;
   firma_url: string | null;
   sello_url: string | null;
@@ -25,6 +27,7 @@ export function mapUsuarioPublico(row: UsuarioRow): UsuarioPublico {
     selloUrl: row.sello_url,
     activo: row.activo,
     creadoEn: row.creado_en,
+    passwordTemporal: row.password_temporal,
   };
 }
 
@@ -58,6 +61,30 @@ export async function crearUsuario(data: CrearUsuarioData): Promise<UsuarioRow> 
      values ($1, $2, $3, $4, $5)
      returning *`,
     [data.nombreCompleto, data.cedula, data.email, data.passwordHash, data.rol]
+  );
+  return rows[0];
+}
+
+/**
+ * Guarda una contrasena nueva.
+ *
+ * `temporal` se apaga al cambiarla uno mismo y se enciende cuando el admin la
+ * restablece: es la bandera que obliga a cambiar la clave al proximo inicio de
+ * sesion.
+ */
+export async function actualizarPassword(
+  idUsuario: string,
+  passwordHash: string,
+  temporal: boolean
+): Promise<UsuarioRow> {
+  const { rows } = await pool.query<UsuarioRow>(
+    `update usuarios
+     set password_hash = $2,
+         password_temporal = $3,
+         password_cambiado_en = now()
+     where id_usuario = $1
+     returning *`,
+    [idUsuario, passwordHash, temporal]
   );
   return rows[0];
 }

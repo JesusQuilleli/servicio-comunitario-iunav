@@ -31,5 +31,8 @@ describe('humo del arnes', () => {
     const res = await api().get('/api/health');
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
+    // La sonda consulta PostgreSQL de verdad: si la base no responde el
+    // servicio no esta disponible aunque el proceso siga vivo.
+    expect(res.body.baseDeDatos).toBe(true);
   });
 });

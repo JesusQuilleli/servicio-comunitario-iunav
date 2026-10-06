@@ -194,13 +194,32 @@ export async function obtenerGrupoConAcceso(
   return grupo;
 }
 
+/**
+ * Quién puede subir los documentos del proyecto (escrito y diapositivas).
+ *
+ * La gestión (admin y coordinador) puede sobre cualquier grupo; el tutor, solo
+ * sobre los suyos. El estudiante no llega aqui: el proyecto es del grupo, y lo
+ * que el estudiante aporta son sus evidencias de bitácora.
+ */
+export async function exigirGestionDeGrupo(
+  idGrupo: string,
+  usuario: { idUsuario: string; rol: UserRole }
+): Promise<DetalleGrupo> {
+  const grupo = await obtenerGrupo(idGrupo);
+  if (!grupo) {
+    throw new ApiError(404, 'Grupo/proyecto no encontrado');
+  }
+  if (usuario.rol === 'tutor' && grupo.tutorId !== usuario.idUsuario) {
+    throw new ApiError(403, 'Solo puedes subir documentos de los proyectos que tú tutorizas');
+  }
+  return grupo;
+}
+
 export interface DatosGrupo {
   nombreProyecto: string;
   periodoId: number | null;
   tutorId: string | null;
   coordinadorId: string | null;
-  proyectoEscritoUrl: string | null;
-  diapositivasUrl: string | null;
   estado: EstadoGrupo;
   integrantesIds: string[];
 }
@@ -278,21 +297,15 @@ export async function crearGrupo(datos: DatosGrupo): Promise<string> {
     await validarUsuarioConRol(client, datos.coordinadorId, 'coordinador', 'coordinador');
     await validarIntegrantes(client, datos.integrantesIds, null);
 
+    // Los documentos no se tocan aqui: las columnas `*_url` solo las escribe el
+    // endpoint de subida. Si esta consulta las incluyera, un simple cambio de
+    // nombre dejaria el grupo sin documentos y con archivos huerfanos en disco.
     const { rows } = await client.query<{ id_grupo: string }>(
       `insert into grupos_proyectos
-         (nombre_proyecto, id_periodo, id_tutor, id_coordinador,
-          proyecto_escrito_url, diapositivas_url, estado)
-       values ($1, $2, $3, $4, $5, $6, $7)
+         (nombre_proyecto, id_periodo, id_tutor, id_coordinador, estado)
+       values ($1, $2, $3, $4, $5)
        returning id_grupo`,
-      [
-        datos.nombreProyecto,
-        datos.periodoId,
-        datos.tutorId,
-        datos.coordinadorId,
-        datos.proyectoEscritoUrl,
-        datos.diapositivasUrl,
-        datos.estado,
-      ]
+      [datos.nombreProyecto, datos.periodoId, datos.tutorId, datos.coordinadorId, datos.estado]
     );
     const idGrupo = rows[0].id_grupo;
 
@@ -338,20 +351,9 @@ export async function actualizarGrupo(idGrupo: string, datos: DatosGrupo): Promi
            id_periodo = $3,
            id_tutor = $4,
            id_coordinador = $5,
-           proyecto_escrito_url = $6,
-           diapositivas_url = $7,
-           estado = $8
+           estado = $6
        where id_grupo = $1`,
-      [
-        idGrupo,
-        datos.nombreProyecto,
-        datos.periodoId,
-        datos.tutorId,
-        datos.coordinadorId,
-        datos.proyectoEscritoUrl,
-        datos.diapositivasUrl,
-        datos.estado,
-      ]
+      [idGrupo, datos.nombreProyecto, datos.periodoId, datos.tutorId, datos.coordinadorId, datos.estado]
     );
 
     const idsActuales = new Set(datos.integrantesIds);

@@ -5,7 +5,9 @@ import { z } from 'zod';
 import { env } from '../config/env.js';
 import { pool } from '../db/pool.js';
 import { ApiError } from '../lib/errors.js';
+import { passwordSchema } from '../lib/password.js';
 import {
+  actualizarPassword,
   crearUsuario,
   findUsuarioPorEmail,
   findUsuarioPorId,
@@ -23,15 +25,32 @@ const registerSchema = z.object({
   nombreCompleto: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
   cedula: z.string().min(5, 'Cédula inválida'),
   email: z.string().email('Correo electrónico inválido'),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  password: passwordSchema,
   rol: z.enum(['admin', 'coordinador', 'tutor', 'estudiante']),
 });
 
-function firmaToken(idUsuario: string, rol: UserRole): string {
-  return jwt.sign({ rol }, env.jwtSecret, {
+const cambiarPasswordSchema = z
+  .object({
+    passwordActual: z.string().min(1, 'Escribe tu contraseña actual'),
+    passwordNueva: passwordSchema,
+  })
+  .refine((v) => v.passwordActual !== v.passwordNueva, {
+    message: 'La contraseña nueva debe ser distinta de la actual',
+    path: ['passwordNueva'],
+  });
+
+function firmaToken(idUsuario: string, rol: UserRole, passwordTemporal: boolean): string {
+  return jwt.sign({ rol, tmp: passwordTemporal }, env.jwtSecret, {
     subject: idUsuario,
     expiresIn: env.jwtExpiresIn as jwt.SignOptions['expiresIn'],
   });
+}
+
+function requiereUsuario(req: AuthRequest): string {
+  if (!req.usuario) {
+    throw new ApiError(401, 'No autenticado');
+  }
+  return req.usuario.idUsuario;
 }
 
 export async function login(
@@ -56,7 +75,7 @@ export async function login(
       throw new ApiError(403, 'Tu cuenta está desactivada. Contacta al coordinador.');
     }
 
-    const token = firmaToken(usuario.id_usuario, usuario.rol);
+    const token = firmaToken(usuario.id_usuario, usuario.rol, usuario.password_temporal);
     res.json({ token, usuario: mapUsuarioPublico(usuario) });
   } catch (err) {
     next(err);
@@ -101,6 +120,44 @@ export async function register(
     });
 
     res.status(201).json({ usuario: mapUsuarioPublico(creado) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Cambio de contrasena por el propio usuario.
+ *
+ * Se exige la actual para que un token robado no sirva para quedarse con la
+ * cuenta. Al cambiarla se devuelve un token nuevo porque el anterior llevaba la
+ * marca de clave temporal y ya no permitiria operar.
+ */
+export async function cambiarPassword(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const idUsuario = requiereUsuario(req);
+    const body = cambiarPasswordSchema.parse(req.body);
+
+    const usuario = await findUsuarioPorId(idUsuario);
+    if (!usuario || !usuario.activo) {
+      throw new ApiError(401, 'Usuario no encontrado o inactivo');
+    }
+
+    const actualValida = await bcrypt.compare(body.passwordActual, usuario.password_hash);
+    if (!actualValida) {
+      throw new ApiError(400, 'La contraseña actual no es correcta');
+    }
+
+    const passwordHash = await bcrypt.hash(body.passwordNueva, 10);
+    const actualizado = await actualizarPassword(idUsuario, passwordHash, false);
+
+    res.json({
+      token: firmaToken(idUsuario, actualizado.rol, false),
+      usuario: mapUsuarioPublico(actualizado),
+    });
   } catch (err) {
     next(err);
   }

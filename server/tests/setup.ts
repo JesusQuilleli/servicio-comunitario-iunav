@@ -30,6 +30,9 @@ url.search = '';
 process.env.DATABASE_URL = url.toString();
 process.env.DB_SSL = 'false';
 process.env.NODE_ENV = 'test';
+// Carpeta propia de pruebas: los archivos de los tests no deben mezclarse con
+// los de desarrollo ni quedar dando vueltas en `server/uploads/`.
+process.env.UPLOAD_DIR = 'uploads-test';
 // Secreto fijo solo para pruebas: no depende del .env ni se filtra a produccion.
 process.env.JWT_SECRET = process.env.TEST_JWT_SECRET ?? 'secreto-exclusivo-de-pruebas-0123456789abcdef';
 process.env.JWT_EXPIRES_IN = '1h';

@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Guía de Usuario — Sistema de Servicio Comunitario IUNAV</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+
+  :root {
+    --verde: #0f5132;
+    --verde-claro: #e8f2ec;
+    --gris: #5b6670;
+    --borde: #d8dee3;
+    --ambar: #8a5a00;
+    --ambar-claro: #fdf3e0;
+    --rojo: #8f1d1d;
+    --rojo-claro: #fbeaea;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.4pt;
+    line-height: 1.5;
+    color: #1c2328;
+    margin: 0;
+  }
+
+  /* ---------- Portada ---------- */
+  .portada {
+    height: 240mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-top: 14px solid var(--verde);
+    padding-top: 8mm;
+    page-break-after: always;
+  }
+  .portada .kicker {
+    font-size: 9pt; letter-spacing: 2.4px; text-transform: uppercase;
+    color: var(--verde); font-weight: 700; margin-bottom: 6mm;
+  }
+  .portada h1 {
+    font-size: 30pt; line-height: 1.15; margin: 0 0 5mm; color: var(--verde);
+    font-weight: 700; letter-spacing: -0.4px;
+  }
+  .portada .sub { font-size: 13pt; color: var(--gris); margin-bottom: 14mm; max-width: 145mm; }
+  .portada .meta {
+    border-top: 1px solid var(--borde); padding-top: 5mm;
+    font-size: 9.5pt; color: var(--gris);
+  }
+  .portada .meta div { margin-bottom: 2mm; }
+  .portada .sello {
+    margin-top: 10mm; background: var(--verde-claro); border-left: 4px solid var(--verde);
+    padding: 5mm 6mm; max-width: 135mm; font-size: 9.5pt;
+  }
+
+  /* ---------- Estructura ---------- */
+  h2 {
+    font-size: 15pt; color: var(--verde); margin: 0 0 4mm;
+    padding-bottom: 2mm; border-bottom: 2px solid var(--verde);
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11.5pt; color: #14304a; margin: 6mm 0 2.5mm;
+    page-break-after: avoid;
+  }
+  h4 { font-size: 10.4pt; margin: 4mm 0 1.5mm; page-break-after: avoid; }
+
+  section { page-break-before: always; }
+  section:first-of-type { page-break-before: auto; }
+
+  p { margin: 0 0 2.5mm; text-align: justify; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.2mm; }
+
+  /* ---------- Tablas ---------- */
+  table {
+    width: 100%; border-collapse: collapse; margin: 2mm 0 4mm;
+    font-size: 9.4pt; page-break-inside: avoid;
+  }
+  th {
+    background: var(--verde); color: #fff; text-align: left;
+    padding: 2.2mm 2.5mm; font-weight: 600; border: 1px solid var(--verde);
+  }
+  td { padding: 2mm 2.5mm; border: 1px solid var(--borde); vertical-align: top; }
+  tbody tr:nth-child(even) td { background: #f7f9fa; }
+  td.centro, th.centro { text-align: center; }
+
+  /* ---------- Roles ---------- */
+  .roles { display: block; margin: 3mm 0; }
+  .rol {
+    border: 1px solid var(--borde); border-left: 5px solid var(--verde);
+    padding: 3mm 4mm; margin-bottom: 3mm; page-break-inside: avoid;
+  }
+  .rol.estudiante { border-left-color: #1d6fa5; }
+  .rol.tutor { border-left-color: #7a4b9e; }
+  .rol.coordinador { border-left-color: #b06a10; }
+  .rol.admin { border-left-color: #9c1f2e; }
+  .rol h3 { margin-top: 0; }
+  .rol .nombre { font-size: 11.5pt; font-weight: 700; color: #14304a; }
+
+  /* ---------- Cajas ---------- */
+  .nota, .aviso, .tip {
+    padding: 3.5mm 4.5mm; margin: 3mm 0 4mm;
+    page-break-inside: avoid; font-size: 9.8pt;
+  }
+  .nota { background: var(--verde-claro); border-left: 4px solid var(--verde); }
+  .aviso { background: var(--rojo-claro); border-left: 4px solid var(--rojo); }
+  .tip { background: var(--ambar-claro); border-left: 4px solid var(--ambar); }
+  .nota strong, .aviso strong, .tip strong { display: block; margin-bottom: 1.5mm; }
+
+  .paso {
+    border: 1px solid var(--borde); border-radius: 2mm;
+    padding: 3mm 4mm; margin: 2mm 0 3.5mm; page-break-inside: avoid;
+  }
+  .paso .titulo { font-weight: 700; color: var(--verde); margin-bottom: 1.5mm; }
+
+  /* ---------- Pasos numerados ---------- */
+  ol.pasos { counter-reset: paso; list-style: none; padding-left: 0; }
+  ol.pasos > li {
+    counter-increment: paso; position: relative;
+    padding-left: 9mm; margin-bottom: 2.5mm;
+  }
+  ol.pasos > li::before {
+    content: counter(paso); position: absolute; left: 0; top: 0.3mm;
+    width: 6mm; height: 6mm; border-radius: 50%;
+    background: var(--verde); color: #fff;
+    font-size: 8.4pt; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .chip {
+    display: inline-block; padding: 0.5mm 2mm; border-radius: 2mm;
+    font-size: 8.4pt; font-weight: 700; color: #fff; margin-right: 1mm;
+  }
+  .chip.si { background: #1a7f4b; }
+  .chip.no { background: #b0413e; }
+  .chip.parcial { background: #b8860b; }
+
+  .glosario dt { font-weight: 700; margin-top: 2.5mm; }
+  .glosario dd { margin: 0 0 2mm 0; color: var(--gris); }
+
+  code {
+    font-family: Consolas, "Courier New", monospace; font-size: 9pt;
+    background: #eef1f3; padding: 0.3mm 1.2mm; border-radius: 1mm;
+  }
+
+  .pie {
+    margin-top: 8mm; padding-top: 3mm; border-top: 1px solid var(--borde);
+    font-size: 8.6pt; color: var(--gris);
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= PORTADA ================= -->
+<div class="portada">
+  <div class="kicker">Universidad Pedagógica Experimental Nacional</div>
+  <h1>Sistema de Servicio Comunitario</h1>
+  <div class="sub">
+    Guía de usuario por rol: qué resuelve el sistema, qué puede hacer cada perfil
+    y cómo se usa paso a paso.
+  </div>
+  <div class="sello">
+    <strong>Antes de empezar</strong>
+    Esta guía describe el sistema tal como está construido. Donde una función
+    todavía no está disponible, se dice explícitamente, en lugar de omitirla.
+  </div>
+  <div class="meta">
+    <div><strong>Versión del documento:</strong> 1.0</div>
+    <div><strong>Dirigido a:</strong> estudiantes, tutores, coordinadores y administradores del programa</div>
+    <div><strong>Acceso al sistema:</strong> dirección que entrega el administrador del sistema</div>
+  </div>
+</div>
+
+<!-- ================= 1. QUÉ RESUELVE ================= -->
+<section>
+  <h2>1. Qué resuelve este sistema</h2>
+
+  <p>
+    El servicio comunitario, social y ambiental exige a cada estudiante acumular
+    un número de horas, adjuntar evidencia de que las hizo, y que alguien las
+    valide. Sin un sistema, eso vive en planillas sueltas, correos y carpetas
+    compartidas: el estudiante no sabe cómo va, el tutor no sabe qué tiene
+    pendiente, y al final del período nadie tiene un respaldo de qué se validó.
+  </p>
+
+  <p>El sistema centraliza ese proceso en un solo lugar:</p>
+
+  <table>
+    <thead>
+      <tr><th style="width:32%">Problema del proceso manual</th><th>Cómo lo resuelve el sistema</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Horas perdidas en planillas y correos</td>
+        <td>Un registro único por fecha, tipo de actividad y cantidad de horas.</td>
+      </tr>
+      <tr>
+        <td>El estudiante no sabe cuánto le falta</td>
+        <td>El panel muestra el avance contra la meta, en tiempo real.</td>
+      </tr>
+      <tr>
+        <td>Evidencias dispersas y fáciles de perder</td>
+        <td>La foto o PDF se adjunta al propio registro, y solo la ven quien tiene permiso.</td>
+      </tr>
+      <tr>
+        <td>Validaciones que se pierden de vista</td>
+        <td>El tutor tiene una lista de pendientes por aprobar, corregir o rechazar.</td>
+      </tr>
+      <tr>
+        <td>No hay forma de demostrar lo hecho al final</td>
+        <td>Consolidado de horas en PDF y Excel, acta por grupo y certificado por estudiante.</td>
+      </tr>
+      <tr>
+        <td>Cuentas de prueba con la misma clave para todos</td>
+        <td>Cada usuario entra con su correo institucional y clave personal.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Qué tiene y qué no tiene el sistema</h3>
+
+  <table>
+    <thead><tr><th style="width:50%">Sí hace</th><th>No hace</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>
+          Registrar y validar horas<br>
+          Adjuntar evidencias<br>
+          Administrar usuarios, grupos y períodos<br>
+          Emitir consolidados, actas y certificados
+        </td>
+        <td>
+          Recuperar la contraseña por correo (el administrador la reinicia)<br>
+          Enviar notificaciones por correo<br>
+          Registrar asistencia o notas<br>
+          Firmar documentos digitalmente
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="nota">
+    <strong>Resumen para el estudiante</strong>
+    El sistema cubre el registro y la validación de horas. Todo lo demás del
+    programa (inscripción, asistencia, notas) se sigue gestionando por los
+    canales habituales de la universidad.
+  </div>
+</section>
+
+<!-- ================= 2. ACCESO ================= -->
+<section>
+  <h2>2. Primer acceso y clave temporal</h2>
+
+  <p>
+    El administrador crea las cuentas. Cada persona entra con su correo
+    institucional y una clave que se le entrega por separado.
+  </p>
+
+  <h3>Cambiar la clave temporal es obligatorio</h3>
+
+  <p>
+    Las cuentas nuevas se crean con una <strong>clave temporal</strong>. Mientras
+    la clave siga siendo temporal, el sistema permite únicamente ver y cambiar
+    la contraseña: <strong>todos los demás módulos aparecen bloqueados</strong>,
+    en la web y también en el servidor.
+  </p>
+
+  <ol class="pasos">
+    <li>Entra al sistema con tu correo y la clave temporal que te entregaron.</li>
+    <li>El sistema te lleva a la pantalla <strong>Mi contraseña</strong>.</li>
+    <li>Escribe la clave nueva, su repetición y la clave temporal como confirmación.</li>
+    <li>Pulsa <strong>Guardar</strong>. A partir de ahí quedan habilitados todos tus módulos.</li>
+  </ol>
+
+  <div class="tip">
+    <strong>Requisitos de la clave</strong>
+    Mínimo 8 caracteres, con al menos una letra mayúscula, una minúscula y un
+    número. El sistema avisa qué condición no se cumple y no la guarda.
+  </div>
+
+  <div class="aviso">
+    <strong>Si olvidaste la clave</strong>
+    No hay autorecuperación por correo. Hay que pedirle al administrador que la
+    reinicie: él genera una clave temporal nueva y tú la cambias al entrar.
+  </div>
+</section>
+
+<!-- ================= 3. ROLES ================= -->
+<section>
+  <h2>3. Los cuatro roles</h2>
+
+  <p>
+    Cada persona ve solo lo que su rol le permite. El menú lateral cambia
+    según el rol: si no aparece un módulo, no es un error de la pantalla, es que
+    tu rol no lo usa.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:15%">Rol</th>
+        <th style="width:30%">Responsabilidad principal</th>
+        <th>Módulos que ve</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Estudiante</strong></td>
+        <td>Registrar sus horas y responder a las correcciones del tutor</td>
+        <td>Panel, Bitácora Comunitaria, Servicio Social y Ambiental, Cambiar contraseña</td>
+      </tr>
+      <tr>
+        <td><strong>Tutor</strong></td>
+        <td>Validar las horas de los estudiantes de su proyecto</td>
+        <td>Panel, Grupos y Proyectos, Validación, Reportes, Cambiar contraseña</td>
+      </tr>
+      <tr>
+        <td><strong>Coordinador</strong></td>
+        <td>Administrar grupos y consultar el estado de los estudiantes</td>
+        <td>Panel, Grupos y Proyectos, Gestión de Usuarios, Configuraciones, Reportes, Cambiar contraseña</td>
+      </tr>
+      <tr>
+        <td><strong>Administrador</strong></td>
+        <td>Control total: cuentas, reglas del programa, períodos y documentos</td>
+        <td>Todos los módulos, incluido Registro de Usuarios</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Quién hace qué, en una línea</h3>
+
+  <div class="roles">
+    <div class="rol estudiante">
+      <span class="nombre">Estudiante</span>
+      <p style="margin:1.5mm 0 0">Registra horas y adjunta evidencia. Puede corregir o retirar sus propios registros mientras estén pendientes. <strong>No valida, no gestiona usuarios.</strong></p>
+    </div>
+    <div class="rol tutor">
+      <span class="nombre">Tutor</span>
+      <p style="margin:1.5mm 0 0">Valida los registros de sus estudiantes (aprobar, pedir corrección, rechazar) y consulta el consolidado de sus grupos. <strong>No ve la lista completa de usuarios ni las reglas del programa.</strong></p>
+    </div>
+    <div class="rol coordinador">
+      <span class="nombre">Coordinador</span>
+      <p style="margin:1.5mm 0 0">Crea y organiza grupos y sus integrantes, consulta el listado de usuarios, gestiona las plantillas documentales y ve la configuración. <strong>No crea cuentas ni edita las reglas del programa.</strong></p>
+    </div>
+    <div class="rol admin">
+      <span class="nombre">Administrador</span>
+      <p style="margin:1.5mm 0 0">Crea cuentas, activa o desactiva usuarios, reinicia contraseñas, define firma y sello institutional, edita las metas y administra los períodos académicos. <strong>Es el único que puede crear usuarios y cambiar las reglas del programa.</strong></p>
+    </div>
+  </div>
+
+  <div class="nota">
+    <strong>Sobre la validación de horas</strong>
+    Hoy en día la validación la hacen <strong>los tutores</strong>. El coordinador
+    tiene la pantalla en su menú, pero la validación es exclusiva del tutor. Es
+    unarestriction pendiente de resolver.
+  </div>
+</section>
+
+<!-- ================= 4. CONCEPTOS ================= -->
+<section>
+  <h2>4. Conceptos que hay que conocer</h2>
+
+  <dl class="glosario">
+    <dt>Período académico</dt>
+    <dd>El bloque de trabajo al que pertenecen las horas (por ejemplo, 2026-I). Todos los consolidados y certificados se filtran por período. Solo el administrador lo crea y activa.</dd>
+
+    <dt>Grupo o proyecto</dt>
+    <dd>La unidad donde el estudiante presta el servicio. Cada estudiante pertenece a un grupo y solo puede registrar horas de los grupos donde está inscrito y en curso. Los estados posibles son <strong>En curso</strong>, <strong>Pendiente aprobación</strong>, <strong>Finalizado</strong> y <strong>Suspendido</strong>.</dd>
+
+    <dt>Bitácora comunitaria</dt>
+    <dd>El registro de <strong>trabajo directo</strong>: las horas que el estudiante accumulates en el proyecto. Es el que se organiza por número de semana.</dd>
+
+    <dt>Servicio social y ambiental</dt>
+    <dd>El registro de <strong>horas de impacto</strong>: jornadas de impacto comunitario o ambiental. Este módulo permite elegir entre el tipo social y el ambiental.</dd>
+
+    <dt>Metas</dt>
+    <dd>Las reglas del programa fijadas por el administrador, por defecto <strong>90 horas de trabajo directo y 30 horas de impacto</strong>, más un tope de horas por día. El sistema <strong>impide</strong> registrar horas que harían pasar la meta.</dd>
+
+    <dt>Evidencia</dt>
+    <dd>Una foto (JPG, PNG o WebP) o un PDF que respalda el registro. Hasta 10 MB en registros de horas y 25 MB en documentos de proyecto y plantillas.</dd>
+
+    <dt>Estados de un registro</dt>
+    <dd>Un registro nace <strong>Pendiente</strong> y el tutor puede dejarlo <strong>Aprobado</strong>, <strong>Rechazado</strong> o <strong>Corregir</strong>. Solo en <strong>Pendiente</strong> y <strong>Corregir</strong> el estudiante puede editarlo o borrarlo.</dd>
+  </dl>
+
+  <div class="tip">
+    <strong>Las correcciones tienen dos tiempos</strong>
+    Si el tutor responde <strong>Corregir</strong>, el estudiante puede ajustar el
+    registro y devolverlo; el estado vuelve a <strong>Pendiente</strong> y el tutor
+    lo ve otra vez en su lista. <strong>Rechazar</strong> cierra el registro y ya
+    no admite cambios.
+  </div>
+</section>
+
+<!-- ================= 5. ESTUDIANTE ================= -->
+<section>
+  <h2>5. El estudiante</h2>
+
+  <h3>5.1 Registrar horas de bitácora comunitaria</h3>
+
+  <p>
+    Menú lateral <strong>Bitácora Comunitaria</strong>. Esta pantalla es el
+    formulario de trabajo directo del proyecto.
+  </p>
+
+  <ol class="pasos">
+    <li>Pulsa <strong>Registrar horas</strong>.</li>
+    <li>Elige el <strong>proyecto</strong>. Solo aparecen los grupos en los que estás inscrita y en curso.</li>
+    <li>Elige el <strong>número de semana</strong> a la que corresponde el trabajo.</li>
+    <li>Escribe las <strong>horas</strong> y la <strong>descripción</strong> de lo que hiciste.</li>
+    <li>Opcionalmente adjunta la <strong>evidencia</strong> (foto o PDF).</li>
+    <li>Guarda. El registro aparece en tu lista con estado <strong>Pendiente</strong>.</li>
+  </ol>
+
+  <h3>5.2 Registrar horas de servicio social o ambiental</h3>
+
+  <p>
+    Menú lateral <strong>Servicio Social y Ambiental</strong>. El formulario es
+    parecido, con dos diferencias: se elige la <strong>fecha</strong> en vez del
+    número de semana, y se indica si la jornada fue <strong>social</strong> o
+    <strong>ambiental</strong>. Estas horas cuentan para la meta de impacto.
+  </p>
+
+  <h3>5.3 Corregir o retirar un registro</h3>
+
+  <p>Abrimos la lista de tus registros. Cada fila indica el estado:</p>
+
+  <table>
+    <thead><tr><th style="width:22%">Estado</th><th>Qué puedes hacer</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Pendiente</strong></td><td>Editar los datos o eliminar el registro.</td></tr>
+      <tr><td><strong>Corregir</strong></td><td>Igual que pendiente: es la señal del tutor de que hay algo que arreglar.</td></tr>
+      <tr><td><strong>Aprobado</strong></td><td>Nada. Cuenta para tu meta.</td></tr>
+      <tr><td><strong>Rechazado</strong></td><td>Nada. El registro queda cerrado.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="aviso">
+    <strong>Si no te aparece el botón de editar</strong>
+    Es porque el registro ya fue aprobado o rechazado. Solo se puede tocar lo que
+    está pendiente o en corrección.
+  </div>
+
+  <h3>5.4 Ver tu avance</h3>
+
+  <p>
+    Tu panel muestra las horas acumuladas frente a la meta, el detalle de tu
+    proyecto y el estado de lo que has registrado. Es la forma rápida de
+    responder "¿cuánto me falta?" sin pedirle nada a nadie.
+  </p>
+
+  <div class="nota">
+    <strong>Si no eres estudiante</strong>
+    Las pantallas de Bitácora y Servicio muestran el aviso
+    <em>Acceso exclusivo para estudiantes</em> y te indican a qué módulo ir.
+    No es una falla.
+  </div>
+</section>
+
+<!-- ================= 6. TUTOR ================= -->
+<section>
+  <h2>6. El tutor</h2>
+
+  <h3>6.1 Validar registros</h3>
+
+  <p>
+    Menú lateral <strong>Validación</strong>. Aquí llega todo lo que tus
+    estudiantes registraron y todavía no tiene respuesta.
+  </p>
+
+  <ol class="pasos">
+    <li>Entra a <strong>Validación</strong>. Verás la lista de registros pendientes de tus grupos.</li>
+    <li>Revisa el detalle: estudiante, proyecto, fecha, horas, descripción y evidencia.</li>
+    <li>Decide una de las tres salidas: <strong>Aprobar</strong>, <strong>Corregir</strong> o <strong>Rechazar</strong>.</li>
+    <li>Escribe el <strong>comentario</strong>. El sistema no deja enviar la decisión sin comentario, porque es lo que el estudiante va a leer.</li>
+    <li>Confirma. El registro desaparece de tu lista de pendientes.</li>
+  </ol>
+
+  <div class="aviso">
+    <strong>El comentario es obligatorio</strong>
+    Es la única vía de retroalimentación que tiene el estudiante. Un
+    <em>rechazar</em> sin explicación deja al estudiante sin saber qué hacer.
+  </div>
+
+  <h3>6.2 Documentos del proyecto</h3>
+
+  <p>
+    Desde <strong>Grupos y Proyectos</strong> puedes subir a cada grupo el
+    <strong>proyecto escrito</strong> y las <strong>diapositivas</strong>. Los
+    archivos quedan asociados al grupo y no se ven desde el lado del estudiante.
+  </p>
+
+  <h3>6.3 Reportes de tus grupos</h3>
+
+  <p>
+    En <strong>Reportes</strong> descargas el consolidado de horas de tus grupos
+    y el acta de cada grupo. Como tutor, el alcance se limita automáticamente a
+    tus propios estudiantes: no puedes ver ni descargar datos de otros grupos.
+  </p>
+</section>
+
+<!-- ================= 7. COORDINADOR Y ADMIN ================= -->
+<section>
+  <h2>7. Coordinador y administrador</h2>
+
+  <h3>7.1 Grupos y proyectos (coordinador y administrador)</h3>
+
+  <ol class="pasos">
+    <li>Crea el grupo con su nombre y el período académico al que pertenece.</li>
+    <li>Agrega y quita integrantes por correo institucional.</li>
+    <li>Cambia el estado del grupo cuando corresponda: en curso, pendiente de aprobación, finalizado o suspendido.</li>
+  </ol>
+
+  <p>
+    Un estudiante solo puede registrar horas de un grupo en el que esté
+    inscrito y cuyo estado no sea <em>finalizado</em> ni <em>suspendido</em>.
+  </p>
+
+  <h3>7.2 Gestión de usuarios (coordinador y administrador)</h3>
+
+  <p>
+    Ambos ven el listado completo de usuarios y su rol. Las acciones de
+    escritura las hace el administrador.
+  </p>
+
+  <h3>7.3 Registro de usuarios (solo administrador)</h3>
+
+  <ol class="pasos">
+    <li>Entra a <strong>Registro de Usuarios</strong>.</li>
+    <li>Completa nombre, correo institucional, cédula, rol y clave inicial.</li>
+    <li>El sistema valida los datos y avisa si el correo o la cédula ya existen.</li>
+    <li>Entrega la clave inicial al usuario: le llegó como <strong>clave temporal</strong> y deberá cambiarla al entrar.</li>
+  </ol>
+
+  <h3>7.4 Acciones que solo hace el administrador</h3>
+
+  <table>
+    <thead><tr><th style="width:44%">Acción</th><th>Para qué sirve</th></tr></thead>
+    <tbody>
+      <tr><td>Activar o desactivar un usuario</td><td>Un usuario desactivado no puede iniciar sesión, sin borrar su historial.</td></tr>
+      <tr><td>Reiniciar contraseña</td><td>Genera una clave temporal nueva para alguien que la olvidó.</td></tr>
+      <tr><td>Firma y sello institucional</td><td>Se suben una vez y quedan aplicados a actas y certificados.</td></tr>
+      <tr><td>Editar las reglas del programa</td><td>Cambia las metas de horas directas, de impacto y el tope horario diario.</td></tr>
+      <tr><td>Administrar períodos académicos</td><td>Crea el período, lo edita y lo activa o desactiva.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>Precaución al cambiar las metas</strong>
+    El sistema recalcula la meta al guardar. Si la bajas por debajo de lo que un
+    estudiante ya aprobó, ese estudiante puede quedar por encima de su meta y el
+    sistema dejará de registrarle horas nuevas.
+  </div>
+
+  <h3>7.5 Configuraciones y plantillas</h3>
+
+  <p>
+    Administrador y coordinador gestionan las <strong>plantillas documentales</strong>
+    (actas, informes, certificados, bitácora) y pueden subir el archivo de cada
+    plantilla. Solo el administrador edita las reglas del programa.
+  </p>
+</section>
+
+<!-- ================= 8. REPORTES ================= -->
+<section>
+  <h2>8. Reportes y certificados</h2>
+
+  <p>
+    El módulo <strong>Reportes</strong> está disponible para administradores,
+    coordinadores y tutores. Hay tres documentos distintos y cada uno se descarga
+    como archivo.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%">Documento</th>
+        <th style="width:16%">Formato</th>
+        <th>Qué incluye</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Consolidado de horas</strong></td>
+        <td>PDF y Excel</td>
+        <td>Horas por estudiante y por tipo de actividad, con totales y estado de validación. Filtra por período y, si quieres, por un grupo concreto.</td>
+      </tr>
+      <tr>
+        <td><strong>Acta de grupo</strong></td>
+        <td>PDF</td>
+        <td>El acta de un grupo específico. Incorpora la firma y el sello institucionales cuando el administrador los ha cargado.</td>
+      </tr>
+      <tr>
+        <td><strong>Certificado</strong></td>
+        <td>PDF</td>
+        <td>Certificado individual de un estudiante. Si no se selecciona un período, incluye toda su historia en el sistema.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Cómo usarlos</h3>
+
+  <ol class="pasos">
+    <li>Elige el <strong>período académico</strong> y, si aplica, el <strong>grupo</strong>.</li>
+    <li>Si eres tutor, el filtro de grupo te deja acotar a tus propios proyectos.</li>
+    <li>Pulsa el botón del documento. El archivo se descarga directo a tu equipo.</li>
+  </ol>
+
+  <div class="nota">
+    <strong>Los reportes solo cuentan horas aprobadas</strong>
+    Un consolidado no incluye horas pendientes ni rechazadas. Si esperas verlas
+    ahí, primero valida los registros.
+  </div>
+</section>
+
+<!-- ================= 9. PROBLEMAS ================= -->
+<section>
+  <h2>9. Problemas frecuentes</h2>
+
+  <table>
+    <thead>
+      <tr><th style="width:34%">Qué pasa</th><th style="width:26%">Por qué</th><th>Qué hacer</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Entro pero todos los módulos están bloqueados</td>
+        <td>La clave sigue siendo temporal</td>
+        <td>Ir a <strong>Mi contraseña</strong> y cambiar la clave.</td>
+      </tr>
+      <tr>
+        <td>Aparece "Acceso exclusivo para estudiantes"</td>
+        <td>Las pantallas de Bitácora y Servicio son del estudiante</td>
+        <td>Ir al módulo que sí corresponde a tu rol.</td>
+      </tr>
+      <tr>
+        <td>Aparece "Acceso exclusivo para tutores"</td>
+        <td>La validación de horas es del tutor</td>
+        <td>Pedirle al tutor del proyecto que revise el registro.</td>
+      </tr>
+      <tr>
+        <td>No me deja registrar más horas</td>
+        <td>Alcanzaste la meta o el tope horario diario</td>
+        <td>Revisar el avance en el panel y las reglas en Configuraciones.</td>
+      </tr>
+      <tr>
+        <td>No puedo editar un registro</td>
+        <td>Ya fue aprobado o rechazado</td>
+        <td>Registrar las horas de nuevo, con la corrección que el tutor pidió.</td>
+      </tr>
+      <tr>
+        <td>No me aparece mi proyecto en el formulario</td>
+        <td>No estás inscrita, o el grupo no está en curso</td>
+        <td>Verificarlo con el coordinador.</td>
+      </tr>
+      <tr>
+        <td>El consolidado sale vacío o incompleto</td>
+        <td>Las horas siguen pendientes de validar</td>
+        <td>Validar primero y volver a descargar.</td>
+      </tr>
+      <tr>
+        <td>La evidencia no se sube</td>
+        <td>Formato no admitido o archivo muy pesado</td>
+        <td>Usar JPG, PNG, WebP o PDF, hasta 10 MB en registros.</td>
+      </tr>
+      <tr>
+        <td>Olvidé mi contraseña</td>
+        <td>No hay recuperación automática</td>
+        <td>Pedir al administrador que la reinicie.</td>
+      </tr>
+      <tr>
+        <td>Alguien dejó de usar el sistema</td>
+        <td>—</td>
+        <td>El administrador lo desactiva; su historial se conserva.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="aviso">
+    <strong>Nunca compartas tu clave</strong>
+    Cada usuario tiene su propia cuenta. Si dos personas usan la misma, el
+    historial de registros y validaciones queda mezclado y ya no se sabe quién
+    hizo qué.
+  </div>
+</section>
+
+<!-- ================= 10. GLOSARIO ================= -->
+<section>
+  <h2>10. Referencia rápida</h2>
+
+  <h3>Qué puede hacer cada rol</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Acción</th>
+        <th class="centro">Est.</th>
+        <th class="centro">Tutor</th>
+        <th class="centro">Coord.</th>
+        <th class="centro">Admin</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Registrar y editar sus propias horas</td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td></tr>
+      <tr><td>Ver la lista de pendientes por validar</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip parcial">Pantalla restringida</span></td><td class="centro"><span class="chip parcial">Pantalla restringida</span></td></tr>
+      <tr><td>Aprobar, corregir o rechazar horas</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip parcial">No en pantalla</span></td><td class="centro"><span class="chip no">No</span></td></tr>
+      <tr><td>Crear y editar grupos e integrantes</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
+      <tr><td>Subir el proyecto escrito y las diapositivas</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
+      <tr><td>Ver el listado de usuarios</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
+      <tr><td>Crear cuentas de usuario</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
+      <tr><td>Activar usuarios y reiniciar contraseñas</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
+      <tr><td>Editar las metas y reglas del programa</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
+      <tr><td>Administrar períodos académicos</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
+      <tr><td>Gestionar plantillas documentales</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
+      <tr><td>Descargar consolidados, actas y certificados</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
+      <tr><td>Cambiar su propia contraseña</td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Los estados de un registro</h3>
+
+  <table>
+    <thead><tr><th style="width:24%">Estado</th><th style="width:30%">Quién lo cambia</th><th>Qué significa</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Pendiente</strong></td><td>El sistema, al registrar</td><td>Esperando revisión del tutor.</td></tr>
+      <tr><td><strong>Corregir</strong></td><td>Tutor</td><td>El estudiante puede editar y devolverlo.</td></tr>
+      <tr><td><strong>Aprobado</strong></td><td>Tutor</td><td>Suma a la meta del estudiante.</td></tr>
+      <tr><td><strong>Rechazado</strong></td><td>Tutor</td><td>No suma y queda cerrado.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Los estados de un grupo</h3>
+
+  <table>
+    <thead><tr><th style="width:24%">Estado</th><th>Qué implica</th></tr></thead>
+    <tbody>
+      <tr><td><strong>En curso</strong></td><td>Los integrantes pueden registrar horas.</td></tr>
+      <tr><td><strong>Pendiente aprobación</strong></td><td>El grupo espera confirmación para empezar.</td></tr>
+      <tr><td><strong>Finalizado</strong></td><td>Cerrado: ya no se registran horas.</td></tr>
+      <tr><td><strong>Suspendido</strong></td><td>Pausado: tampoco se registran horas.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="pie">
+    Sistema de Servicio Comunitario · Guía de usuario, versión 1.0.
+    Documento de uso interno. Los datos de ejemplo de esta guía son ficticios.
+  </div>
+</section>
+
+</body>
+</html>

@@ -5,7 +5,9 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000
 
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
-  headers: { "Content-Type": "application/json" },
+  // Sin `Content-Type` fijo: axios lo deduce del cuerpo. Si se fijara aquí,
+  // los `FormData` de las subidas de archivo saldrían declarados como JSON y el
+  // servidor los ignoraría.
 });
 
 api.interceptors.request.use((config) => {

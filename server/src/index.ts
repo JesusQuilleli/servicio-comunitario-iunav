@@ -10,9 +10,9 @@ async function main(): Promise<void> {
   });
 
   const app = createApp();
-  app.listen(env.port, () => {
-    console.log(`>> API IUNAV Servicio Comunitario escuchando en http://localhost:${env.port}`);
-    console.log(`>> Health check: http://localhost:${env.port}/api/health`);
+  app.listen(env.port, env.apiHost, () => {
+    console.log(`>> API IUNAV Servicio Comunitario escuchando en http://${env.apiHost}:${env.port}`);
+    console.log(`>> Health check: http://${env.apiHost}:${env.port}/api/health`);
   });
 }
 

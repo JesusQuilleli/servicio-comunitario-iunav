@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import * as periodo from '../controllers/periodo.controller.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requiereCambioDePassword } from '../middleware/auth.js';
 import { requireRole } from '../middleware/role.js';
 
 const router = Router();
 
 router.use(authenticate);
+router.use(requiereCambioDePassword);
 
 const gestion = requireRole('admin', 'coordinador');
 

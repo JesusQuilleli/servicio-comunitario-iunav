@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# La plantilla SI se versiona: sin ella, quien clone el repo no sabe qué variable
+# falta y la web publicada queda buscando la API en localhost.
+!.env.example
 
 # vercel
 .vercel

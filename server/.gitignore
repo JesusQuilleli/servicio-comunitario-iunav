@@ -2,3 +2,8 @@ node_modules/
 dist/
 .env
 *.log
+
+# Archivos subidos por los usuarios (evidencias, proyectos, firmas, sellos).
+# Nunca se versionan: son datos personales de estudiantes.
+uploads/
+uploads-test/

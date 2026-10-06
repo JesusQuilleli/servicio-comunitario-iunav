@@ -21,12 +21,17 @@ export function api(): supertest.Agent {
 
 /** Hace login real contra la API y devuelve el token JWT. */
 export async function tokenDe(rol: Rol): Promise<string> {
+  return tokenDeCorreo(CORREOS[rol]);
+}
+
+/** Login por correo, para los usuarios del seed que no son un rol de `CORREOS`. */
+export async function tokenDeCorreo(email: string): Promise<string> {
   const res = await api()
     .post('/api/auth/login')
-    .send({ email: CORREOS[rol], password: PASSWORD_SEMILLA });
+    .send({ email, password: PASSWORD_SEMILLA });
 
   if (res.status !== 200) {
-    throw new Error(`Login de ${rol} fallo con ${res.status}: ${JSON.stringify(res.body)}`);
+    throw new Error(`Login de ${email} fallo con ${res.status}: ${JSON.stringify(res.body)}`);
   }
   return res.body.token as string;
 }

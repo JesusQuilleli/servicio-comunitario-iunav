@@ -1,7 +1,7 @@
 -- ============================================================
 -- Sistema de Gestión de Servicio Comunitario IUNAV
--- Esquema de base de datos (Supabase PostgreSQL 15+)
--- Ejecutar en: Supabase Dashboard -> SQL Editor -> New query
+-- Esquema de base de datos (PostgreSQL 15 o superior)
+-- Ejecutar con: psql -d app_iunav -f sql/schema.sql
 -- ============================================================
 
 -- Extensión para generación de UUIDs
@@ -16,6 +16,10 @@ create table if not exists usuarios (
   cedula text not null unique,
   email text not null unique,
   password_hash text not null,
+  -- El admin puede restablecer la clave y dejar una temporal: mientras siga en
+  -- true, el usuario solo puede cambiar su contraseña (ver `middleware/auth.ts`).
+  password_temporal boolean not null default false,
+  password_cambiado_en timestamptz,
   rol text not null check (rol in ('admin', 'coordinador', 'tutor', 'estudiante')),
   firma_url text,
   sello_url text,
@@ -132,3 +136,12 @@ create index if not exists idx_bitacoras_estudiante on bitacoras_comunitario(id_
 create index if not exists idx_control_estudiante on control_servicios_institucionales(id_estudiante);
 create index if not exists idx_grupos_tutor on grupos_proyectos(id_tutor);
 create index if not exists idx_integrantes_estudiante on integrantes_grupo(id_estudiante);
+
+-- ------------------------------------------------------------
+-- Ajustes sobre bases ya creadas
+-- ------------------------------------------------------------
+-- `create table if not exists` no toca las tablas que ya existen, asi que las
+-- columnas anadidas despues de la primera version se anaden aqui. Es
+-- idempotente: se puede volver a ejecutar el esquema cuantas veces se quiera.
+alter table usuarios add column if not exists password_temporal boolean not null default false;
+alter table usuarios add column if not exists password_cambiado_en timestamptz;

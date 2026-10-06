@@ -10,6 +10,8 @@ export interface UsuarioPublico {
   selloUrl: string | null;
   activo: boolean;
   creadoEn: Date;
+  /** La clave es una temporal entregada por el admin: hay que cambiarla. */
+  passwordTemporal: boolean;
 }
 
 export interface LoginBody {

@@ -6,6 +6,7 @@ import {
   asegurarBaseDePruebas,
   cerrarPool,
   sembrar,
+  PASSWORD_SEMILLA,
   type DatosSemilla,
 } from './helpers/db.js';
 
@@ -19,7 +20,15 @@ interface Caso {
   ruta: (d: DatosSemilla) => string;
   cuerpo?: (d: DatosSemilla) => Record<string, unknown>;
   permitido: Record<Rol, boolean>;
+  /** Archivo a adjuntar, para los endpoints que suben uno. */
+  adjunto?: { campo: string; nombre: string; tipo: string; cuerpo: Buffer };
 }
+
+const PNG = Buffer.from(
+  '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000000020001e221bc330000000049454e44ae426082',
+  'hex'
+);
+const PDF = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF');
 
 const TODOS: Record<Rol, boolean> = {
   admin: true,
@@ -30,6 +39,14 @@ const TODOS: Record<Rol, boolean> = {
 const GESTION: Record<Rol, boolean> = { admin: true, coordinador: true, tutor: false, estudiante: false };
 const SOLO_ADMIN: Record<Rol, boolean> = { admin: true, coordinador: false, tutor: false, estudiante: false };
 const SOLO_TUTOR: Record<Rol, boolean> = { admin: false, coordinador: false, tutor: true, estudiante: false };
+// Los reportes los pide el tutor tambien (para sus propios estudiantes): es
+// gestion mas tutor, sin el estudiante.
+const GESTION_Y_TUTOR: Record<Rol, boolean> = {
+  admin: true,
+  coordinador: true,
+  tutor: true,
+  estudiante: false,
+};
 const SOLO_ESTUDIANTE: Record<Rol, boolean> = { admin: false, coordinador: false, tutor: false, estudiante: true };
 
 const CASOS: Caso[] = [
@@ -52,7 +69,48 @@ const CASOS: Caso[] = [
     }),
     permitido: SOLO_ADMIN,
   },
+  {
+    nombre: 'PATCH /api/auth/password',
+    metodo: 'patch',
+    ruta: () => '/api/auth/password',
+    // La contrasena actual es la del seed, asi que cada rol llega al 200 de verdad
+    // en vez de toparse con el 400 de "contrasena actual incorrecta".
+    cuerpo: () => ({ passwordActual: PASSWORD_SEMILLA, passwordNueva: 'claveNueva9' }),
+    permitido: TODOS,
+  },
+  {
+    nombre: 'POST /api/usuarios/:id/password',
+    metodo: 'post',
+    ruta: (d) => `/api/usuarios/${d.estudianteB}/password`,
+    permitido: SOLO_ADMIN,
+  },
   { nombre: 'GET /api/dashboard', metodo: 'get', ruta: () => '/api/dashboard', permitido: TODOS },
+  {
+    // Los reportes van a `gestion`: el tutor los pide para sus estudiantes y
+    // el propio estudiante no puede bajar ninguno.
+    nombre: 'GET /api/reportes/consolidado-horas.pdf',
+    metodo: 'get',
+    ruta: () => '/api/reportes/consolidado-horas.pdf',
+    permitido: GESTION_Y_TUTOR,
+  },
+  {
+    nombre: 'GET /api/reportes/consolidado-horas.xlsx',
+    metodo: 'get',
+    ruta: () => '/api/reportes/consolidado-horas.xlsx',
+    permitido: GESTION_Y_TUTOR,
+  },
+  {
+    nombre: 'GET /api/reportes/acta/:idGrupo.pdf',
+    metodo: 'get',
+    ruta: (d) => `/api/reportes/acta/${d.grupo}.pdf`,
+    permitido: GESTION_Y_TUTOR,
+  },
+  {
+    nombre: 'GET /api/reportes/certificado/:idUsuario.pdf',
+    metodo: 'get',
+    ruta: (d) => `/api/reportes/certificado/${d.estudianteA}.pdf`,
+    permitido: GESTION_Y_TUTOR,
+  },
   { nombre: 'GET /api/usuarios', metodo: 'get', ruta: () => '/api/usuarios', permitido: GESTION },
   {
     nombre: 'PATCH /api/usuarios/:id/activo',
@@ -60,6 +118,23 @@ const CASOS: Caso[] = [
     ruta: (d) => `/api/usuarios/${d.estudianteB}/activo`,
     cuerpo: () => ({ activo: false }),
     permitido: SOLO_ADMIN,
+  },
+  {
+    // Cualquier rol autenticado llega al controlador; el controlador decide si es
+    // el propio usuario o el admin. Aqui `tutoralfa` no es el dueño, asi que
+    // responde 403 desde la lógica de negocio, no desde `requireRole`.
+    nombre: 'POST /api/usuarios/:id/firma (ajena)',
+    metodo: 'post',
+    ruta: (d) => `/api/usuarios/${d.estudianteB}/firma`,
+    permitido: SOLO_ADMIN,
+    adjunto: { campo: 'archivo', nombre: 'firma.png', tipo: 'image/png', cuerpo: PNG },
+  },
+  {
+    nombre: 'POST /api/usuarios/:id/sello',
+    metodo: 'post',
+    ruta: (d) => `/api/usuarios/${d.coordinador}/sello`,
+    permitido: SOLO_ADMIN,
+    adjunto: { campo: 'archivo', nombre: 'sello.png', tipo: 'image/png', cuerpo: PNG },
   },
   {
     nombre: 'GET /api/bitacoras/mias',
@@ -90,6 +165,29 @@ const CASOS: Caso[] = [
     metodo: 'get',
     ruta: () => '/api/bitacoras/pendientes',
     permitido: SOLO_TUTOR,
+  },
+  {
+    nombre: 'GET /api/bitacoras/metas',
+    metodo: 'get',
+    ruta: () => '/api/bitacoras/metas',
+    permitido: SOLO_ESTUDIANTE,
+  },
+  {
+    nombre: 'PATCH /api/bitacoras/:id',
+    metodo: 'patch',
+    ruta: (d) => `/api/bitacoras/${d.bitacoraPendiente}`,
+    cuerpo: () => ({
+      fecha: '2026-02-10',
+      descripcion: 'Registro editado desde la matriz de permisos',
+      horas: 4,
+    }),
+    permitido: SOLO_ESTUDIANTE,
+  },
+  {
+    nombre: 'DELETE /api/bitacoras/:id',
+    metodo: 'delete',
+    ruta: (d) => `/api/bitacoras/${d.bitacoraPendiente}`,
+    permitido: SOLO_ESTUDIANTE,
   },
   {
     nombre: 'PATCH /api/bitacoras/:id/estado',
@@ -167,6 +265,18 @@ const CASOS: Caso[] = [
     ruta: (d) => `/api/grupos/${d.grupo}/integrantes/${d.integranteSinHoras}`,
     permitido: GESTION,
   },
+  {
+    nombre: 'POST /api/grupos/:id/documentos',
+    metodo: 'post',
+    ruta: (d) => `/api/grupos/${d.grupo}/documentos`,
+    permitido: { admin: true, coordinador: true, tutor: true, estudiante: false },
+    adjunto: {
+      campo: 'proyectoEscrito',
+      nombre: 'proyecto.pdf',
+      tipo: 'application/pdf',
+      cuerpo: PDF,
+    },
+  },
   { nombre: 'GET /api/periodos', metodo: 'get', ruta: () => '/api/periodos', permitido: TODOS },
   {
     nombre: 'POST /api/periodos',
@@ -239,7 +349,21 @@ const CASOS: Caso[] = [
     cuerpo: () => ({ activo: false }),
     permitido: GESTION,
   },
+  {
+    nombre: 'POST /api/configuracion/plantillas/:id/documento',
+    metodo: 'post',
+    ruta: (d) => `/api/configuracion/plantillas/${d.plantilla}/documento`,
+    permitido: GESTION,
+    adjunto: { campo: 'documento', nombre: 'plantilla.pdf', tipo: 'application/pdf', cuerpo: PDF },
+  },
 ];
+
+/** Adjunta un archivo de relleno a los casos que suben uno. */
+function adjuntar(peticion: supertest.Test, caso: Caso): supertest.Test {
+  if (!caso.adjunto) return peticion;
+  const { campo, nombre, tipo, cuerpo } = caso.adjunto;
+  return peticion.attach(campo, cuerpo, { filename: nombre, contentType: tipo });
+}
 
 function pedir(caso: Caso, token: string, d: DatosSemilla): supertest.Test {
   const a = api();
@@ -248,8 +372,12 @@ function pedir(caso: Caso, token: string, d: DatosSemilla): supertest.Test {
   switch (caso.metodo) {
     case 'get':
       return a.get(caso.ruta(d)).set(cabeceras).send(cuerpo);
-    case 'post':
-      return a.post(caso.ruta(d)).set(cabeceras).send(cuerpo);
+    case 'post': {
+      const peticion = a.post(caso.ruta(d)).set(cabeceras);
+      // `.send()` fija `Content-Type: application/json` y dejaria sin efecto el
+      // `multipart` de `.attach()`, asi que los dos son excluyentes.
+      return caso.adjunto ? adjuntar(peticion, caso) : peticion.send(cuerpo);
+    }
     case 'patch':
       return a.patch(caso.ruta(d)).set(cabeceras).send(cuerpo);
     case 'delete':
@@ -285,7 +413,10 @@ describe('matriz de permisos por rol', () => {
           const res = await pedir(caso, token, datos);
 
           if (caso.permitido[rol]) {
-            expect([200, 201], `respondio ${res.status}: ${JSON.stringify(res.body)}`).toContain(res.status);
+            expect(
+              [200, 201, 204],
+              `respondio ${res.status}: ${JSON.stringify(res.body)}`
+            ).toContain(res.status);
           } else {
             expect(res.status, `respondio ${res.status}: ${JSON.stringify(res.body)}`).toBe(403);
             expect(res.body.message).toMatch(/Acceso denegado/i);
@@ -329,8 +460,8 @@ describe('el rol no se puede falsear dentro del token', () => {
 });
 
 describe('cobertura de la matriz', () => {
-  it('cubre los 28 endpoints de la API', () => {
-    expect(CASOS).toHaveLength(28);
+  it('cubre los 41 endpoints de la API', () => {
+    expect(CASOS).toHaveLength(41);
   });
 
   it('todo caso declara al menos un rol autorizado', () => {

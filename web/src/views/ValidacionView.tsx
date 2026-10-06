@@ -8,13 +8,13 @@ import {
   Loader2,
   RefreshCw,
   AlertTriangle,
-  ExternalLink,
   GraduationCap,
   FileText,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Evidencia } from "@/components/Evidencia";
 import { api } from "@/lib/api";
 import { useApiData } from "@/lib/useApiData";
 import { useAuthStore } from "@/stores/authStore";
@@ -171,18 +171,10 @@ function TarjetaPendiente({
 
       <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
         {pendiente.proyectoNombre && <span className="font-medium">{pendiente.proyectoNombre}</span>}
-        {pendiente.evidenciaUrl && (
-          <a
-            href={pendiente.evidenciaUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-iunav-blue hover:underline"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Ver evidencia
-          </a>
-        )}
       </div>
+
+      {/* La evidencia necesita el token JWT, así que no puede ir en un `href`. */}
+      <Evidencia ruta={pendiente.evidenciaUrl} />
 
       {error && (
         <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-3">

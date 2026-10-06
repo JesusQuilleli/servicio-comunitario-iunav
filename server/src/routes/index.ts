@@ -6,6 +6,8 @@ import { bitacoraRouter } from './bitacora.routes.js';
 import { gruposRouter } from './grupos.routes.js';
 import { periodosRouter } from './periodos.routes.js';
 import { configuracionRouter } from './configuracion.routes.js';
+import { archivoRouter } from './archivo.routes.js';
+import { reporteRouter } from './reporte.routes.js';
 
 const router = Router();
 
@@ -16,5 +18,7 @@ router.use('/bitacoras', bitacoraRouter);
 router.use('/grupos', gruposRouter);
 router.use('/periodos', periodosRouter);
 router.use('/configuracion', configuracionRouter);
+router.use('/archivos', archivoRouter);
+router.use('/reportes', reporteRouter);
 
 export { router as apiRouter };

@@ -10,6 +10,8 @@ export interface Usuario {
   selloUrl: string | null;
   activo: boolean;
   creadoEn: string;
+  /** La clave es una temporal entregada por el admin: hay que cambiarla. */
+  passwordTemporal: boolean;
 }
 
 export interface LoginResponse {
@@ -94,11 +96,27 @@ export interface RegistroHoras {
   fecha: string;
   descripcion: string;
   horas: number;
-  evidencia: boolean;
+  /** Ruta del archivo en el servidor, o `null` si el registro no lleva evidencia. */
+  evidenciaUrl: string | null;
   estado: "pendiente" | "aprobado" | "rechazado" | "corregir";
   comentarioTutor: string | null;
   proyecto: string | null;
   creadoEn: string;
+}
+
+/** Metas y límite vigente, los mismos valores que aplica el servidor. */
+export interface Metas {
+  horasDirectas: number;
+  horasImpacto: number;
+  limiteDiario: number;
+  periodoActivo: number | null;
+}
+
+/** Estados en los que el estudiante todavía puede editar su registro. */
+export const ESTADOS_EDITABLES: RegistroHoras["estado"][] = ["pendiente", "corregir"];
+
+export function esEditable(registro: { estado: RegistroHoras["estado"] }): boolean {
+  return ESTADOS_EDITABLES.includes(registro.estado);
 }
 
 export interface GrupoEstudiante {

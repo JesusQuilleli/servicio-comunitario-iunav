@@ -34,7 +34,6 @@ export interface DatosPlantilla {
   nombre: string;
   descripcion: string | null;
   tipo: TipoPlantilla;
-  urlDocumento: string | null;
 }
 
 interface FilaConfiguracion {
@@ -178,10 +177,12 @@ export async function crearPlantilla(datos: DatosPlantilla): Promise<FilaPlantil
   }
 
   const { rows } = await pool.query<{ id_plantilla: number }>(
-    `insert into plantillas_documento (nombre, descripcion, tipo, url_documento)
-     values ($1, $2, $3, $4)
+    // `url_documento` no se escribe aqui: la deja nula hasta que se suba el
+    // archivo por `POST /plantillas/:id/documento`.
+    `insert into plantillas_documento (nombre, descripcion, tipo)
+     values ($1, $2, $3)
      returning id_plantilla`,
-    [datos.nombre, datos.descripcion, datos.tipo, datos.urlDocumento]
+    [datos.nombre, datos.descripcion, datos.tipo]
   );
 
   return obtenerPlantilla(rows[0].id_plantilla);
@@ -197,11 +198,13 @@ export async function actualizarPlantilla(id: number, datos: DatosPlantilla): Pr
   }
 
   const { rows } = await pool.query(
+    // Igual que en el alta: renombrar una plantilla no puede deshacer la subida
+    // de su documento.
     `update plantillas_documento
-     set nombre = $1, descripcion = $2, tipo = $3, url_documento = $4, actualizado_en = now()
-     where id_plantilla = $5
+     set nombre = $1, descripcion = $2, tipo = $3, actualizado_en = now()
+     where id_plantilla = $4
      returning id_plantilla`,
-    [datos.nombre, datos.descripcion, datos.tipo, datos.urlDocumento, id]
+    [datos.nombre, datos.descripcion, datos.tipo, id]
   );
   if (rows.length === 0) {
     throw new ApiError(404, 'Plantilla no encontrada');

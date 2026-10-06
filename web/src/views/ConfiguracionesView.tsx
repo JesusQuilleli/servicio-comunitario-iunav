@@ -26,6 +26,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Evidencia } from "@/components/Evidencia";
+import { SubirDocumentoPlantilla } from "@/components/SubirDocumentoPlantilla";
 import { api } from "@/lib/api";
 import { useApiData } from "@/lib/useApiData";
 import { useAuthStore } from "@/stores/authStore";
@@ -74,10 +76,9 @@ interface FormPlantilla {
   nombre: string;
   descripcion: string;
   tipo: TipoPlantilla;
-  urlDocumento: string;
 }
 
-const PLANTILLA_VACIA: FormPlantilla = { nombre: "", descripcion: "", tipo: "bitacora", urlDocumento: "" };
+const PLANTILLA_VACIA: FormPlantilla = { nombre: "", descripcion: "", tipo: "bitacora" };
 
 function mensajeError(err: unknown, porDefecto: string): string {
   return (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? porDefecto;
@@ -97,7 +98,6 @@ function formDesdePlantilla(p: PlantillaDocumento): FormPlantilla {
     nombre: p.nombre,
     descripcion: p.descripcion ?? "",
     tipo: p.tipo,
-    urlDocumento: p.urlDocumento ?? "",
   };
 }
 
@@ -229,7 +229,6 @@ export function ConfiguracionesView() {
       nombre: formPlantilla.nombre,
       descripcion: formPlantilla.descripcion === "" ? null : formPlantilla.descripcion,
       tipo: formPlantilla.tipo,
-      urlDocumento: formPlantilla.urlDocumento === "" ? null : formPlantilla.urlDocumento,
     };
     try {
       if (plantillaEditando) {
@@ -582,16 +581,19 @@ export function ConfiguracionesView() {
                             </td>
                             <td className="px-4 py-3">
                               {p.urlDocumento ? (
-                                <a
-                                  href={p.urlDocumento}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-iunav-blue hover:underline text-xs"
-                                >
-                                  Ver documento
-                                </a>
+                                <div className="flex flex-col gap-1">
+                                  <Evidencia ruta={p.urlDocumento} compacta />
+                                  <SubirDocumentoPlantilla
+                                    idPlantilla={p.idPlantilla}
+                                    onSubido={reloadPlantillas}
+                                  />
+                                </div>
                               ) : (
-                                <span className="text-xs text-muted-foreground">Sin archivo</span>
+                                <SubirDocumentoPlantilla
+                                  idPlantilla={p.idPlantilla}
+                                  onSubido={reloadPlantillas}
+                                  soloBoton
+                                />
                               )}
                             </td>
                             <td className="px-4 py-3">
@@ -751,18 +753,11 @@ export function ConfiguracionesView() {
               </select>
             </div>
 
-            <div className="space-y-1.5">
-              <label htmlFor="url-plantilla" className="text-sm font-medium text-foreground">
-                URL del documento
-              </label>
-              <Input
-                id="url-plantilla"
-                type="url"
-                placeholder="https://..."
-                value={formPlantilla.urlDocumento}
-                onChange={(e) => setFormPlantilla({ ...formPlantilla, urlDocumento: e.target.value })}
-              />
-            </div>
+            {plantillaEditando && (
+              <p className="text-xs text-muted-foreground">
+                El archivo del documento se sube en la tabla de plantillas, una vez guardada.
+              </p>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setPlantillaAbierta(false)}>

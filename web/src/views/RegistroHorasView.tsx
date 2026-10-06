@@ -1,45 +1,108 @@
 "use client";
 
-import { useState } from "react";
-import { Clock, Leaf, Loader2, RefreshCw, AlertTriangle, CheckCircle2, Save } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Leaf,
+  Loader2,
+  Paperclip,
+  Pencil,
+  RefreshCw,
+  Save,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Evidencia } from "@/components/Evidencia";
+import { MetasPanel } from "@/components/MetasPanel";
+import { MAX_EVIDENCIA_MB, motivoEvidenciaInvalida } from "@/lib/archivos";
 import { api } from "@/lib/api";
 import { useApiData } from "@/lib/useApiData";
 import { useAuthStore } from "@/stores/authStore";
 import { estadoRegistro, formatearHoras, mostrarFecha } from "@/lib/registro";
-import type { GrupoEstudiante, RegistroHoras, TipoRegistro } from "@/lib/types";
+import {
+  esEditable,
+  type DashboardPayload,
+  type GrupoEstudiante,
+  type Metas,
+  type RegistroHoras,
+  type TipoRegistro,
+} from "@/lib/types";
 
 const TIPOS_SERVICIO: { value: "social" | "ambiental"; label: string }[] = [
   { value: "social", label: "Social" },
   { value: "ambiental", label: "Ambiental" },
 ];
 
+const CAMPO_EVIDENCIA = "evidencia";
+
+/** Estado del formulario, compartido por el alta y la edición. */
+interface Borrador {
+  tipo: TipoRegistro;
+  idGrupo: string;
+  semana: string;
+  fecha: string;
+  horas: string;
+  descripcion: string;
+}
+
+const BORRADOR_VACIO: Borrador = {
+  tipo: "social",
+  idGrupo: "",
+  semana: "",
+  fecha: "",
+  horas: "",
+  descripcion: "",
+};
+
+function borradorDesde(r: RegistroHoras): Borrador {
+  return {
+    tipo: r.tipo,
+    idGrupo: "",
+    semana: r.semana ? String(r.semana) : "",
+    fecha: r.fecha,
+    horas: String(r.horas),
+    descripcion: r.descripcion,
+  };
+}
+
+function mensajeDeError(err: unknown, porDefecto: string): string {
+  const detalle = err as { response?: { data?: { message?: string } } };
+  return detalle?.response?.data?.message ?? porDefecto;
+}
+
 export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }) {
   const usuario = useAuthStore((s) => s.usuario);
   const esEstudiante = usuario?.rol === "estudiante";
+  const esComunitario = tipo === "comunitario";
 
   const { data, loading, error, reload } = useApiData<{ registros: RegistroHoras[] }>("/bitacoras/mias");
   const { data: datosGrupos } = useApiData<{ grupos: GrupoEstudiante[] }>("/bitacoras/grupos");
+  const { data: datosMetas } = useApiData<{ metas: Metas }>("/bitacoras/metas");
+  const { data: dash } = useApiData<DashboardPayload>("/dashboard", esEstudiante);
   const grupos = datosGrupos?.grupos ?? [];
 
-  const esComunitario = tipo === "comunitario";
-  const filtrados = (data?.registros ?? []).filter((r) =>
-    esComunitario ? r.tipo === "comunitario" : r.tipo === "social" || r.tipo === "ambiental"
-  );
+  const [borrador, setBorrador] = useState<Borrador>({
+    ...BORRADOR_VACIO,
+    tipo: esComunitario ? "comunitario" : "social",
+    fecha: new Date().toISOString().slice(0, 10),
+  });
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [quitarEvidencia, setQuitarEvidencia] = useState(false);
 
-  const [subTipo, setSubTipo] = useState<"social" | "ambiental">("social");
-  const [idGrupo, setIdGrupo] = useState("");
-  const [semana, setSemana] = useState("");
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
-  const [horas, setHoras] = useState("");
-  const [descripcion, setDescripcion] = useState("");
+  const [editando, setEditando] = useState<string | null>(null);
+  const [borrando, setBorrando] = useState<string | null>(null);
 
   const [enviando, setEnviando] = useState(false);
   const [errorForm, setErrorForm] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
+
+  const inputArchivo = useRef<HTMLInputElement>(null);
 
   if (!usuario) return null;
 
@@ -52,7 +115,8 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
           </h2>
           <p className="text-muted-foreground text-sm mt-1">
             El registro de horas es realizado por los estudiantes. Como {usuario.rol}, revisa la
-            información en el Dashboard y en {usuario.rol === "tutor" ? "el módulo de Validación." : "Gestión de Usuarios."}
+            información en el Dashboard y en{" "}
+            {usuario.rol === "tutor" ? "el módulo de Validación." : "Gestión de Usuarios."}
           </p>
         </div>
         <Card className="border-0 shadow-sm">
@@ -76,59 +140,138 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const filtrados = (data?.registros ?? []).filter((r) =>
+    esComunitario ? r.tipo === "comunitario" : r.tipo === "social" || r.tipo === "ambiental"
+  );
+
+  const editandoRegistro = filtrados.find((r) => r.id === editando) ?? null;
+
+  function limpiarFormulario() {
+    setBorrador({
+      ...BORRADOR_VACIO,
+      tipo: esComunitario ? "comunitario" : "social",
+      fecha: new Date().toISOString().slice(0, 10),
+    });
+    setArchivo(null);
+    setQuitarEvidencia(false);
+    setEditando(null);
+    if (inputArchivo.current) inputArchivo.current.value = "";
+  }
+
+  function elegirArchivo(e: React.ChangeEvent<HTMLInputElement>) {
+    const elegido = e.target.files?.[0] ?? null;
+    setErrorForm(null);
+    if (!elegido) {
+      setArchivo(null);
+      return;
+    }
+    const motivo = motivoEvidenciaInvalida(elegido, MAX_EVIDENCIA_MB);
+    if (motivo) {
+      setArchivo(null);
+      setErrorForm(motivo);
+      if (inputArchivo.current) inputArchivo.current.value = "";
+      return;
+    }
+    setArchivo(elegido);
+    setQuitarEvidencia(false);
+  }
+
+  function editar(r: RegistroHoras) {
+    setEditando(r.id);
+    setBorrador(borradorDesde(r));
+    setArchivo(null);
+    setQuitarEvidencia(false);
+    setErrorForm(null);
+    setExito(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function validar(horasNum: number): string | null {
+    if (!horasNum || horasNum <= 0 || horasNum > 24) {
+      return "Indica una cantidad de horas válida (mayor a 0 y hasta 24).";
+    }
+    if (!borrador.fecha) return "Indica la fecha de la actividad.";
+    if (borrador.descripcion.trim().length < 3) {
+      return "Describe la actividad (mínimo 3 caracteres).";
+    }
+    if (esComunitario) {
+      if (!borrador.idGrupo && !editandoRegistro) {
+        return "Selecciona el grupo/proyecto del trabajo comunitario.";
+      }
+      const semanaNum = Number(borrador.semana);
+      if (!borrador.semana || !semanaNum || semanaNum < 1 || semanaNum > 52) {
+        return "Indica la semana de la actividad (1 a 52).";
+      }
+    }
+    return null;
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorForm(null);
     setExito(null);
 
-    const horasNum = Number(horas);
-    if (!horasNum || horasNum <= 0 || horasNum > 24) {
-      setErrorForm("Indica una cantidad de horas válida (mayor a 0 y hasta 24).");
+    const horasNum = Number(borrador.horas);
+    const problema = validar(horasNum);
+    if (problema) {
+      setErrorForm(problema);
       return;
     }
 
-    const payload: {
-      tipo: TipoRegistro;
-      fecha: string;
-      horas: number;
-      descripcion: string;
-      semana?: number;
-      idGrupo?: string;
-    } = {
-      tipo: esComunitario ? "comunitario" : subTipo,
-      fecha,
-      horas: horasNum,
-      descripcion: descripcion.trim(),
-    };
+    // Siempre `multipart`: la misma ruta acepta alta y edición, y así el archivo
+    // viaja con el resto de los campos sin cambiar de modo según el caso.
+    const cuerpo = new FormData();
+    cuerpo.append("fecha", borrador.fecha);
+    cuerpo.append("descripcion", borrador.descripcion.trim());
+    cuerpo.append("horas", String(horasNum));
     if (esComunitario) {
-      if (!idGrupo) {
-        setErrorForm("Selecciona el grupo/proyecto del trabajo comunitario.");
-        return;
-      }
-      const semanaNum = Number(semana);
-      if (!semanaNum || semanaNum < 1 || semanaNum > 52) {
-        setErrorForm("Indica la semana de la actividad (1 a 52).");
-        return;
-      }
-      payload.semana = semanaNum;
-      payload.idGrupo = idGrupo;
+      if (borrador.semana) cuerpo.append("semana", borrador.semana);
+      if (borrador.idGrupo) cuerpo.append("idGrupo", borrador.idGrupo);
     }
+    if (archivo) cuerpo.append(CAMPO_EVIDENCIA, archivo);
+    if (quitarEvidencia) cuerpo.append("quitarEvidencia", "true");
+
+    const enCorreccion = editandoRegistro?.estado === "corregir";
 
     setEnviando(true);
     try {
-      await api.post("/bitacoras", payload);
-      setExito("Registro guardado correctamente. Queda pendiente de validación por tu tutor/a.");
-      setHoras("");
-      setDescripcion("");
-      setSemana("");
+      if (editandoRegistro) {
+        await api.patch(`/bitacoras/${editandoRegistro.id}`, cuerpo);
+        setExito(
+          enCorreccion
+            ? "Corrección guardada. Tu registro vuelve a la lista de pendientes del tutor."
+            : "Registro actualizado."
+        );
+      } else {
+        cuerpo.append("tipo", borrador.tipo);
+        await api.post("/bitacoras", cuerpo);
+        setExito("Registro guardado correctamente. Queda pendiente de validación por tu tutor/a.");
+      }
+      limpiarFormulario();
       reload();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setErrorForm(msg ?? "No se pudo guardar el registro.");
+      setErrorForm(mensajeDeError(err, "No se pudo guardar el registro."));
     } finally {
       setEnviando(false);
     }
-  };
+  }
+
+  async function confirmarBorrado(r: RegistroHoras) {
+    if (!window.confirm("¿Retirar este registro? También se eliminará su evidencia.")) return;
+
+    setBorrando(r.id);
+    try {
+      await api.delete(`/bitacoras/${r.id}`);
+      if (editando === r.id) limpiarFormulario();
+      reload();
+    } catch (err: unknown) {
+      setErrorForm(mensajeDeError(err, "No se pudo eliminar el registro."));
+    } finally {
+      setBorrando(null);
+    }
+  }
+
+  const progreso = dash && dash.rol === "estudiante" ? dash : null;
 
   return (
     <div className="space-y-6">
@@ -143,11 +286,35 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
         </p>
       </div>
 
+      {datosMetas && progreso && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">Mi avance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MetasPanel
+              horasDirectas={progreso.horasDirectas}
+              horasImpacto={progreso.horasImpacto}
+              metas={datosMetas.metas}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
-            {esComunitario ? <Clock className="h-4 w-4 text-iunav-blue" /> : <Leaf className="h-4 w-4 text-emerald-600" />}
-            Registrar horas
+            {esComunitario ? (
+              <Clock className="h-4 w-4 text-iunav-blue" />
+            ) : (
+              <Leaf className="h-4 w-4 text-emerald-600" />
+            )}
+            {editandoRegistro ? "Corregir registro" : "Registrar horas"}
+            {editandoRegistro && (
+              <span className="text-xs font-normal text-muted-foreground">
+                (volvió a “{estadoRegistro[editandoRegistro.estado].label}”)
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -157,6 +324,26 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
               ? "no perteneces a ningún proyecto activo."
               : grupos.map((g) => g.nombreProyecto).join(" • ")}
           </p>
+
+          {editandoRegistro && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Estás corrigiendo un registro que tu tutor/a devolvió.
+              {editandoRegistro.comentarioTutor && (
+                <span className="font-medium">Comentario: {editandoRegistro.comentarioTutor}</span>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1"
+                onClick={limpiarFormulario}
+              >
+                <X className="h-3 w-3" />
+                Cancelar
+              </Button>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {esComunitario ? (
@@ -166,11 +353,13 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
                   </label>
                   <select
                     id="grupo"
-                    value={idGrupo}
-                    onChange={(e) => setIdGrupo(e.target.value)}
+                    value={borrador.idGrupo}
+                    onChange={(e) => setBorrador((b) => ({ ...b, idGrupo: e.target.value }))}
                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
-                    <option value="">Selecciona un grupo...</option>
+                    <option value="">
+                      {editandoRegistro ? "Mantener el actual" : "Selecciona un grupo..."}
+                    </option>
                     {grupos.map((g) => (
                       <option key={g.idGrupo} value={g.idGrupo}>
                         {g.nombreProyecto}
@@ -185,8 +374,10 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
                   </label>
                   <select
                     id="subtipo"
-                    value={subTipo}
-                    onChange={(e) => setSubTipo(e.target.value as "social" | "ambiental")}
+                    value={borrador.tipo === "comunitario" ? "social" : borrador.tipo}
+                    onChange={(e) =>
+                      setBorrador((b) => ({ ...b, tipo: e.target.value as "social" | "ambiental" }))
+                    }
                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
                     {TIPOS_SERVICIO.map((t) => (
@@ -209,8 +400,8 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
                     min={1}
                     max={52}
                     placeholder="1-52"
-                    value={semana}
-                    onChange={(e) => setSemana(e.target.value)}
+                    value={borrador.semana}
+                    onChange={(e) => setBorrador((b) => ({ ...b, semana: e.target.value }))}
                     required
                   />
                 </div>
@@ -224,8 +415,8 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
                   id="fecha"
                   type="date"
                   max={new Date().toISOString().slice(0, 10)}
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
+                  value={borrador.fecha}
+                  onChange={(e) => setBorrador((b) => ({ ...b, fecha: e.target.value }))}
                   required
                 />
               </div>
@@ -241,8 +432,8 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
                   min="0.5"
                   max="24"
                   placeholder="Ej. 6.5"
-                  value={horas}
-                  onChange={(e) => setHoras(e.target.value)}
+                  value={borrador.horas}
+                  onChange={(e) => setBorrador((b) => ({ ...b, horas: e.target.value }))}
                   required
                 />
               </div>
@@ -256,11 +447,53 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
                 id="descripcion"
                 rows={3}
                 placeholder="Describe qué realizaste en la actividad..."
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
+                value={borrador.descripcion}
+                onChange={(e) => setBorrador((b) => ({ ...b, descripcion: e.target.value }))}
                 className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
                 required
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="evidencia" className="text-sm font-medium text-foreground">
+                Evidencia (opcional)
+              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  ref={inputArchivo}
+                  id="evidencia"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={elegirArchivo}
+                  className="block w-full text-xs text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-foreground hover:file:bg-primary/20 sm:w-auto"
+                />
+                {archivo && (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Paperclip className="h-3 w-3" />
+                    {archivo.name}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                JPG, PNG, WebP o PDF de hasta {MAX_EVIDENCIA_MB} MB.
+              </p>
+
+              {editandoRegistro?.evidenciaUrl && (
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={quitarEvidencia}
+                    onChange={(e) => {
+                      setQuitarEvidencia(e.target.checked);
+                      if (e.target.checked) {
+                        setArchivo(null);
+                        if (inputArchivo.current) inputArchivo.current.value = "";
+                      }
+                    }}
+                  />
+                  Quitar la evidencia actual
+                </label>
+              )}
             </div>
 
             {errorForm && (
@@ -276,28 +509,33 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
               </div>
             )}
 
-            <Button type="submit" disabled={enviando}>
-              {enviando ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Guardar registro
-                </>
+            <div className="flex gap-2">
+              <Button type="submit" disabled={enviando}>
+                {enviando ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    {editandoRegistro ? "Guardar corrección" : "Guardar registro"}
+                  </>
+                )}
+              </Button>
+              {editandoRegistro && (
+                <Button type="button" variant="outline" onClick={limpiarFormulario}>
+                  Cancelar
+                </Button>
               )}
-            </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
 
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">
-            Mis registros ({filtrados.length})
-          </CardTitle>
+          <CardTitle className="text-base font-semibold">Mis registros ({filtrados.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -316,30 +554,82 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
             </div>
           ) : filtrados.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              Aún no has registrado {esComunitario ? "horas de bitácora comunitaria" : "servicios sociales o ambientales"}.
+              Aún no has registrado{" "}
+              {esComunitario ? "horas de bitácora comunitaria" : "servicios sociales o ambientales"}.
             </p>
           ) : (
             <div className="space-y-3">
-              {filtrados.map((r) => (
-                <div key={r.id} className="border rounded-lg p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant={estadoRegistro[r.estado].variant}>{estadoRegistro[r.estado].label}</Badge>
-                      {!esComunitario && (
-                        <Badge variant="secondary">{r.tipo === "social" ? "Social" : "Ambiental"}</Badge>
+              {filtrados.map((r) => {
+                const editable = esEditable(r);
+                return (
+                  <div key={r.id} className="border rounded-lg p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant={estadoRegistro[r.estado].variant}>
+                          {estadoRegistro[r.estado].label}
+                        </Badge>
+                        {!esComunitario && (
+                          <Badge variant="secondary">
+                            {r.tipo === "social" ? "Social" : "Ambiental"}
+                          </Badge>
+                        )}
+                        {r.semana && (
+                          <span className="text-xs text-muted-foreground">Semana {r.semana}</span>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {mostrarFecha(r.fecha)}
+                        </span>
+                        <span className="text-xs font-semibold text-iunav-blue">
+                          {formatearHoras(r.horas)}
+                        </span>
+                      </div>
+                      {r.proyecto && (
+                        <span className="text-xs text-muted-foreground">{r.proyecto}</span>
                       )}
-                      {r.semana && <span className="text-xs text-muted-foreground">Semana {r.semana}</span>}
-                      <span className="text-xs text-muted-foreground">{mostrarFecha(r.fecha)}</span>
-                      <span className="text-xs font-semibold text-iunav-blue">{formatearHoras(r.horas)}</span>
                     </div>
-                    {r.proyecto && <span className="text-xs text-muted-foreground">{r.proyecto}</span>}
+
+                    <p className="text-sm text-foreground mt-2 leading-snug">{r.descripcion}</p>
+
+                    {r.comentarioTutor && (
+                      <p className="text-xs text-sky-700 mt-2 italic">
+                        Comentario del tutor: {r.comentarioTutor}
+                      </p>
+                    )}
+
+                    <Evidencia ruta={r.evidenciaUrl} />
+
+                    {editable && (
+                      <div className="mt-3 flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => editar(r)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          {r.estado === "corregir" ? "Corregir" : "Editar"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1.5 text-red-600 hover:bg-red-50"
+                          disabled={borrando === r.id}
+                          onClick={() => confirmarBorrado(r)}
+                        >
+                          {borrando === r.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                          Retirar
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-sm text-foreground mt-2 leading-snug">{r.descripcion}</p>
-                  {r.comentarioTutor && (
-                    <p className="text-xs text-sky-700 mt-2 italic">Comentario del tutor: {r.comentarioTutor}</p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

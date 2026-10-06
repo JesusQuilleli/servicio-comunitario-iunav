@@ -1,0 +1,43 @@
+# API IUNAV Servicio Comunitario.
+#
+# Se ejecuta como el usuario de sistema `iunav`, nunca como root: si un archivo
+# subido llegan a ejecutar codigo, el proceso no tiene permisos de administrador.
+[Unit]
+Description=IUNAV API (Express)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=iunav
+Group=iunav
+WorkingDirectory=/opt/iunav/server
+
+# NODE_ENV, PORT, API_HOST, DATABASE_URL, JWT_SECRET y demas viven aqui, no en
+# el codigo y no en el repo. El archivo lo crea deploy/instalar.sh.
+EnvironmentFile=/etc/iunav/server.env
+
+ExecStart=/usr/bin/node dist/index.js
+
+# Lo que mas falla en una VPS es que el proceso muera y nadie lo reinicie. Con
+# `always`, un OOM o un fallo de Postgres al arrancar se recupera solo.
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Endurecimiento. `strict` deja el sistema de archivos en solo lectura salvo lo
+# que este listado en ReadWritePaths: un atacante que lograra ejecutar codigo no
+# podria escribir fuera de la carpeta de subidas ni tocar el codigo desplegado.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/iunav/server/uploads
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iunav-api
+
+[Install]
+WantedBy=multi-user.target

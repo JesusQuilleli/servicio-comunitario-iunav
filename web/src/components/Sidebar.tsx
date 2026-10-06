@@ -11,38 +11,37 @@ import {
   ChevronRight,
   UserPlus,
   LogOut,
+  KeyRound,
+  FileBarChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { UserRole } from "@/lib/types";
-
-export type ViewKey =
-  | "dashboard"
-  | "usuarios"
-  | "proyectos"
-  | "bitacora"
-  | "servicio"
-  | "validacion"
-  | "configuracion"
-  | "registro-usuarios";
+import { ROLES_POR_RUTA, RUTAS, viewDeRuta } from "@/lib/rutas";
 
 interface NavItem {
-  key: ViewKey;
+  key: keyof typeof RUTAS;
   label: string;
   icon: React.ElementType;
-  roles: UserRole[];
 }
 
+// Los roles no se repiten aqui: salen de `ROLES_POR_RUTA`, la misma tabla que
+// usa `proxy.ts` para cortar la ruta. Si el menu y el proxy se olvidaran de un
+// rol, el menu ofreceria una pantalla que el servidor va a rechazar.
 const navItems: NavItem[] = [
-  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "coordinador", "tutor", "estudiante"] },
-  { key: "registro-usuarios", label: "Registro de Usuarios", icon: UserPlus, roles: ["admin"] },
-  { key: "usuarios", label: "Gestión de Usuarios", icon: Users, roles: ["admin", "coordinador"] },
-  { key: "proyectos", label: "Grupos y Proyectos", icon: FolderKanban, roles: ["admin", "coordinador", "tutor"] },
-  { key: "bitacora", label: "Bitácora Comunitario", icon: Clock, roles: ["admin", "coordinador", "tutor", "estudiante"] },
-  { key: "servicio", label: "Servicio Social y Ambiental", icon: Leaf, roles: ["admin", "coordinador", "tutor", "estudiante"] },
-  { key: "validacion", label: "Validación", icon: CheckCircle, roles: ["admin", "coordinador", "tutor"] },
-  { key: "configuracion", label: "Configuraciones", icon: Settings, roles: ["admin", "coordinador"] },
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "registro-usuarios", label: "Registro de Usuarios", icon: UserPlus },
+  { key: "usuarios", label: "Gestión de Usuarios", icon: Users },
+  { key: "proyectos", label: "Grupos y Proyectos", icon: FolderKanban },
+  { key: "bitacora", label: "Bitácora Comunitario", icon: Clock },
+  { key: "servicio", label: "Servicio Social y Ambiental", icon: Leaf },
+  { key: "validacion", label: "Validación", icon: CheckCircle },
+  { key: "configuracion", label: "Configuraciones", icon: Settings },
+  { key: "reportes", label: "Reportes", icon: FileBarChart },
+  { key: "password", label: "Mi contraseña", icon: KeyRound },
 ];
 
 const roleLabels: Record<UserRole, string> = {
@@ -53,17 +52,17 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 interface SidebarProps {
-  activeView: ViewKey;
-  onViewChange: (view: ViewKey) => void;
   userRole: UserRole;
   userName: string;
   onLogout: () => void;
 }
 
-export function Sidebar({ activeView, onViewChange, userRole, userName, onLogout }: SidebarProps) {
+export function Sidebar({ userRole, userName, onLogout }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+  const vistaActual = viewDeRuta(pathname);
 
-  const visibleItems = navItems.filter((item) => item.roles.includes(userRole));
+  const visibleItems = navItems.filter((item) => ROLES_POR_RUTA[item.key].includes(userRole));
   const initials = userName.split(" ").map((n) => n[0]).slice(0, 2).join("");
 
   return (
@@ -89,11 +88,12 @@ export function Sidebar({ activeView, onViewChange, userRole, userName, onLogout
         <ul className="space-y-1">
           {visibleItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeView === item.key;
+            const isActive = vistaActual === item.key;
             return (
               <li key={item.key}>
-                <button
-                  onClick={() => onViewChange(item.key)}
+                <Link
+                  href={RUTAS[item.key]}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
                     isActive
@@ -104,7 +104,7 @@ export function Sidebar({ activeView, onViewChange, userRole, userName, onLogout
                 >
                   <Icon className={cn("h-5 w-5 shrink-0", isActive && "text-white")} />
                   {!collapsed && <span className="truncate">{item.label}</span>}
-                </button>
+                </Link>
               </li>
             );
           })}
@@ -123,15 +123,25 @@ export function Sidebar({ activeView, onViewChange, userRole, userName, onLogout
             </div>
           )}
           {!collapsed && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10 shrink-0"
-              onClick={onLogout}
-              title="Cerrar Sesión"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <Link
+                href={RUTAS.password}
+                aria-label="Cambiar mi contraseña"
+                title="Cambiar mi contraseña"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <KeyRound className="h-4 w-4" />
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10 shrink-0"
+                onClick={onLogout}
+                title="Cerrar Sesión"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           )}
         </div>
       </div>

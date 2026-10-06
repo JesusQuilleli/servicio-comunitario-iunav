@@ -1,0 +1,50 @@
+# Web IUNAV Servicio Comunitario (Next.js).
+#
+# Necesita `web/.next` compilado antes de arrancar: `npm start` no compila, solo
+# sirve. deploy/instalar.sh y deploy/actualizar.sh se encargan del build.
+[Unit]
+Description=IUNAV Web (Next.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=iunav
+Group=iunav
+WorkingDirectory=/opt/iunav/web
+
+# NEXT_PUBLIC_API_URL va aqui y tambien se carga al compilar: Next la incrusta
+# en el bundle del navegador, no se puede cambiar sin reconstruir.
+EnvironmentFile=/etc/iunav/web.env
+
+# Next usa `process.env.HOSTNAME` como interfaz de escucha, y systemd pone ahi el
+# nombre de la maquina (por ejemplo vps-abc123). Si Next intenta resolver ese
+# nombre falla con EADDRNOTAVAIL, y si resuelve a la IP de la VPS queda
+# escuchando en la interfaz publica. Se fija aqui, despues del EnvironmentFile,
+# para que el ultimo valor que gana sea loopback.
+Environment=HOSTNAME=127.0.0.1
+
+# Se invoca el binario de next directamente en vez de `npx next start`, para no
+# pagar el arranque de npx en cada reinicio.
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -p 3000
+
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+# Next escribe en `.next/cache` en tiempo de ejecucion (por ejemplo el cache de
+# optimizacion de imagenes). Sin esta excepcion, el arranque falla con EROFS por
+# el `ProtectSystem=strict` de arriba.
+ReadWritePaths=/opt/iunav/web/.next
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iunav-web
+
+[Install]
+WantedBy=multi-user.target

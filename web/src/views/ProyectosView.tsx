@@ -27,6 +27,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Evidencia } from "@/components/Evidencia";
+import { SubirDocumentosGrupo } from "@/components/SubirDocumentosGrupo";
 import { api } from "@/lib/api";
 import { useApiData } from "@/lib/useApiData";
 import { useAuthStore } from "@/stores/authStore";
@@ -80,8 +82,6 @@ interface FormGrupo {
   periodoId: string;
   tutorId: string;
   coordinadorId: string;
-  proyectoEscritoUrl: string;
-  diapositivasUrl: string;
   estado: EstadoGrupo;
   integrantesIds: string[];
 }
@@ -91,8 +91,6 @@ const FORMULARIO_VACIO: FormGrupo = {
   periodoId: "",
   tutorId: "",
   coordinadorId: "",
-  proyectoEscritoUrl: "",
-  diapositivasUrl: "",
   estado: "en_curso",
   integrantesIds: [],
 };
@@ -101,6 +99,9 @@ export function ProyectosView() {
   const usuario = useAuthStore((s) => s.usuario);
   const puedeGestionar = usuario?.rol === "admin" || usuario?.rol === "coordinador";
   const esTutor = usuario?.rol === "tutor";
+  // Los documentos del proyecto los sube quien lo gestiona, y tambien el tutor
+  // del grupo (el servidor lo comprueba; esto solo evita mostrar el formulario).
+  const puedeSubirDocumentos = puedeGestionar || esTutor;
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<EstadoGrupo | "todos">("todos");
@@ -274,8 +275,6 @@ export function ProyectosView() {
         periodoId: g.periodoId ? String(g.periodoId) : "",
         tutorId: g.tutorId ?? "",
         coordinadorId: g.coordinadorId ?? "",
-        proyectoEscritoUrl: g.proyectoEscritoUrl ?? "",
-        diapositivasUrl: g.diapositivasUrl ?? "",
         estado: g.estado,
         integrantesIds: g.listaIntegrantes.map((i) => i.idUsuario),
       });
@@ -320,8 +319,6 @@ export function ProyectosView() {
         periodoId: form.periodoId ? Number(form.periodoId) : null,
         tutorId: form.tutorId || null,
         coordinadorId: form.coordinadorId || null,
-        proyectoEscritoUrl: form.proyectoEscritoUrl.trim() || null,
-        diapositivasUrl: form.diapositivasUrl.trim() || null,
         estado: form.estado,
         integrantesIds: form.integrantesIds,
       };
@@ -591,37 +588,33 @@ export function ProyectosView() {
               <div className="space-y-2">
                 <p className="text-sm font-semibold text-foreground">Material del proyecto</p>
                 <div className="grid sm:grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-2 rounded-lg border p-3">
-                    <FileText className="h-4 w-4 text-iunav-blue shrink-0" />
+                  <div className="rounded-lg border p-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-iunav-blue shrink-0" />
+                      <span className="font-medium">Proyecto escrito</span>
+                    </div>
                     {detalle.proyectoEscritoUrl ? (
-                      <a
-                        href={detalle.proyectoEscritoUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-iunav-blue-light hover:underline truncate"
-                      >
-                        Proyecto escrito
-                      </a>
+                      <Evidencia ruta={detalle.proyectoEscritoUrl} />
                     ) : (
-                      <span className="text-muted-foreground">Proyecto escrito pendiente</span>
+                      <p className="text-muted-foreground text-xs mt-1">Pendiente de subir</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 rounded-lg border p-3">
-                    <Presentation className="h-4 w-4 text-iunav-blue shrink-0" />
+                  <div className="rounded-lg border p-3">
+                    <div className="flex items-center gap-2">
+                      <Presentation className="h-4 w-4 text-iunav-blue shrink-0" />
+                      <span className="font-medium">Diapositivas</span>
+                    </div>
                     {detalle.diapositivasUrl ? (
-                      <a
-                        href={detalle.diapositivasUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-iunav-blue-light hover:underline truncate"
-                      >
-                        Diapositivas
-                      </a>
+                      <Evidencia ruta={detalle.diapositivasUrl} />
                     ) : (
-                      <span className="text-muted-foreground">Diapositivas pendientes</span>
+                      <p className="text-muted-foreground text-xs mt-1">Pendiente de subir</p>
                     )}
                   </div>
                 </div>
+
+                {puedeSubirDocumentos && (
+                  <SubirDocumentosGrupo idGrupo={detalle.idGrupo} onSubido={reloadDetalle} />
+                )}
               </div>
 
               {puedeGestionar && (
@@ -903,32 +896,8 @@ export function ProyectosView() {
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label htmlFor="proyecto-escrito" className="text-sm font-medium text-foreground">
-                  URL del proyecto escrito
-                </label>
-                <Input
-                  id="proyecto-escrito"
-                  type="url"
-                  placeholder="https://..."
-                  value={form.proyectoEscritoUrl}
-                  onChange={(e) => setForm({ ...form, proyectoEscritoUrl: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="diapositivas" className="text-sm font-medium text-foreground">
-                  URL de las diapositivas
-                </label>
-                <Input
-                  id="diapositivas"
-                  type="url"
-                  placeholder="https://..."
-                  value={form.diapositivasUrl}
-                  onChange={(e) => setForm({ ...form, diapositivasUrl: e.target.value })}
-                />
-              </div>
-            </div>
+            {/* Los documentos no se pegan como URL: se suben al proyecto ya
+                creado, porque es un endpoint aparte. */}
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">

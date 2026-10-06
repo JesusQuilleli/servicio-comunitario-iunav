@@ -2,22 +2,15 @@ import type { NextFunction, Response } from 'express';
 import { z } from 'zod';
 import type { AuthRequest } from '../middleware/auth.js';
 import { ApiError } from '../lib/errors.js';
+import { borrarArchivo, guardarArchivo } from '../lib/archivos.js';
+import { archivoDeCampo } from '../middleware/subida.js';
+import { escribirRuta, leerRuta } from '../models/archivo.model.js';
 import * as model from '../models/grupo.model.js';
 import type { EstadoGrupo } from '../models/grupo.model.js';
 import type { UserRole } from '../types.js';
 
 const estadosGrupo = ['en_curso', 'pendiente_aprobacion', 'finalizado', 'suspendido'] as const;
 const estadosFinal = ['en_curso', 'aprobado', 'reprobado'] as const;
-
-const urlOpcional = z
-  .union([z.string(), z.literal(''), z.null()])
-  .optional()
-  .transform((v) => (v == null ? null : v.trim()))
-  .refine(
-    (v) => v === null || v === '' || /^https?:\/\/\S+$/i.test(v),
-    'Debe ser una URL válida (http:// o https://)'
-  )
-  .transform((v) => (v == null || v === '' ? null : v));
 
 const idOpcional = z
   .union([z.string(), z.literal(''), z.null()])
@@ -40,8 +33,7 @@ const grupoSchema = z.object({
   periodoId: numeroOpcional,
   tutorId: idOpcional,
   coordinadorId: idOpcional,
-  proyectoEscritoUrl: urlOpcional,
-  diapositivasUrl: urlOpcional,
+  // Sin campos de URL: los documentos entran por `POST /:id/documentos`.
   estado: z.enum(estadosGrupo),
   integrantesIds: z.array(z.string().uuid('Estudiante inválido')).max(80).default([]),
 });
@@ -171,6 +163,69 @@ export async function cambiarEstadoFinalIntegrante(
     const grupo = await model.obtenerGrupo(id);
     res.json({ grupo });
   } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * `POST /api/grupos/:id/documentos` con dos campos opcionales:
+ * `proyectoEscrito` y `diapositivas`. Cada uno reemplaza el anterior.
+ *
+ * El archivo se escribe en disco antes de tocar la base de datos, y si la
+ * escritura de la ruta falla se borra lo que se haya guardado. Al reemplazar,
+ * el archivo viejo se borra despues de que la fila apunte al nuevo.
+ */
+export async function subirDocumentos(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  // Archivos ya escritos en disco que la base de datos todavia no referencia.
+  // Si algo falla, estos son los unicos que se pueden borrar: los que ya se
+  // guardaron en una columna tienen que sobrevivir aunque el otro falle, o la
+  // fila quedaria apuntando a un archivo inexistente.
+  const sinReferencia = new Set<string>();
+  try {
+    const usuario = requiereUsuario(req);
+    const { id } = req.params as { id: string };
+
+    const escrito = archivoDeCampo(req, 'proyectoEscrito');
+    const diapositivas = archivoDeCampo(req, 'diapositivas');
+    if (!escrito && !diapositivas) {
+      throw new ApiError(400, 'Adjunta al menos un archivo: el proyecto escrito o las diapositivas');
+    }
+
+    // Se comprueba el permiso antes de escribir nada en disco.
+    await model.exigirGestionDeGrupo(id, usuario);
+
+    const anterior = {
+      proyectoEscritoUrl: await leerRuta('grupos_proyectos', id, 'proyecto_escrito_url'),
+      diapositivasUrl: await leerRuta('grupos_proyectos', id, 'diapositivas_url'),
+    };
+
+    if (escrito) {
+      const ruta = (await guardarArchivo('proyectos', escrito)).ruta;
+      sinReferencia.add(ruta);
+      await escribirRuta('grupos_proyectos', id, 'proyecto_escrito_url', ruta);
+      sinReferencia.delete(ruta);
+    }
+    if (diapositivas) {
+      const ruta = (await guardarArchivo('proyectos', diapositivas)).ruta;
+      sinReferencia.add(ruta);
+      await escribirRuta('grupos_proyectos', id, 'diapositivas_url', ruta);
+      sinReferencia.delete(ruta);
+    }
+
+    // La fila ya apunta a los archivos nuevos: los anteriores sobran.
+    if (escrito && anterior.proyectoEscritoUrl) {
+      await borrarArchivo(anterior.proyectoEscritoUrl);
+    }
+    if (diapositivas && anterior.diapositivasUrl) {
+      await borrarArchivo(anterior.diapositivasUrl);
+    }
+
+    const grupo = await model.obtenerGrupo(id);
+    res.status(201).json({ grupo });
+  } catch (err) {
+    for (const ruta of sinReferencia) {
+      await borrarArchivo(ruta);
+    }
     next(err);
   }
 }

@@ -1,14 +1,18 @@
 import { Router } from 'express';
 import * as config from '../controllers/configuracion.controller.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requiereCambioDePassword } from '../middleware/auth.js';
 import { requireRole } from '../middleware/role.js';
+import { subirArchivo } from '../middleware/subida.js';
 
 const router = Router();
 
 router.use(authenticate);
+router.use(requiereCambioDePassword);
 
 const lectura = requireRole('admin', 'coordinador');
 const soloAdmin = requireRole('admin');
+
+const conDocumento = subirArchivo('plantillas', 'documento');
 
 // GET /api/configuracion -> reglas del programa
 router.get('/', lectura, config.obtenerConfiguracion);
@@ -27,5 +31,8 @@ router.patch('/plantillas/:id', lectura, config.actualizarPlantilla);
 
 // PATCH /api/configuracion/plantillas/:id/activo -> activar o desactivar
 router.patch('/plantillas/:id/activo', lectura, config.cambiarActivoPlantilla);
+
+// POST /api/configuracion/plantillas/:id/documento -> archivo de la plantilla
+router.post('/plantillas/:id/documento', lectura, conDocumento, config.subirDocumentoPlantilla);
 
 export { router as configuracionRouter };

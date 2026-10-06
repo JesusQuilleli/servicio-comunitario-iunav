@@ -313,7 +313,25 @@ async function seedPlantillas(): Promise<void> {
   console.log(`  + ${plantillasSeed.length} plantillas documentales`);
 }
 
+/**
+ * El seed crea cuentas de prueba con contrasenas conocidas y publicas en este
+ * repositorio (`admin123`, `coord123`, `tutor123`, `est123`). Es lo que uno
+ * quiere en una VPS de pruebas y es un agujero en un servidor real.
+ *
+ * Por eso no se ejecuta por accidente: hay que pasar `--confirm-seed`.asi el
+ * dia que esto se despliegue en el IUNAV, un `npm run db:seed` de buena fe no
+ * deja admins con contrasena de diccionario.
+ */
+function confirmarSeed(): void {
+  if (process.argv.includes('--confirm-seed')) return;
+
+  console.error('Este seed crea usuarios de prueba con contrasenas conocidas del repositorio.');
+  console.error('Para continuar, ejecuta:  npm run db:seed -- --confirm-seed');
+  process.exit(1);
+}
+
 async function main(): Promise<void> {
+  confirmarSeed();
   console.log('Ejecutando seed de la base de datos...');
   try {
     const idPeriodo = await seedPeriodo();

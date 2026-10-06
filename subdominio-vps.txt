@@ -1,0 +1,2 @@
+Subodminio: iunav-service.shop-mg.com
+IP vps: 166.0.112.206

@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FirmaSello } from "@/components/FirmaSello";
+import { RestablecerPassword } from "@/components/RestablecerPassword";
 import { api } from "@/lib/api";
 import { useApiData } from "@/lib/useApiData";
 import { useAuthStore } from "@/stores/authStore";
@@ -135,7 +137,16 @@ export function UsuariosView() {
                     <th className="text-left font-medium text-muted-foreground px-4 py-3">Correo</th>
                     <th className="text-left font-medium text-muted-foreground px-4 py-3">Rol</th>
                     <th className="text-left font-medium text-muted-foreground px-4 py-3">Estado</th>
-                    {esAdmin && <th className="text-right font-medium text-muted-foreground px-4 py-3">Acciones</th>}
+                    {esAdmin && (
+                      <th className="text-left font-medium text-muted-foreground px-4 py-3">
+                        Firma y sello
+                      </th>
+                    )}
+                    {esAdmin && (
+                      <th className="text-right font-medium text-muted-foreground px-4 py-3">
+                        Acciones
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -165,25 +176,62 @@ export function UsuariosView() {
                         </Badge>
                       </td>
                       {esAdmin && (
-                        <td className="px-4 py-3 text-right">
-                          {u.idUsuario === usuario?.idUsuario ? (
-                            <span className="text-xs text-muted-foreground">Cuenta actual</span>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-1.5 text-xs"
-                              disabled={toggling === u.idUsuario}
-                              onClick={() => toggleActivo(u)}
-                            >
-                              {toggling === u.idUsuario ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Power className="h-3.5 w-3.5" />
+                        <td className="px-4 py-3">
+                          <div className="flex gap-6">
+                            <FirmaSello
+                              idUsuario={u.idUsuario}
+                              tipo="firma"
+                              rutaActual={u.firmaUrl}
+                              puedeSubir
+                              alCambiar={reload}
+                            />
+                            <FirmaSello
+                              idUsuario={u.idUsuario}
+                              tipo="sello"
+                              rutaActual={u.selloUrl}
+                              puedeSubir
+                              alCambiar={reload}
+                            />
+                          </div>
+                        </td>
+                      )}
+                      {esAdmin && (
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col items-end gap-1">
+                            {u.passwordTemporal && (
+                              <Badge variant="warning" className="text-[10px]">
+                                Clave temporal
+                              </Badge>
+                            )}
+                            <div className="inline-flex gap-1">
+                              {u.idUsuario !== usuario?.idUsuario && (
+                                <>
+                                  <RestablecerPassword
+                                    idUsuario={u.idUsuario}
+                                    nombre={u.nombreCompleto}
+                                    onRestablecido={reload}
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="gap-1.5 text-xs"
+                                    disabled={toggling === u.idUsuario}
+                                    onClick={() => toggleActivo(u)}
+                                  >
+                                    {toggling === u.idUsuario ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <Power className="h-3.5 w-3.5" />
+                                    )}
+                                    {u.activo ? "Desactivar" : "Activar"}
+                                  </Button>
+                                </>
                               )}
-                              {u.activo ? "Desactivar" : "Activar"}
-                            </Button>
-                          )}
+                            </div>
+                            {u.idUsuario === usuario?.idUsuario && (
+                              <span className="text-xs text-muted-foreground">Cuenta actual</span>
+                            )}
+                          </div>
                         </td>
                       )}
                     </tr>

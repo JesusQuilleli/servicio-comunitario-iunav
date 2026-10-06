@@ -1,0 +1,58 @@
+# Caddy al frente de web y API, en un solo dominio.
+#
+# `__DOMINIO__` lo reemplaza deploy/instalar.sh con el subdominio real. Si este
+# archivo se copia a mano a /etc/caddy/Caddyfile, hay que hacer el cambio a mano.
+#
+# Decisiones ya tomadas (no reabrir):
+# - Un solo dominio para web y API. Al quedar en el mismo origen, el navegador
+#   nunca hace una peticion cross-origin, asi que CORS no llega a activarse y no
+#   hay cookie de sesion entre sitios distintos.
+# - TLS lo resuelve Caddy solo, con el certificado de Let's Encrypt renewal
+#   automatico. 443 abierto, 80 solo para el reto de validacion.
+# - El API nunca se expone: escucha en 127.0.0.1 y aqui se le manda trafico.
+
+__DOMINIO__ {
+	# Quitar la cabecera `Server`: dice la version exacta de Caddy.
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# El API.
+	handle /api/* {
+		reverse_proxy 127.0.0.1:4000 {
+			# Si PostgreSQL cae, /api/health responde 503 y Caddy deja de
+			# mandarle trafico en vez de reenviar errores al navegador.
+			health_uri /api/health
+			health_interval 30s
+			health_timeout 5s
+
+			# Las subidas van multipart con archivos de hasta 25 MB
+			# (MAX_DOCUMENTO_MB). Este es el tope externo: si se supera, Caddy
+			# rechaza la peticion antes de leerla en memoria, que es lo que
+			# evita que un cliente nos agote la RAM de la VPS.
+			transport http {
+				request_body {
+					max_size 30MB
+				}
+			}
+		}
+	}
+
+	# La web (Next.js). Next ya lee las cabeceras X-Forwarded-* que Caddy anade,
+	# asi que `npm start` no necesita configuracion extra de proxy.
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	# Lo que se sirve comprimido. Los PDF de reportes y los archivos ya subidos
+	# van sin comprimir: son bytes comprimidos y volver a comprimirlos no ayuda.
+	encode zstd gzip
+}
+
+# Nota sobre CSP: aqui no se define Content-Security-Policy a proposito. Next
+# inyecta scripts de arranque en linea para sus datos de servidor, y una CSP
+# razonable los bloquearia. Si se anade en el futuro, hay que usar nonce/hash de
+# las ramas experimentales de Next, no un allowlist generico.

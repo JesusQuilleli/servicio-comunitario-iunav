@@ -2,20 +2,13 @@ import type { NextFunction, Response } from 'express';
 import { z } from 'zod';
 import type { AuthRequest } from '../middleware/auth.js';
 import { ApiError } from '../lib/errors.js';
+import { borrarArchivo, guardarArchivo } from '../lib/archivos.js';
+import { archivoDe } from '../middleware/subida.js';
+import { escribirRuta, leerRuta } from '../models/archivo.model.js';
 import * as model from '../models/configuracion.model.js';
 import type { TipoPlantilla } from '../models/configuracion.model.js';
 
 const tiposPlantilla = ['bitacora', 'acta', 'informe', 'certificado'] as const;
-
-const urlOpcional = z
-  .union([z.string(), z.literal(''), z.null()])
-  .optional()
-  .transform((v) => (v == null ? null : v.trim()))
-  .refine(
-    (v) => v === null || v === '' || /^https?:\/\/\S+$/i.test(v),
-    'Debe ser una URL válida (http:// o https://)'
-  )
-  .transform((v) => (v == null || v === '' ? null : v));
 
 const periodoIdOpcional = z.preprocess(
   (v) => (v === '' || v === undefined ? null : v),
@@ -62,8 +55,8 @@ const plantillaSchema = z.object({
     .min(3, 'El nombre debe tener al menos 3 caracteres')
     .max(120, 'El nombre es demasiado largo'),
   descripcion: textoOpcional,
+  // El documento se adjunta aparte: `POST /plantillas/:id/documento`.
   tipo: z.enum(tiposPlantilla),
-  urlDocumento: urlOpcional,
 });
 
 const activoSchema = z.object({ activo: z.boolean() });
@@ -122,7 +115,6 @@ export async function crearPlantilla(req: AuthRequest, res: Response, next: Next
       nombre: body.nombre,
       descripcion: body.descripcion,
       tipo: body.tipo as TipoPlantilla,
-      urlDocumento: body.urlDocumento,
     });
     res.status(201).json({ plantilla });
   } catch (err) {
@@ -140,7 +132,6 @@ export async function actualizarPlantilla(req: AuthRequest, res: Response, next:
       nombre: body.nombre,
       descripcion: body.descripcion,
       tipo: body.tipo as TipoPlantilla,
-      urlDocumento: body.urlDocumento,
     });
     res.json({ plantilla });
   } catch (err) {
@@ -161,6 +152,52 @@ export async function cambiarActivoPlantilla(
     const plantilla = await model.cambiarActivoPlantilla(idPlantilla, activo);
     res.json({ plantilla });
   } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * `POST /api/configuracion/plantillas/:id/documento` con el archivo en el campo
+ * `documento`. Las plantillas son los formatos base del programa (bitácora,
+ * acta, informe, certificado): las usa la gestión, no el estudiante.
+ */
+export async function subirDocumentoPlantilla(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  let rutaNueva: string | null = null;
+  try {
+    requiereUsuario(req);
+    const { id } = req.params as { id: string };
+    const idPlantilla = idPlantillaSchema.parse(id);
+
+    // Antes de escribir nada: si la plantilla no existe, es un 404, no un archivo
+    // huerfano en la carpeta de subidas.
+    await model.obtenerPlantilla(idPlantilla);
+
+    const archivo = archivoDe(req, 'documento');
+    if (!archivo) {
+      throw new ApiError(400, 'Adjunta el documento de la plantilla');
+    }
+
+    // La ruta anterior se lee ANTES de escribir: leerla después siempre devolvería
+    // la nueva y el archivo viejo se quedaría huérfano para siempre.
+    const anterior = await leerRuta('plantillas_documento', String(idPlantilla), 'url_documento');
+
+    rutaNueva = (await guardarArchivo('plantillas', archivo)).ruta;
+    await escribirRuta('plantillas_documento', String(idPlantilla), 'url_documento', rutaNueva);
+
+    if (anterior && anterior !== rutaNueva) {
+      await borrarArchivo(anterior);
+    }
+
+    const plantilla = await model.obtenerPlantilla(idPlantilla);
+    res.status(201).json({ plantilla });
+  } catch (err) {
+    if (rutaNueva) {
+      await borrarArchivo(rutaNueva);
+    }
     next(err);
   }
 }
