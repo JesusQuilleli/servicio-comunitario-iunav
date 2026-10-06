@@ -10,14 +10,15 @@
 # Que hace, en orden:
 #   1. Node 22 (el apt de Ubuntu 22.04 trae Node 12; Next 16 exige >= 20.9)
 #   2. PostgreSQL, escuchando solo en localhost
-#   3. Usuario de sistema `iunav` y arbol /opt/iunav
+#   3. Usuario de sistema `iunav` (home en /var/lib/iunav) y arbol /opt/iunav
 #   4. Base de datos de la app y la de pruebas
 #   5. Caddy con el certificado TLS
 #   6. Unidades systemd
 #   7. Cortafuegos: solo 22, 80 y 443
 #
-# Lo que NO hace, y hay que hacer a mano: el `git clone` del codigo (paso 0 del
-# README) y la creacion del remoto privado de git.
+# Lo que NO hace, y hay que hacer a mano: la llave SSH de despliegue y el
+# `git clone` del codigo (paso 3 del README). El repo es privado, asi que sin
+# esa llave el clone falla con Permission denied.
 
 set -euo pipefail
 
@@ -60,16 +61,25 @@ systemctl restart "postgresql@$VERSION_PG-main"
 nota "PostgreSQL $VERSION_PG escuchando solo en localhost:5432."
 
 paso "3/7 Usuario de sistema y arbol del proyecto"
+# El home va en /var/lib/iunav y NO en $RUTA_APP: si el home estuviera dentro
+# del repo, la carpeta .ssh dejaria /opt/iunav no vacio y `git clone` se
+# negaria a entrar. Ademas, ssh busca la deploy key en $HOME/.ssh.
 if ! id -u "$USUARIO_APP" >/dev/null 2>&1; then
-  adduser --system --group --home "$RUTA_APP" --shell /usr/sbin/nologin "$USUARIO_APP"
-  nota "Usuario $USUARIO_APP creado, sin login."
+  adduser --system --group --home /var/lib/iunav --shell /usr/sbin/nologin "$USUARIO_APP"
+  nota "Usuario $USUARIO_APP creado, sin login, home en /var/lib/iunav."
 fi
+mkdir -p /var/lib/iunav
+chown "$USUARIO_APP:$USUARIO_APP" /var/lib/iunav
 if [[ ! -d "$RUTA_APP/.git" ]]; then
   echo >&2
   echo "ERROR: $RUTA_APP no es un repositorio git." >&2
-  echo "Clona el codigo primero (ver deploy/README.md, paso 0):" >&2
-  echo "  sudo mkdir -p $RUTA_APP && sudo chown $USUARIO_APP:$USUARIO_APP $RUTA_APP" >&2
-  echo "  sudo -u $USUARIO_APP git clone <REMOTO> $RUTA_APP" >&2
+  echo "Clona el codigo primero (ver deploy/README.md, paso 3, que incluye la" >&2
+  echo "llave SSH de despliegue que pide el repo privado):" >&2
+  echo "  sudo mkdir -p /var/lib/iunav $RUTA_APP && sudo chown $USUARIO_APP:$USUARIO_APP /var/lib/iunav $RUTA_APP" >&2
+  echo "  sudo -Hu $USUARIO_APP mkdir -p -m 700 /var/lib/iunav/.ssh" >&2
+  echo "  sudo -Hu $USUARIO_APP ssh-keygen -t ed25519 -N '' -f /var/lib/iunav/.ssh/id_ed25519" >&2
+  echo "  sudo cat /var/lib/iunav/.ssh/id_ed25519.pub   # pegarla en GitHub > Deploy keys" >&2
+  echo "  sudo -Hu $USUARIO_APP git clone git@github.com:JesusQuilleli/servicio-comunitario-iunav.git $RUTA_APP" >&2
   exit 1
 fi
 mkdir -p /etc/iunav "$RUTA_APP/server/uploads"

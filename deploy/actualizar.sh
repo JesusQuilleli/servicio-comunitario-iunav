@@ -30,19 +30,19 @@ cd "$RUTA_APP"
 
 paso "Traiendo el codigo"
 if [[ -n "$RAMA" ]]; then
-  sudo -u "$USUARIO_APP" git fetch --all --prune
-  sudo -u "$USUARIO_APP" git checkout "$RAMA"
+  sudo -Hu "$USUARIO_APP" git fetch --all --prune
+  sudo -Hu "$USUARIO_APP" git checkout "$RAMA"
 fi
-if ! sudo -u "$USUARIO_APP" git pull --ff-only; then
+if ! sudo -Hu "$USUARIO_APP" git pull --ff-only; then
   echo >&2
   echo "El pull no fue fast-forward. Revisa si hay commits locales o una" >&2
   echo "divergencia, y haz el merge en una maquina de desarrollo, no aqui." >&2
   exit 1
 fi
-nota "Version desplegada: $(sudo -u "$USUARIO_APP" git rev-parse --short HEAD)"
+nota "Version desplegada: $(sudo -Hu "$USUARIO_APP" git rev-parse --short HEAD)"
 
 paso "Compilando el API"
-sudo -u "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm ci && npm run build"
+sudo -Hu "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm ci && npm run build"
 test -f "$RUTA_APP/server/dist/index.js" || { echo "No se genero dist/index.js" >&2; exit 1; }
 
 paso "Compilando la web"
@@ -53,11 +53,14 @@ set -a
 # shellcheck disable=SC1091
 source /etc/iunav/web.env
 set +a
-sudo -u "$USUARIO_APP" -E bash -c "cd $RUTA_APP/web && npm ci && npm run build"
+# -E pasa las variables exportadas desde /etc/iunav/web.env, pero conserva el
+# HOME de quien corre el script (root), y con HOME=/root el `npm ci` no puede
+# escribir su cache. Se fija HOME a mano.
+sudo -u "$USUARIO_APP" -E bash -c "export HOME=/var/lib/iunav; cd $RUTA_APP/web && npm ci && npm run build"
 test -d "$RUTA_APP/web/.next" || { echo "El build de Next no genero .next" >&2; exit 1; }
 
 paso "Aplicando el esquema"
-sudo -u "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm run db:schema"
+sudo -Hu "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm run db:schema"
 
 paso "Permisos y reinicio"
 # El pull deja los archivos con el uid de quien hizo el pull; esto los devuelve

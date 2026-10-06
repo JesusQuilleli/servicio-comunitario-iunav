@@ -11,16 +11,15 @@ subdominio ya apunta por DNS a la IP de la VPS.
 | Subdominio | `iunav-service.shop-mg.com` |
 | IP publica | `166.0.112.206` |
 | URL final | `https://iunav-service.shop-mg.com` |
-| Remoto git | `https://github.com/<USUARIO>/servicio-comunitario-iunav.git` (privado) |
+| Remoto git | `git@github.com:JesusQuilleli/servicio-comunitario-iunav.git` (privado) |
 
 ## Resumen en una pantalla
 
 | # | Qué | Comando / acción | Se marca |
 |---|---|---|---|
-| 0 | Crear el remoto de git y commitear | `git remote -v` · `git add -A && git commit` | ☐ |
 | 1 | Preparar la maquina | `adduser iunavadmin` · `usermod -aG sudo iunavadmin` | ☐ |
 | 2 | DNS: registro **A** `iunav-service.shop-mg.com` → `166.0.112.206` | `dig +short iunav-service.shop-mg.com` | ☐ |
-| 3 | Clonar el codigo en `/opt/iunav` | `sudo -u iunav git clone <REMOTO> /opt/iunav` | ☐ |
+| 3 | Clave SSH de despliegue en GitHub y clonar en `/opt/iunav` | ver *Paso 3* | ☐ |
 | 4 | Instalar todo (Node, Postgres, Caddy, systemd, firewall) | `sudo ./deploy/instalar.sh iunav-service.shop-mg.com` | ☐ |
 | 4b | **Anotar** la contraseña de la base y el `JWT_SECRET` | salen en pantalla una sola vez | ☐ |
 | 5 | Compilar, sembrar y arrancar | `sudo ./deploy/arrancar.sh --con-datos` | ☐ |
@@ -29,7 +28,7 @@ subdominio ya apunta por DNS a la IP de la VPS.
 
 Desplegar versiones nuevas: `sudo ./deploy/actualizar.sh`.
 
-## Los cinco comandos, listos para copiar
+## Despliegue completo, listo para copiar
 
 Todo el despliegue, asumiendo que el repo ya esta en GitHub y el DNS ya
 resuelve:
@@ -38,24 +37,36 @@ resuelve:
 # 1. Entrar a la VPS
 ssh root@166.0.112.206
 
-# 2. Usuario normal + clonar
+# 2. Usuario normal
 adduser iunavadmin && usermod -aG sudo iunavadmin
 su - iunavadmin
-sudo apt-get update && sudo apt-get install -y git
-dig +short iunav-service.shop-mg.com        # debe devolver 166.0.112.206
-sudo mkdir -p /opt/iunav
-sudo useradd --system --group --home /opt/iunav --shell /usr/sbin/nologin iunav
-sudo chown iunav:iunav /opt/iunav
-sudo -u iunav git clone https://github.com/<USUARIO>/servicio-comunitario-iunav.git /opt/iunav
+sudo apt-get update && sudo apt-get install -y git openssh-client
 
-# 3. Instalar (anota la clave de la base y el JWT_SECRET)
-cd /opt/iunav && chmod +x deploy/*.sh
+# 3. Comprobar el DNS (debe devolver 166.0.112.206)
+dig +short iunav-service.shop-mg.com
+
+# 4. Usuario de servicio, clave SSH de despliegue y clonado
+#    El home del usuario va FUERA del repo: si viviera en /opt/iunav, la carpeta
+#    .ssh dejaria el directorio no vacio y `git clone` se negaria a entrar.
+id -u iunav 2>/dev/null || sudo adduser --system --group --home /var/lib/iunav --shell /usr/sbin/nologin iunav
+sudo mkdir -p /var/lib/iunav /opt/iunav
+sudo chown iunav:iunav /var/lib/iunav /opt/iunav
+sudo -Hu iunav mkdir -p -m 700 /var/lib/iunav/.ssh
+sudo -Hu iunav ssh-keygen -t ed25519 -N "" -C iunav-vps -f /var/lib/iunav/.ssh/id_ed25519
+sudo -Hu iunav sh -c 'ssh-keyscan github.com >> /var/lib/iunav/.ssh/known_hosts'
+echo "== pega esta llave en GitHub: Settings > Deploy keys > Add deploy key (solo lectura) =="
+sudo cat /var/lib/iunav/.ssh/id_ed25519.pub
+# ... pegas la llave aca y luego:
+sudo -Hu iunav git clone git@github.com:JesusQuilleli/servicio-comunitario-iunav.git /opt/iunav
+
+# 5. Instalar (anota la clave de la base y el JWT_SECRET)
+cd /opt/iunav && sudo chmod +x deploy/*.sh
 sudo ./deploy/instalar.sh iunav-service.shop-mg.com
 
-# 4. Compilar, sembrar datos y arrancar
+# 6. Compilar, sembrar datos y arrancar
 sudo ./deploy/arrancar.sh --con-datos
 
-# 5. Respaldo diario
+# 7. Respaldo diario
 sudo crontab -e     # anadir: 17 3 * * * /opt/iunav/deploy/backup.sh >> /var/log/iunav-backup.log 2>&1
 ```
 
@@ -68,31 +79,15 @@ Internet ──> Caddy (:443, TLS)  ┬─ /api/*  ──> 127.0.0.1:4000   Expr
                                  └─ /*       ──> 127.0.0.1:3000   Next.js
 
 PostgreSQL 127.0.0.1:5432  (nunca expuesto)
+/opt/iunav                  (codigo, propiedad de iunav)
 /opt/iunav/server/uploads    (evidencias, firmas, sellos)
+/var/lib/iunav               (home de iunav: llave SSH de despliegue)
 /etc/iunav/server.env        (secretos, modo 640)
 ```
 
 Un solo dominio para web y API. Al quedar en el mismo origen, CORS casi nunca se
 activa y no hay cookie de sesion entre sitios distintos. Caddy es el unico proceso
 que ve internet.
-
-## Paso 0: el remoto de git, antes que nada
-
-El repositorio hoy **no tiene remoto** y tiene 42 modificados, 39 borrados y 40
-archivos nuevos sin commitear. Sin commit previo, no hay nada que clonar.
-
-```bash
-git remote -v                       # si no sale nada, no hay remoto
-```
-
-Hay que crear un remoto **privado**. No publico: en el historial esta la
-contraseña de Supabase que se borro del arbol de trabajo pero sigue en los
-commits viejos. Ademas, un remoto publico de un repositorio de una
-universidad con datos de estudiantes es una decision que no se toma por
-accidente.
-
-Si ese proyecto de Supabase ya no se usa, rota la contrasena antes de publicar
-el repo en cualquier sitio.
 
 ## Paso 1: preparar la maquina
 
@@ -104,7 +99,12 @@ trabajar como root:
 ```bash
 adduser iunavadmin
 usermod -aG sudo iunavadmin
+su - iunavadmin
+sudo apt-get update && sudo apt-get install -y git openssh-client
 ```
+
+`openssh-client` hace falta para el paso 3: por defecto la VPS no trae el
+cliente `ssh`.
 
 ## Paso 2: apuntar el DNS
 
@@ -123,21 +123,55 @@ dig +short iunav-service.shop-mg.com   # debe devolver 166.0.112.206
 
 ## Paso 3: subir el codigo
 
-El codigo va en `/opt/iunav`, propiedad del usuario de sistema `iunav`:
+El codigo esta en un repo **privado**:
+
+```
+git@github.com:JesusQuilleli/servicio-comunitario-iunav.git
+```
+
+Como es privado, la VPS necesita credencial para clonarlo. La mas simple y la
+mas segura es una **deploy key**: llave SSH de solo lectura, valida unicamente
+para este repositorio y revocable en un clic. No es una contrasena de usuario
+ni sirve para tocar nada mas. En GitHub no hay que generar tokens.
+
+El codigo va en `/opt/iunav`, propiedad del usuario de sistema `iunav`. Todo
+desde `iunavadmin`, con `sudo`. Ojo con el home del usuario: **no** va dentro
+de `/opt/iunav`, porque entonces la carpeta `.ssh` dejaria el directorio no
+vacio y `git clone` se negaria a entrar. Va en `/var/lib/iunav`.
 
 ```bash
-sudo apt-get update
-sudo mkdir -p /opt/iunav
-sudo useradd --system --group --home /opt/iunav --shell /usr/sbin/nologin iunav
-sudo chown iunav:iunav /opt/iunav
-sudo -u iunav git clone <REMOTO-PRIVADO> /opt/iunav
+id -u iunav 2>/dev/null || sudo adduser --system --group --home /var/lib/iunav --shell /usr/sbin/nologin iunav
+sudo mkdir -p /var/lib/iunav /opt/iunav
+sudo chown iunav:iunav /var/lib/iunav /opt/iunav
+sudo -Hu iunav mkdir -p -m 700 /var/lib/iunav/.ssh
+sudo -Hu iunav ssh-keygen -t ed25519 -N "" -C iunav-vps -f /var/lib/iunav/.ssh/id_ed25519
+sudo -Hu iunav sh -c 'ssh-keyscan github.com >> /var/lib/iunav/.ssh/known_hosts'
+sudo cat /var/lib/iunav/.ssh/id_ed25519.pub      # imprime la llave publica
 ```
+
+Con esa llave publica, en GitHub: `JesusQuilleli/servicio-comunitario-iunav`
+→ **Settings** → **Deploy keys** → **Add deploy key**, pegarla, marcar *Allow
+read-only access* y **Add key**. Despues, de vuelta en la VPS:
+
+```bash
+sudo -Hu iunav git clone git@github.com:JesusQuilleli/servicio-comunitario-iunav.git /opt/iunav
+```
+
+Si el clon falla con `Permission denied (publickey)`, la llave no se pego bien
+en GitHub o falto el `ssh-keyscan`. Repetir esas dos lineas.
+
+El `-H` de `sudo` no es adorno: fija `HOME=/var/lib/iunav`, que es donde `git`
+y `ssh` buscan la llave. Sin el, segun la version de sudo, podrian buscar en el
+home de quien ejecuta el `sudo` y no encontrarla.
+
+El codigo de desarrollo local no cambia: ahi sigue con su `origin` normal por
+HTTPS. La deploy key solo vive en la VPS.
 
 ## Paso 4: instalar dependencias, base, TLS y firewall
 
 ```bash
 cd /opt/iunav
-chmod +x deploy/*.sh              # solo si el bit de ejecucion se perdio al clonar
+sudo chmod +x deploy/*.sh           # por si el bit de ejecucion no viajo en el clon
 sudo ./deploy/instalar.sh iunav-service.shop-mg.com
 ```
 
@@ -186,13 +220,16 @@ protegerse de perder el disco hay que copiar `/var/backups/iunav` a otra maquina
 
 ## Despliegues siguientes
 
-Con el codigo ya en el remoto:
+Con el codigo ya subido y la deploy key instalada, una sola linea:
 
 ```bash
-cd /opt/iunav
-git pull              # o: sudo ./deploy/actualizar.sh <rama>
-sudo ./deploy/actualizar.sh
+cd /opt/iunav && sudo ./deploy/actualizar.sh          # rama por defecto
+cd /opt/iunav && sudo ./deploy/actualizar.sh <rama>   # otra rama
 ```
+
+`actualizar.sh` hace el `git pull --ff-only` **como el usuario `iunav`**, que es
+el dueño de la llave SSH: un `git pull` hecho como root o como `iunavadmin` no
+encontraria la llave y fallaria con `Permission denied (publickey)`.
 
 `git pull --ff-only` a proposito: nunca resuelve conflictos en el servidor. El
 script recompila, aplica el esquema, reinicia y comprueba que ambos servicios
@@ -221,6 +258,7 @@ Los logs van a journald, no a archivos. `sudo journalctl -u iunav-api -f`.
 | La web carga pero toda llamada va a `localhost:4000` | Se compilo sin `NEXT_PUBLIC_API_URL`: `sudo ./deploy/actualizar.sh` la carga desde `/etc/iunav/web.env` |
 | 413 al subir un archivo grande | Tope de Caddy (30 MB en `deploy/Caddyfile`) o de multer: `MAX_EVIDENCIA_MB` / `MAX_DOCUMENTO_MB` en `/etc/iunav/server.env` |
 | 502 en cualquier pagina | El servicio de esa mitad no esta arriba: revisar `iunav-web` o `iunav-api` |
+| `Permission denied (publickey)` al clonar o al actualizar | Falta la deploy key en GitHub, o se hizo el `git` como otro usuario que no es `iunav` |
 
 ## Lo que este despliegue NO cubre
 

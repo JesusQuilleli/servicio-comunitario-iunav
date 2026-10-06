@@ -19,7 +19,7 @@ paso() { printf '\n\033[1;34m==> %s\033[0m\n' "$1"; }
 nota() { printf '    %s\n' "$1"; }
 
 paso "Compilando el API"
-sudo -u "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm ci && npm run build"
+sudo -Hu "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm ci && npm run build"
 test -f "$RUTA_APP/server/dist/index.js" || { echo "No se genero dist/index.js" >&2; exit 1; }
 
 paso "Compilando la web"
@@ -30,11 +30,14 @@ set -a
 # shellcheck disable=SC1091
 source /etc/iunav/web.env
 set +a
-sudo -u "$USUARIO_APP" -E bash -c "cd $RUTA_APP/web && npm ci && npm run build"
+# -E pasa las variables exportadas desde /etc/iunav/web.env, pero conserva el
+# HOME de quien corre el script (root), y con HOME=/root el `npm ci` no puede
+# escribir su cache. Se fija HOME a mano.
+sudo -u "$USUARIO_APP" -E bash -c "export HOME=/var/lib/iunav; cd $RUTA_APP/web && npm ci && npm run build"
 test -d "$RUTA_APP/web/.next" || { echo "El build de Next no genero .next" >&2; exit 1; }
 
 paso "Creando el esquema"
-sudo -u "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm run db:schema"
+sudo -Hu "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm run db:schema"
 
 if $CON_DATOS; then
   paso "Sembrando datos de prueba"
@@ -42,7 +45,7 @@ if $CON_DATOS; then
   # publicadas en el repo. En una VPS personal de pruebas es lo que se quiere;
   # en el servidor del IUNAV habria que cambiar la clave del admin nada mas
   # entrar por primera vez.
-  sudo -u "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm run db:seed -- --confirm-seed"
+  sudo -Hu "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm run db:seed -- --confirm-seed"
   echo
   echo "    Cuentas creadas. Entrar como admin@iunav.edu.ve / admin123"
   echo "    (cambiar esa clave en el primer inicio si la VPS es publica)"
