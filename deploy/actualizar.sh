@@ -55,8 +55,10 @@ source /etc/iunav/web.env
 set +a
 # -E pasa las variables exportadas desde /etc/iunav/web.env, pero conserva el
 # HOME de quien corre el script (root), y con HOME=/root el `npm ci` no puede
-# escribir su cache. Se fija HOME a mano.
-sudo -u "$USUARIO_APP" -E bash -c "export HOME=/var/lib/iunav; cd $RUTA_APP/web && npm ci && npm run build"
+# escribir su cache. Se fija HOME a mano. Ademas se quita NODE_ENV: viene
+# "production" desde web.env y con eso npm ci omitiria las dependencias de
+# desarrollo (@tailwindcss/postcss y tailwindcss), que el build de Next NECESITA.
+sudo -u "$USUARIO_APP" -E bash -c "export HOME=/var/lib/iunav; cd $RUTA_APP/web && unset NODE_ENV && npm ci && npm run build"
 test -d "$RUTA_APP/web/.next" || { echo "El build de Next no genero .next" >&2; exit 1; }
 
 paso "Aplicando el esquema"
