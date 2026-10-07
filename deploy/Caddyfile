@@ -30,13 +30,13 @@ __DOMINIO__ {
 			health_timeout 5s
 
 			# Las subidas van multipart con archivos de hasta 25 MB
-			# (MAX_DOCUMENTO_MB). Este es el tope externo: si se supera, Caddy
-			# rechaza la peticion antes de leerla en memoria, que es lo que
-			# evita que un cliente nos agote la RAM de la VPS.
-			transport http {
-				request_body {
-					max_size 30MB
-				}
+			# (MAX_DOCUMENTO_MB). `request_body` es subdirectiva del propio
+			# reverse_proxy (NO va dentro de `transport http {}`, eso rompe el
+			# parseo: "unrecognized subdirective request_body"). Es el tope
+			# externo: si se supera, Caddy rechaza la peticion antes de leerla
+			# en memoria, que es lo que evita que un cliente agote la RAM.
+			request_body {
+				max_size 30MB
 			}
 		}
 	}
