@@ -64,7 +64,10 @@ sudo -u "$USUARIO_APP" -E bash -c "export HOME=/var/lib/iunav; cd $RUTA_APP/web 
 test -d "$RUTA_APP/web/.next" || { echo "El build de Next no genero .next" >&2; exit 1; }
 
 paso "Aplicando el esquema"
-sudo -Hu "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm run db:schema"
+# /etc/iunav/server.env es donde vive la config en la VPS (no hay server/.env,
+# como esperaria dotenv). db:schema importa env.ts, que exige DATABASE_URL y
+# JWT_SECRET.
+sudo -Hu "$USUARIO_APP" bash -c "set -a && source /etc/iunav/server.env && set +a && cd $RUTA_APP/server && npm run db:schema"
 
 paso "Permisos y reinicio"
 # El pull deja los archivos con el uid de quien hizo el pull; esto los devuelve

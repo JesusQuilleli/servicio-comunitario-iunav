@@ -44,7 +44,10 @@ sudo -u "$USUARIO_APP" -E bash -c "export HOME=/var/lib/iunav; cd $RUTA_APP/web 
 test -d "$RUTA_APP/web/.next" || { echo "El build de Next no genero .next" >&2; exit 1; }
 
 paso "Creando el esquema"
-sudo -Hu "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm run db:schema"
+# En la VPS la config del server vive en /etc/iunav/server.env (no existe
+# server/.env, que es lo que leeria dotenv solo). db:schema importa env.ts, que
+# exige DATABASE_URL y JWT_SECRET, asi que hay que cargarlo antes de correrlo.
+sudo -Hu "$USUARIO_APP" bash -c "set -a && source /etc/iunav/server.env && set +a && cd $RUTA_APP/server && npm run db:schema"
 
 if $CON_DATOS; then
   paso "Sembrando datos de prueba"
@@ -52,7 +55,7 @@ if $CON_DATOS; then
   # publicadas en el repo. En una VPS personal de pruebas es lo que se quiere;
   # en el servidor del IUNAV habria que cambiar la clave del admin nada mas
   # entrar por primera vez.
-  sudo -Hu "$USUARIO_APP" bash -c "cd $RUTA_APP/server && npm run db:seed -- --confirm-seed"
+  sudo -Hu "$USUARIO_APP" bash -c "set -a && source /etc/iunav/server.env && set +a && cd $RUTA_APP/server && npm run db:seed -- --confirm-seed"
   echo
   echo "    Cuentas creadas. Entrar como admin@iunav.edu.ve / admin123"
   echo "    (cambiar esa clave en el primer inicio si la VPS es publica)"
