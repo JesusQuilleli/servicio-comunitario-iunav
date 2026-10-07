@@ -1,0 +1,4 @@
+# Los scripts se ejecutan en Linux: siempre fin de linea LF.
+# Con CRLF o con BOM, bash falla con "Illegal option -o pipefail" o con
+# "#!/usr/bin/env: not found".
+*.sh text eol=lf

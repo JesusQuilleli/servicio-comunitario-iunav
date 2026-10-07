@@ -1,4 +1,4 @@
-﻿import { CambiarPassword } from "@/components/CambiarPassword";
+import { CambiarPassword } from "@/components/CambiarPassword";
 
 export default function Page() {
   return (

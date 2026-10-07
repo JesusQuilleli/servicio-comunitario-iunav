@@ -1,4 +1,4 @@
-﻿import { RegistroHorasView } from "@/views/RegistroHorasView";
+import { RegistroHorasView } from "@/views/RegistroHorasView";
 
 export default function Page() {
   return <RegistroHorasView tipo="servicio" />;

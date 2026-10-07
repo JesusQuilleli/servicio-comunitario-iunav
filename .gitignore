@@ -22,3 +22,7 @@ dist-ssr
 *.sw?
 .env
 supabase_config.txt
+
+# Notas locales de la VPS: contienen la contrasena de acceso. Nunca al repo.
+VPS.txt
+Logs Github.txt

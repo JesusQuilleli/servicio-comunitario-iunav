@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 #
 # Primera instalacion del sistema en una VPS Ubuntu 22.04 (vacia).
 #
