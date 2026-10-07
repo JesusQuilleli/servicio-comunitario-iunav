@@ -58,7 +58,9 @@ set +a
 # escribir su cache. Se fija HOME a mano. Ademas se quita NODE_ENV: viene
 # "production" desde web.env y con eso npm ci omitiria las dependencias de
 # desarrollo (@tailwindcss/postcss y tailwindcss), que el build de Next NECESITA.
-sudo -u "$USUARIO_APP" -E bash -c "export HOME=/var/lib/iunav; cd $RUTA_APP/web && unset NODE_ENV && npm ci && npm run build"
+# `rm -rf .next` antes del build: Turbopack reutiliza su cache persistente y una
+# corrida fallida queda grabada y se repite el mismo error en la siguiente.
+sudo -u "$USUARIO_APP" -E bash -c "export HOME=/var/lib/iunav; cd $RUTA_APP/web && unset NODE_ENV && npm ci && rm -rf .next && npm run build"
 test -d "$RUTA_APP/web/.next" || { echo "El build de Next no genero .next" >&2; exit 1; }
 
 paso "Aplicando el esquema"
