@@ -28,7 +28,10 @@ export function proxy(request: NextRequest) {
     const esPanel = rutasPanel.some(
       (ruta) => pathname === ruta || pathname.startsWith(`${ruta}/`)
     );
-    if (esPanel || pathname === "/login") {
+    // Sin sesion, el panel va al login. Pero `/login` mismo debe RENDERIZARSE:
+    // redirigirlo a si mismo seria un 307 en bucle (ERR_TOO_MANY_REDIRECTS),
+    // porque este proxy corre despues de que "/" hace redirect("/login").
+    if (esPanel) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     return NextResponse.next();
