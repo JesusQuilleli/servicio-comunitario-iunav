@@ -12,6 +12,16 @@
 # - El API nunca se expone: escucha en 127.0.0.1 y aqui se le manda trafico.
 
 __DOMINIO__ {
+	# Las subidas van multipart con archivos de hasta 25 MB (MAX_DOCUMENTO_MB).
+	# `request_body` es una directiva de nivel de sitio (experimental desde
+	# Caddy 2.10): NO va como subdirectiva de `reverse_proxy`, ahi el adaptador
+	# falla con "unrecognized subdirective request_body". Rechaza cuerpos de mas
+	# de 30 MB con 413 antes de leerlos, asi un cliente no nos obliga a
+	# bufferizar una subida gigante.
+	request_body {
+		max_size 30MB
+	}
+
 	# Quitar la cabecera `Server`: dice la version exacta de Caddy.
 	header {
 		-Server
@@ -28,16 +38,6 @@ __DOMINIO__ {
 			health_uri /api/health
 			health_interval 30s
 			health_timeout 5s
-
-			# Las subidas van multipart con archivos de hasta 25 MB
-			# (MAX_DOCUMENTO_MB). `request_body` es subdirectiva del propio
-			# reverse_proxy (NO va dentro de `transport http {}`, eso rompe el
-			# parseo: "unrecognized subdirective request_body"). Es el tope
-			# externo: si se supera, Caddy rechaza la peticion antes de leerla
-			# en memoria, que es lo que evita que un cliente agote la RAM.
-			request_body {
-				max_size 30MB
-			}
 		}
 	}
 
