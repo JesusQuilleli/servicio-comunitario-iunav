@@ -57,7 +57,7 @@ if $CON_DATOS; then
   # entrar por primera vez.
   sudo -Hu "$USUARIO_APP" bash -c "set -a && source /etc/iunav/server.env && set +a && cd $RUTA_APP/server && npm run db:seed -- --confirm-seed"
   echo
-  echo "    Cuentas creadas. Entrar como admin@iunav.edu.ve / admin123"
+  echo "    Cuentas creadas. Entrar como cmendoza@iunav.edu.ve / admin123"
   echo "    (cambiar esa clave en el primer inicio si la VPS es publica)"
   echo
 else

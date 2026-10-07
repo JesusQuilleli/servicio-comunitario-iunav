@@ -201,7 +201,7 @@ sirva `/login`; si algo no sube, imprime el journal del servicio que fallo.
 
 ## Paso 6: entrar
 
-`https://iunav-service.shop-mg.com`, como `admin@iunav.edu.ve` / `admin123`.
+`https://iunav-service.shop-mg.com`, como `cmendoza@iunav.edu.ve` / `admin123`.
 
 **Cambia esa clave en el primer inicio.** La VPS es publica y la contrasena esta
 publicada en este repositorio.
