@@ -32,6 +32,9 @@ const BORDE = '#d1d5db';
 
 const MARGEN = 40;
 
+/** Nombre completo de la institucion: IUNAV. */
+export const NOMBRE_INSTITUCION = 'Instituto Universitario Adventista de Venezuela';
+
 export class DocumentoPdf {
   readonly doc: PDFKit.PDFDocument;
   private anchoUtil: number;
@@ -55,24 +58,29 @@ export class DocumentoPdf {
     const { doc } = this;
     doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(16);
     doc.text('COMUNIDAD IUNAV', { align: 'center' });
-    doc.fontSize(13).text(m.titulo, { align: 'center' });
+    doc.font('Helvetica').fontSize(9).fillColor(GRIS);
+    doc.text(NOMBRE_INSTITUCION, { align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(13).fillColor(AZUL);
+    doc.text(pdfSeguro(m.titulo), { align: 'center' });
     doc.font('Helvetica').fontSize(10).fillColor(GRIS);
-    doc.text(m.subtitulo, { align: 'center' });
+    doc.text(pdfSeguro(m.subtitulo), { align: 'center' });
     doc.moveDown(0.8);
 
+    // Cada par etiqueta/valor es una linea: la llamada con `continued` deja el
+    // cursor (y) donde estaba y la del valor lo baja. El cursor NO se retrocede
+    // despues del bloque: hacerlo pintaba la linea y la tabla encima de estos
+    // datos, que era justo el texto encimado de los reportes.
     if (m.datos?.length) {
-      const y = doc.y;
       doc.fontSize(9);
       for (const d of m.datos) {
         doc
           .font('Helvetica-Bold')
           .fillColor(AZUL)
-          .text(`${d.etiqueta}: `, { continued: true })
+          .text(pdfSeguro(`${d.etiqueta}: `), { continued: true })
           .font('Helvetica')
           .fillColor(GRIS)
-          .text(d.valor);
+          .text(pdfSeguro(d.valor));
       }
-      doc.y = y;
       doc.moveDown(0.8);
     }
 
@@ -93,6 +101,12 @@ export class DocumentoPdf {
   /**
    * Dibuja una tabla. Si no cabe, empieza otra pagina y vuelve a pintar la
    * fila de cabeceras, para que ninguna hoja quede sin titulo.
+   *
+   * Las celdas NO se envuelven: cada fila mide `altoFila` fijo, y una celda
+   * que pasara a segunda linea caeria encima de la fila siguiente (el motivo
+   * por el que los reportes se leian encimados). `ellipsis` de PDFKit no sirve
+   * aqui porque solo funciona con `height`, asi que el corte se hace a mano
+   * midiendo el texto con la misma fuente con la que se va a pintar.
    */
   tabla(columnas: Columna[], filas: string[][], opciones: { size?: number } = {}): void {
     const { doc } = this;
@@ -105,10 +119,9 @@ export class DocumentoPdf {
       let x = MARGEN;
       doc.font('Helvetica-Bold').fontSize(size).fillColor(AZUL);
       for (const c of columnas) {
-        doc.text(c.titulo, x + 4, y + 4, {
+        doc.text(this.truncar(pdfSeguro(c.titulo), c.ancho - 8), x + 4, y + 4, {
           width: c.ancho - 8,
           align: c.alinear ?? 'left',
-          lineBreak: false,
         });
         x += c.ancho;
       }
@@ -129,11 +142,9 @@ export class DocumentoPdf {
       let x = MARGEN;
       doc.font('Helvetica').fontSize(size).fillColor('#111827');
       columnas.forEach((c, i) => {
-        doc.text(fila[i] ?? '', x + 4, y + 4, {
+        doc.text(this.truncar(pdfSeguro(fila[i] ?? ''), c.ancho - 8), x + 4, y + 4, {
           width: c.ancho - 8,
           align: c.alinear ?? 'left',
-          lineBreak: false,
-          ellipsis: true,
         });
         x += c.ancho;
       });
@@ -141,6 +152,29 @@ export class DocumentoPdf {
       this.lineaFila(y + altoFila);
     }
     doc.moveDown(0.8);
+  }
+
+  /**
+   * Corta el texto para que quepa en `ancho` puntos con la fuente activa,
+   * terminando en `...` y, si hay donde cortar, en un limite de palabra.
+   */
+  private truncar(texto: string, ancho: number): string {
+    const { doc } = this;
+    if (ancho <= 0 || doc.widthOfString(texto) <= ancho) return texto;
+
+    const sufijo = '...';
+    let corte = texto;
+    while (corte.length > 0 && doc.widthOfString(corte + sufijo) > ancho) {
+      corte = corte.slice(0, -1);
+    }
+
+    const espacio = corte.lastIndexOf(' ');
+    if (espacio > 0 && espacio >= corte.length - corte.length * 0.4) {
+      corte = corte.slice(0, espacio);
+    }
+
+    const resultado = `${corte}${sufijo}`;
+    return doc.widthOfString(resultado) <= ancho ? resultado : sufijo;
   }
 
   private lineaFila(y: number): void {
@@ -158,7 +192,7 @@ export class DocumentoPdf {
       .font(opciones.negrita ? 'Helvetica-Bold' : 'Helvetica')
       .fontSize(opciones.size ?? 9.5)
       .fillColor(opciones.color ?? '#111827')
-      .text(texto, { align: 'justify' });
+      .text(pdfSeguro(texto), { align: 'justify' });
     doc.moveDown(0.4);
   }
 
@@ -166,24 +200,39 @@ export class DocumentoPdf {
     if (this.doc.y > this.doc.page.height - MARGEN - 90) {
       this.doc.addPage();
     }
-    this.doc.moveDown(0.4).fillColor(AZUL).font('Helvetica-Bold').fontSize(11).text(texto);
+    this.doc
+      .moveDown(0.4)
+      .fillColor(AZUL)
+      .font('Helvetica-Bold')
+      .fontSize(11)
+      .text(pdfSeguro(texto));
     this.linea();
     this.doc.moveDown(0.5);
   }
 
-  /** Cierra el documento y devuelve los bytes, con pie de página en todas las hojas. */
+  /**
+   * Cierra el documento y devuelve los bytes, con pie de página en todas las hojas.
+   *
+   * El pie se dibuja dentro del área útil (`page.maxY()`): PDFKit se niega a
+   * componer texto por debajo de ese límite y en su lugar agregaba una página
+   * nueva con el renglón suelto en la parte de arriba, dejando los reportes
+   * con hojas de más y sin pie.
+   */
   async finalizar(generadoPor: string): Promise<Buffer> {
     const { doc } = this;
     const rango = doc.bufferedPageRange();
+    const emisor = pdfSeguro(generadoPor);
 
     for (let i = rango.start; i < rango.start + rango.count; i++) {
       doc.switchToPage(i);
-      const y = doc.page.height - 34;
+      // 10pt sobre el limite inferior: alcanza para el renglon (≈9pt a 7,5pt)
+      // sin que el salto de pagina de PDFKit entre en escena.
+      const y = doc.page.maxY() - 10;
       doc
         .font('Helvetica')
         .fontSize(7.5)
         .fillColor(GRIS)
-        .text(`Generado por ${generadoPor}`, MARGEN, y, {
+        .text(`Generado por ${emisor}`, MARGEN, y, {
           width: this.anchoUtil / 2,
           align: 'left',
           lineBreak: false,
@@ -213,14 +262,21 @@ export class DocumentoPdf {
   }
 }
 
-/** Normaliza texto a los caracteres que las fuentes estándar de PDFKit saben dibujar. */
+/**
+ * Normaliza texto a los caracteres que las fuentes estándar de PDFKit saben
+ * dibujar (Helvetica = WinAnsi: ASCII + Latin-1). Todo lo que entra al
+ * documento pasa por aqui, porque un carácter fuera de ese rango se pierde en
+ * silencio y deja huecos en el reporte.
+ */
 export function pdfSeguro(texto: string): string {
   return texto
-    .replace(/\u2014/g, '-')
-    .replace(/\u2013/g, '-')
-    .replace(/\u2018|\u2019/g, "'")
-    .replace(/\u201c|\u201d/g, '"')
-    .replace(/[^\x20-\x7E\u00A0-\u00FF\n]/g, '');
+    .replace(/[\u2014\u2013]/g, '-')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201c\u201d]/g, '"')
+    .replace(/[\u2022\u00b7]/g, '-')
+    .replace(/\t/g, ' ')
+    .replace(/\r/g, '')
+    .replace(/[^\x20-\x7e\u00a0-\u00ff\n]/g, '');
 }
 
 /** `12.5` -> `12,5`, con el separador decimal que se usa en Venezuela. */

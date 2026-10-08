@@ -9,6 +9,7 @@ import { passwordSchema } from '../lib/password.js';
 import {
   actualizarPassword,
   crearUsuario,
+  findUsuarioPorCedula,
   findUsuarioPorEmail,
   findUsuarioPorId,
   mapUsuarioPublico,
@@ -105,9 +106,20 @@ export async function register(
   try {
     const body = registerSchema.parse(req.body);
 
+    // Jerarquia: el coordinador da de alta tutores y estudiantes, nunca a
+    // alguien por encima de el mismo (ni a otro coordinador).
+    if (req.usuario?.rol === 'coordinador' && (body.rol === 'admin' || body.rol === 'coordinador')) {
+      throw new ApiError(403, 'Solo el administrador puede crear administradores o coordinadores');
+    }
+
     const existe = await findUsuarioPorEmail(body.email.toLowerCase());
     if (existe) {
       throw new ApiError(409, 'Ya existe un usuario con ese correo electrónico');
+    }
+
+    const mismaCedula = await findUsuarioPorCedula(body.cedula.trim());
+    if (mismaCedula) {
+      throw new ApiError(409, 'Ya existe un usuario con esa cédula');
     }
 
     const passwordHash = await bcrypt.hash(body.password, 10);

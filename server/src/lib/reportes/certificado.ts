@@ -1,5 +1,5 @@
 import type { DatosCertificado } from '../../models/reporte.model.js';
-import { DocumentoPdf, horas, pdfSeguro } from './pdf.js';
+import { DocumentoPdf, NOMBRE_INSTITUCION, horas, pdfSeguro } from './pdf.js';
 
 /**
  * Certificado de culminacion del servicio comunitario.
@@ -16,11 +16,11 @@ export async function generarCertificadoPdf(
   const periodo = d.periodo?.nombre ?? 'todos los periodos';
 
   const pdf = new DocumentoPdf({
-    titulo: 'Certificado de culminacion',
+    titulo: 'Certificado de culminación',
     subtitulo: 'Servicio comunitario',
     datos: [
       { etiqueta: 'Estudiante', valor: d.nombreCompleto },
-      { etiqueta: 'Cedula', valor: d.cedula },
+      { etiqueta: 'Cédula', valor: d.cedula },
       { etiqueta: 'Periodo', valor: periodo },
       { etiqueta: 'Emitido', valor: new Date().toLocaleDateString('es-VE') },
     ],
@@ -31,11 +31,11 @@ export async function generarCertificadoPdf(
 
   pdf.doc.moveDown(2).font('Helvetica').fontSize(11).fillColor('#111827');
   pdf.doc.text(
-    `La Direccion de Servicio Comunitario del Instituto Universitario ` +
-      `Naval Villegas Edmond, hace constar que el(a) ciudadano(a) ${nombre}, ` +
-      `titular de la cedula ${d.cedula}, ha culminado satisfactoryamente el programa de ` +
-      `servicio comunitario correspondiente al periodo ${periodo}, cumpliendo con las ` +
-      `horas de trabajo directo y de impacto social y ambiental que exige el programa.`,
+    `La Dirección de Servicio Comunitario del ${NOMBRE_INSTITUCION}, hace constar ` +
+      `que el(a) ciudadano(a) ${nombre}, titular de la cédula ${pdfSeguro(d.cedula)}, ` +
+      `ha culminado satisfactoriamente el programa de servicio comunitario ` +
+      `correspondiente al periodo ${pdfSeguro(periodo)}, cumpliendo con las horas de ` +
+      `trabajo directo y de impacto social y ambiental que exige el programa.`,
     { align: 'justify' }
   );
 
@@ -45,11 +45,11 @@ export async function generarCertificadoPdf(
       { titulo: 'Concepto', ancho: 260 },
       { titulo: 'Meta', ancho: 90, alinear: 'right' },
       { titulo: 'Cumplidas', ancho: 90, alinear: 'right' },
-      { titulo: 'Condicion', ancho: 75, alinear: 'center' },
+      { titulo: 'Condición', ancho: 75, alinear: 'center' },
     ],
     [
       [
-        'Trabajo directo (bitacora comunitaria)',
+        'Trabajo directo (bitácora comunitaria)',
         horas(d.metas.directas),
         horas(d.horasDirectas),
         d.horasDirectas >= d.metas.directas ? 'Cumplida' : 'Pendiente',
@@ -67,7 +67,7 @@ export async function generarCertificadoPdf(
   if (!d.cumpleMetas) {
     pdf.parrafo(
       'DOCUMENTO NO ACREDITADO. Las horas registradas no alcanzan las metas del programa, ' +
-        `por lo que este certificado no constituye prueba de culminacion. Quedan ` +
+        `por lo que este certificado no constituye prueba de culminación. Quedan ` +
         `${d.pendientes} registro(s) sin validar.`,
       { size: 9, color: '#9a3412', negrita: true }
     );
@@ -94,7 +94,7 @@ export async function generarCertificadoPdf(
   const yFirma = pdf.doc.y;
   pdf.doc.font('Helvetica').fontSize(8.5).fillColor('#6b7280');
   pdf.doc.text('_______________________________', 200, yFirma, { width: 195, align: 'center' });
-  pdf.doc.text('Coordinacion del Servicio Comunitario', 200, yFirma + 14, {
+  pdf.doc.text('Coordinación del Servicio Comunitario', 200, yFirma + 14, {
     width: 195,
     align: 'center',
   });

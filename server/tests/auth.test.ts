@@ -161,6 +161,19 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(409);
   });
 
+  it('rechaza cedula duplicada con 409 en vez de un error del servidor', async () => {
+    const token = await tokenDe('admin');
+    await api().post('/api/auth/register').set(auth(token)).send(nuevo);
+
+    const res = await api()
+      .post('/api/auth/register')
+      .set(auth(token))
+      .send({ ...nuevo, email: 'otro-correo@test.local' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.message).toMatch(/cédula/i);
+  });
+
   it('rechaza contrasena corta con 400', async () => {
     const token = await tokenDe('admin');
     const res = await api()
@@ -187,5 +200,47 @@ describe('POST /api/auth/register', () => {
   it('no permite registrarse sin token', async () => {
     const res = await api().post('/api/auth/register').send(nuevo);
     expect(res.status).toBe(401);
+  });
+
+  it('el coordinador puede crear estudiantes y tutores', async () => {
+    const token = await tokenDe('coordinador');
+
+    const estudiante = await api()
+      .post('/api/auth/register')
+      .set(auth(token))
+      .send({ ...nuevo, email: 'alumno@test.local' });
+    expect(estudiante.status).toBe(201);
+
+    const tutor = await api()
+      .post('/api/auth/register')
+      .set(auth(token))
+      .send({ ...nuevo, cedula: 'V-22222222', email: 'tutor-nuevo@test.local', rol: 'tutor' });
+    expect(tutor.status).toBe(201);
+    expect(tutor.body.usuario.rol).toBe('tutor');
+  });
+
+  it('el coordinador no puede crear coordinadores ni administradores', async () => {
+    const token = await tokenDe('coordinador');
+
+    for (const rol of ['coordinador', 'admin'] as const) {
+      const res = await api()
+        .post('/api/auth/register')
+        .set(auth(token))
+        .send({ ...nuevo, email: `arriba-${rol}@test.local`, rol });
+
+      expect(res.status, `rol ${rol}`).toBe(403);
+      expect(res.body.message).toMatch(/administrador/i);
+    }
+  });
+
+  it('el administrador si puede crear un coordinador', async () => {
+    const token = await tokenDe('admin');
+    const res = await api()
+      .post('/api/auth/register')
+      .set(auth(token))
+      .send({ ...nuevo, email: 'coordinador-nuevo@test.local', rol: 'coordinador' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.usuario.rol).toBe('coordinador');
   });
 });

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FirmaSello } from "@/components/FirmaSello";
 import { RestablecerPassword } from "@/components/RestablecerPassword";
+import { CargaMasivaEstudiantes } from "@/components/CargaMasivaEstudiantes";
 import { api } from "@/lib/api";
 import { useApiData } from "@/lib/useApiData";
 import { useAuthStore } from "@/stores/authStore";
@@ -23,6 +24,7 @@ const rolBadge: Record<UserRole, "danger" | "warning" | "info" | "secondary"> = 
 export function UsuariosView() {
   const usuario = useAuthStore((s) => s.usuario);
   const esAdmin = usuario?.rol === "admin";
+  const esGestion = esAdmin || usuario?.rol === "coordinador";
 
   const { data, loading, error, reload } = useApiData<{ usuarios: Usuario[] }>("/usuarios");
   const [busqueda, setBusqueda] = useState("");
@@ -62,13 +64,16 @@ export function UsuariosView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Gestión de Usuarios</h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          {esAdmin
-            ? "Consulta y administra el estado de todos los usuarios del sistema."
-            : "Consulta el registro de usuarios del sistema."}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Gestión de Usuarios</h2>
+          <p className="text-muted-foreground text-sm mt-1">
+            {esAdmin
+              ? "Consulta y administra el estado de todos los usuarios del sistema."
+              : "Consulta el registro de usuarios del sistema."}
+          </p>
+        </div>
+        {esGestion && <CargaMasivaEstudiantes onImportado={reload} />}
       </div>
 
       <Card className="border-0 shadow-sm">

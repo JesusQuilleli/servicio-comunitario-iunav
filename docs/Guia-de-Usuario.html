@@ -159,7 +159,7 @@
 
 <!-- ================= PORTADA ================= -->
 <div class="portada">
-  <div class="kicker">Universidad Pedagógica Experimental Nacional</div>
+  <div class="kicker">Instituto Universitario Adventista de Venezuela</div>
   <h1>Sistema de Servicio Comunitario</h1>
   <div class="sub">
     Guía de usuario por rol: qué resuelve el sistema, qué puede hacer cada perfil
@@ -171,7 +171,7 @@
     todavía no está disponible, se dice explícitamente, en lugar de omitirla.
   </div>
   <div class="meta">
-    <div><strong>Versión del documento:</strong> 1.0</div>
+    <div><strong>Versión del documento:</strong> 1.1</div>
     <div><strong>Dirigido a:</strong> estudiantes, tutores, coordinadores y administradores del programa</div>
     <div><strong>Acceso al sistema:</strong> dirección que entrega el administrador del sistema</div>
   </div>
@@ -249,7 +249,7 @@
     <strong>Resumen para el estudiante</strong>
     El sistema cubre el registro y la validación de horas. Todo lo demás del
     programa (inscripción, asistencia, notas) se sigue gestionando por los
-    canales habituales de la universidad.
+    canales habituales de la institución.
   </div>
 </section>
 
@@ -280,8 +280,16 @@
 
   <div class="tip">
     <strong>Requisitos de la clave</strong>
-    Mínimo 8 caracteres, con al menos una letra mayúscula, una minúscula y un
-    número. El sistema avisa qué condición no se cumple y no la guarda.
+    Mínimo 8 caracteres, con al menos una letra y un número. El sistema avisa qué
+    condición no se cumple y no la guarda.
+  </div>
+
+  <div class="nota">
+    <strong>Si te crearon con una carga masiva</strong>
+    En el alta en lote la clave inicial es tu <strong>cédula</strong>; si no
+    cumple los requisitos de la política, el coordinador o el administrador te
+    entrega una clave generada aparte. En ambos casos el primer ingreso te
+    obliga a cambiarla.
   </div>
 
   <div class="aviso">
@@ -323,12 +331,12 @@
       <tr>
         <td><strong>Coordinador</strong></td>
         <td>Administrar grupos y consultar el estado de los estudiantes</td>
-        <td>Panel, Grupos y Proyectos, Gestión de Usuarios, Configuraciones, Reportes, Cambiar contraseña</td>
+        <td>Panel, Grupos y Proyectos, Registro de Usuarios, Gestión de Usuarios, Configuraciones, Reportes, Cambiar contraseña</td>
       </tr>
       <tr>
         <td><strong>Administrador</strong></td>
         <td>Control total: cuentas, reglas del programa, períodos y documentos</td>
-        <td>Todos los módulos, incluido Registro de Usuarios</td>
+        <td>Todos los módulos</td>
       </tr>
     </tbody>
   </table>
@@ -346,7 +354,7 @@
     </div>
     <div class="rol coordinador">
       <span class="nombre">Coordinador</span>
-      <p style="margin:1.5mm 0 0">Crea y organiza grupos y sus integrantes, consulta el listado de usuarios, gestiona las plantillas documentales y ve la configuración. <strong>No crea cuentas ni edita las reglas del programa.</strong></p>
+      <p style="margin:1.5mm 0 0">Crea y organiza grupos y sus integrantes, da de alta estudiantes y tutores (uno por uno o con carga masiva) y gestiona las plantillas documentales. <strong>No crea administradores ni coordinadores, no valida horas y no edita las reglas del programa.</strong></p>
     </div>
     <div class="rol admin">
       <span class="nombre">Administrador</span>
@@ -356,9 +364,11 @@
 
   <div class="nota">
     <strong>Sobre la validación de horas</strong>
-    Hoy en día la validación la hacen <strong>los tutores</strong>. El coordinador
-    tiene la pantalla en su menú, pero la validación es exclusiva del tutor. Es
-    unarestriction pendiente de resolver.
+    La validación la hacen <strong>solo los tutores</strong>. El módulo
+    <strong>Validación</strong> existe únicamente para el tutor: ni el
+    coordinador ni el administrador lo ven en el menú, y el servidor rechaza sus
+    decisiones. Si un coordinador o un administrador necesita revisar horas, lo
+    hace a través del tutor del grupo.
   </div>
 </section>
 
@@ -525,11 +535,21 @@
   <h3>7.2 Gestión de usuarios (coordinador y administrador)</h3>
 
   <p>
-    Ambos ven el listado completo de usuarios y su rol. Las acciones de
-    escritura las hace el administrador.
+    Ambos ven el listado completo de usuarios y su rol. Desde aquí el coordinador
+    y el administrador pueden hacer la <strong>carga masiva de estudiantes</strong>
+    con la plantilla .xlsx, y el administrador hace además el resto de las
+    acciones: activar o desactivar cuentas y reiniciar contraseñas.
   </p>
 
-  <h3>7.3 Registro de usuarios (solo administrador)</h3>
+  <h3>7.3 Registro de usuarios (administrador y coordinador)</h3>
+
+  <p>
+    El registro individual lo hacen el administrador y el coordinador, con una
+    jerarquía: el administrador puede crear cualquier rol, mientras que el
+    coordinador solo crea <strong>estudiantes y tutores</strong>. El sistema
+    filtra las opciones de rol según quién está creando y rechaza con un mensaje
+    claro el intento de saltarse la regla.
+  </p>
 
   <ol class="pasos">
     <li>Entra a <strong>Registro de Usuarios</strong>.</li>
@@ -538,7 +558,22 @@
     <li>Entrega la clave inicial al usuario: le llegó como <strong>clave temporal</strong> y deberá cambiarla al entrar.</li>
   </ol>
 
-  <h3>7.4 Acciones que solo hace el administrador</h3>
+  <h3>7.4 Carga masiva de estudiantes (coordinador y administrador)</h3>
+
+  <p>
+    Para el arranque del período conviene la carga en lote, disponible en
+    <strong>Gestión de Usuarios</strong>: se descarga una plantilla .xlsx y se
+    sube con una fila por estudiante.
+  </p>
+
+  <ol class="pasos">
+    <li>Pulsa <strong>Carga masiva</strong> y descarga la plantilla.</li>
+    <li>Completa por estudiante: nombre, cédula, correo y, opcionalmente, el grupo al que pertenece.</li>
+    <li>Sube el archivo. La clave inicial de cada cuenta es la <strong>cédula</strong>, con cambio obligatorio en el primer ingreso.</li>
+    <li>El sistema devuelve el resumen: cuentas creadas, cuántas quedaron asignadas a un grupo y las filas con error, con su motivo.</li>
+  </ol>
+
+  <h3>7.5 Acciones que solo hace el administrador</h3>
 
   <table>
     <thead><tr><th style="width:44%">Acción</th><th>Para qué sirve</th></tr></thead>
@@ -558,7 +593,7 @@
     sistema dejará de registrarle horas nuevas.
   </div>
 
-  <h3>7.5 Configuraciones y plantillas</h3>
+  <h3>7.6 Configuraciones y plantillas</h3>
 
   <p>
     Administrador y coordinador gestionan las <strong>plantillas documentales</strong>
@@ -707,12 +742,12 @@
     </thead>
     <tbody>
       <tr><td>Registrar y editar sus propias horas</td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td></tr>
-      <tr><td>Ver la lista de pendientes por validar</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip parcial">Pantalla restringida</span></td><td class="centro"><span class="chip parcial">Pantalla restringida</span></td></tr>
-      <tr><td>Aprobar, corregir o rechazar horas</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip parcial">No en pantalla</span></td><td class="centro"><span class="chip no">No</span></td></tr>
+      <tr><td>Ver la lista de pendientes por validar</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td></tr>
+      <tr><td>Aprobar, corregir o rechazar horas</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td></tr>
       <tr><td>Crear y editar grupos e integrantes</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
       <tr><td>Subir el proyecto escrito y las diapositivas</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
       <tr><td>Ver el listado de usuarios</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
-      <tr><td>Crear cuentas de usuario</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
+      <tr><td>Crear cuentas de usuario</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí *</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
       <tr><td>Activar usuarios y reiniciar contraseñas</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
       <tr><td>Editar las metas y reglas del programa</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
       <tr><td>Administrar períodos académicos</td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip no">No</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
@@ -721,6 +756,11 @@
       <tr><td>Cambiar su propia contraseña</td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td><td class="centro"><span class="chip si">Sí</span></td></tr>
     </tbody>
   </table>
+
+  <p style="font-size:9pt; color:var(--gris)">
+    * El coordinador crea solo estudiantes y tutores. Los administradores y
+    coordinadores los crea únicamente el administrador.
+  </p>
 
   <h3>Los estados de un registro</h3>
 
@@ -747,7 +787,7 @@
   </table>
 
   <div class="pie">
-    Sistema de Servicio Comunitario · Guía de usuario, versión 1.0.
+    Sistema de Servicio Comunitario · Guía de usuario, versión 1.1.
     Documento de uso interno. Los datos de ejemplo de esta guía son ficticios.
   </div>
 </section>

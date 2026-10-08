@@ -4,11 +4,14 @@ import { pool } from '../db/pool.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { ApiError } from '../lib/errors.js';
 import { borrarArchivo, guardarArchivo } from '../lib/archivos.js';
+import { leerPlantilla } from '../lib/importar.js';
 import { generarPasswordTemporal } from '../lib/password.js';
+import { plantillaEstudiantes } from '../lib/plantilla.js';
 import { archivoDe } from '../middleware/subida.js';
 import { escribirRuta, leerRuta } from '../models/archivo.model.js';
 import {
   actualizarPassword,
+  importarEstudiantesEnLote,
   mapUsuarioPublico,
   type UsuarioRow,
 } from '../models/usuario.model.js';
@@ -176,6 +179,43 @@ export async function restablecerPassword(
       passwordTemporal: temporal,
       usuario: mapUsuarioPublico(actualizado),
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function descargarPlantilla(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const buffer = await plantillaEstudiantes();
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader('Content-Disposition', 'attachment; filename="plantilla-estudiantes.xlsx"');
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function importarEstudiantes(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const archivo = archivoDe(req, 'archivo');
+    if (!archivo) {
+      throw new ApiError(400, 'Adjunta el archivo .xlsx con la lista de estudiantes');
+    }
+
+    const filas = await leerPlantilla(archivo.buffer);
+    const resultado = await importarEstudiantesEnLote(filas);
+    res.status(201).json(resultado);
   } catch (err) {
     next(err);
   }

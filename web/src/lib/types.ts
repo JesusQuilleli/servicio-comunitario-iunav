@@ -242,3 +242,25 @@ export const tipoPlantillaLabels: Record<TipoPlantilla, string> = {
 };
 
 export const TIPOS_PLANTILLA: TipoPlantilla[] = ["bitacora", "acta", "informe", "certificado"];
+
+/** Error de una fila durante la carga masiva de estudiantes. */
+export interface ErrorImportacion {
+  /** Número de fila en la plantilla (la 1 es el encabezado). */
+  fila: number;
+  campo: string;
+  mensaje: string;
+}
+
+/** Clave inicial que dejó el servidor a un estudiante importado. */
+export interface ClaveImportacion {
+  fila: number;
+  email: string;
+  claveInicial: string;
+}
+
+export interface ResultadoImportacion {
+  creados: number;
+  asignados: number;
+  errores: ErrorImportacion[];
+  claves: ClaveImportacion[];
+}

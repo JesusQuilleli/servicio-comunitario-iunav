@@ -1,6 +1,6 @@
 # Estado del proyecto y plan de cierre — Servicio Comunitario IUNAV
 
-**Última actualización:** 05/10/2026
+**Última actualización:** 08/10/2026
 **Rama:** `main` · **Base de datos:** PostgreSQL 17 local (`app_iunav`)
 
 > Este documento es el punto de entrada para retomar el proyecto. Está pensado para leerse en 5 minutos y saber exactamente qué falta.
@@ -25,15 +25,24 @@
 | Ruta | Módulo | Quién entra |
 |---|---|---|
 | `/dashboard` | Dashboard por rol | los 4 |
-| `/registro-usuarios` | Alta de usuarios | admin |
+| `/registro-usuarios` | Alta de usuarios | admin, coordinador |
 | `/usuarios` | Gestión de usuarios | admin, coordinador |
 | `/proyectos` | Grupos y proyectos | admin, coordinador, tutor |
 | `/bitacora` | Bitácora comunitaria | los 4 |
 | `/servicio` | Servicio social y ambiental | los 4 |
-| `/validacion` | Validación de horas | admin, coordinador, tutor |
+| `/validacion` | Validación de horas | tutor |
 | `/configuracion` | Configuración y plantillas | admin, coordinador |
 | `/reportes` | Reportes y certificados | admin, coordinador, tutor |
 | `/password` | Mi contraseña | los 4 |
+
+> **Validación es solo del tutor** (decisión de producto, ya aplicada en las tres piezas):
+> el módulo no aparece en el menú de coordinador ni administrador, la ruta está
+> protegida por rol y la matriz de permisos coincide (item 19 resuelto).
+>
+> **Bajo `/usuarios` hay dos endpoints nuevos** para carga masiva, ambos
+> `admin`/`coordinador`: `GET /api/usuarios/plantilla.xlsx` (plantilla .xlsx para
+> descargar) y `POST /api/usuarios/importar` (recibe un archivo `archivo` y crea
+> estudiantes en lote, con la cédula como clave inicial de cambio obligatorio).
 
 **Estructura** (la raíz solo tiene esto; el prototipo Vite se borró):
 
@@ -58,9 +67,16 @@ HANDOFF.md              este archivo
 - **Reportes:** consolidado de horas en **PDF y Excel**, acta de culminación y certificado por estudiante, generados en memoria y servidos con `Content-Disposition`. Solo cuentan las horas **aprobadas**; las pendientes van aparte y el certificado sale marcado "no acreditado" si el estudiante no llega a las metas.
 - **Dashboards** por rol, con datos reales.
 
-**Cómo se verificó:** `typecheck` y `build` de ambos proyectos, ESLint y `tsc` de Next limpios, **368 pruebas automatizadas en verde** (`cd server; npm test`) y las rutas del panel probadas contra el server de producción (307 correctos para sesión ausente y rol insuficiente).
+**Cómo se verificó:** `typecheck` y `build` de ambos proyectos, ESLint y `tsc` de Next limpios, **402 pruebas automatizadas en verde** (`cd server; npm test`) y las rutas del panel probadas contra el server de producción (307 correctos para sesión ausente y rol insuficiente).
 
-> Ese trabajo ya no depende del historial del chat: la matriz de permisos de la sección 4 está **codificada como dato** en `server/tests/permisos.test.ts`, no reescrita a mano, y un test verifica que la matriz siga cubriendo los 41 endpoints.
+> Ese trabajo ya no depende del historial del chat: la matriz de permisos de la sección 4 está **codificada como dato** en `server/tests/permisos.test.ts`, no reescrita a mano, y un test verifica que la matriz siga cubriendo los 43 endpoints.
+>
+> **Carga masiva:** plantilla .xlsx con cabecera `nombreCompleto, cedula, email, grupo`
+> (el parser acepta `correo` como alias y normaliza mayúsculas/tildes; `grupo` es
+> opcional y asigna al proyecto en la misma carga). La clave inicial de cada
+> cuenta es la **cédula** si cumple la política; si no, se genera una temporal.
+> El resultado dice `creados`, `asignados`, `errores[por fila]` y `claves`
+> (se muestran una sola vez, igual que el reset del admin).
 
 ---
 
@@ -104,7 +120,14 @@ HANDOFF.md              este archivo
 
 ~~**12. No hay README en la raíz.**~~ → **MITIGADO.** No hay un README de proyecto, pero `deploy/README.md` tiene el guion completo de instalación en VPS (con checklist de una pantalla), y este `HANDOFF.md` cubre el resto. Para una instalación en local están la sección 6 y las plantillas `server/.env.example` y `web/.env.example`.
 
-**12b. Documentos para el usuario final.** → **HECHO.** `docs/Guia-de-Usuario-IUNAV.pdf` (14 páginas) con qué resuelve el sistema, los cuatro roles paso a paso, glosario, tabla de permisos por rol y 10 problemas frecuentes. El fuente editable es `docs/Guia-de-Usuario.html`, regenerable con Edge o Chrome en modo headless: `msedge --headless=new --no-pdf-header-footer --print-to-pdf=salida.pdf file:///.../Guia-de-Usuario.html`.
+**12b. Documentos para el usuario final.** → **HECHO (v1.1).** `docs/Guia-de-Usuario-IUNAV.pdf` con qué resuelve el sistema, los cuatro roles paso a paso, glosario, tabla de permisos por rol y 10 problemas frecuentes, y `docs/Flujo-de-Uso-IUNAV.pdf` con el recorrido del programa por etapas. Fuentes editables: `docs/Guia-de-Usuario.html` y `docs/Flujo-de-Uso-IUNAV.html`, regenerables con Edge en modo headless:
+
+```
+msedge --headless=new --disable-gpu --user-data-dir=%TEMP%\edge-doc --no-pdf-header-footer --print-to-pdf=docs\Guia-de-Usuario-IUNAV.pdf file:///.../docs/Guia-de-Usuario.html
+msedge --headless=new --disable-gpu --user-data-dir=%TEMP%\edge-doc --no-pdf-header-footer --print-to-pdf=docs\Flujo-de-Uso-IUNAV.pdf file:///.../docs/Flujo-de-Uso-IUNAV.html
+```
+
+> Del flujo: si el nombre del HTML no coincide con el del PDF esperado, Edge imprime con el nombre del HTML; renombrar después (`Guia-de-Usuario.pdf` → `Guia-de-Usuario-IUNAV.pdf`).
 
 ~~**13. Restos del prototipo Vite muerto en la raíz.**~~ → **RESUELTO.** Se borraron `src/` (28 archivos), `index.html`, `vite.config.ts`, los `package.json`/`package-lock.json` de la raíz y los `tsconfig`/`tailwind`/`postcss`/`eslint` del prototipo: **37 archivos de la raíz, recuperables con git**. De paso desapareció el warning de lockfiles duplicados de Turbopack.
 
@@ -118,24 +141,24 @@ HANDOFF.md              este archivo
 
 ~~**18. Sin rutas por módulo.**~~ → **RESUELTO.** Ver sección 1.
 
-**19. La validación de horas es del tutor, pero la matriz dice que el coordinador también puede.** Inconsistencia real, encontrada al redactar la guía de usuario:
+~~**19. La validación de horas es del tutor, pero la matriz dice que el coordinador también puede.**~~ → **RESUELTO (08/10/2026).** Decisión de producto: la validación es **exclusiva del tutor**. Se ajustaron las tres piezas en la misma dirección:
 
-- `GET /api/bitacoras/pendientes` (la lista que hay que ver para poder validar) es **solo tutor**.
-- `PATCH /api/bitacoras/:id/estado` sí está autorizada para **admin, coordinador y tutor** (`GESTION` en `CASOS`, y hay una prueba que lo exige).
-- Pero `web/src/views/ValidacionView.tsx:37` corta la pantalla a `usuario.rol !== "tutor"` y muestra "Acceso exclusivo para tutores".
+- `web/src/lib/rutas.ts`: `validacion: ["tutor"]` — el coordinador y el administrador ya no ven el módulo en el menú (antes lo veían y la pantalla los rebotaba).
+- Ruta y controladores: `PATCH /api/bitacoras/:id/estado` pasó de `GESTION` a **solo tutor**, igual que `GET /api/bitacoras/pendientes`. La matriz de `CASOS` quedó sincronizada y probada.
+- `web/src/views/ValidacionView.tsx` seguía cortando a tutor.
 
-Efecto en la práctica: **solo el tutor valida**. La rama `admin`/`coordinador` de la prueba de `/estado` es inalcanzable desde la interfaz, y el coordinador y el administrador ven un enlace "Validación" en el menú que lleva a una pantalla restringida. Hay que decidir y ajustar las tres piezas a la misma respuesta. **No se cambió nada de esto**: tocar la matriz de permisos probada es una decisión de producto, no un arreglo silencioso.
+Además, por la misma jerarquía: `POST /api/auth/register` ahora es **admin + coordinador**, y el coordinador solo puede crear **estudiantes y tutores** (403 para administradores/coordinadores, con mensaje "Solo el administrador puede crear administradores o coordinadores"). También se agregó el chequeo de cédula duplicada (409) al registrar.
 
 ---
 
 ## 4. Matriz de permisos actual
 
-**41 endpoints**, extraída de `server/tests/permisos.test.ts` (constante `CASOS`), que es la misma fuente que ejecuta las pruebas.
+**43 endpoints**, extraída de `server/tests/permisos.test.ts` (constante `CASOS`), que es la misma fuente que ejecuta las pruebas.
 
 | Endpoint | admin | coordinador | tutor | estudiante |
 |---|:-:|:-:|:-:|:-:|
 | `GET /api/auth/me` | ✅ | ✅ | ✅ | ✅ |
-| `POST /api/auth/register` | ✅ | ❌ | ❌ | ❌ |
+| `POST /api/auth/register` | ✅ | ✅* | ❌ | ❌ |
 | `PATCH /api/auth/password` | ✅ | ✅ | ✅ | ✅ |
 | `POST /api/usuarios/:id/password` | ✅ | ❌ | ❌ | ❌ |
 | `GET /api/dashboard` | ✅ | ✅ | ✅ | ✅ |
@@ -144,6 +167,8 @@ Efecto en la práctica: **solo el tutor valida**. La rama `admin`/`coordinador` 
 | `GET /api/reportes/acta/:idGrupo.pdf` | ✅ | ✅ | ✅ | ❌ |
 | `GET /api/reportes/certificado/:idUsuario.pdf` | ✅ | ✅ | ✅ | ❌ |
 | `GET /api/usuarios` | ✅ | ✅ | ❌ | ❌ |
+| `GET /api/usuarios/plantilla.xlsx` | ✅ | ✅ | ❌ | ❌ |
+| `POST /api/usuarios/importar` | ✅ | ✅ | ❌ | ❌ |
 | `PATCH /api/usuarios/:id/activo` | ✅ | ❌ | ❌ | ❌ |
 | `POST /api/usuarios/:id/firma (ajena)` | ✅ | ❌ | ❌ | ❌ |
 | `POST /api/usuarios/:id/sello` | ✅ | ❌ | ❌ | ❌ |
@@ -182,6 +207,8 @@ Notas sobre las filas que no son obvias:
 - `GET /api/auth/me`, `GET /api/dashboard` y `GET /api/periodos` solo exigen autenticación: los tres hacen falta para el perfil del estudiante, que no gestiona nada.
 - **Los reportes son `gestion` + tutor.** El estudiante no baja ninguno. Y `requireRole` no basta: el tutor además tiene que ser dueño del grupo o tener al estudiante, comprobado en `reporte.model.ts` (`esIntegranteDeTutor`), no solo en la ruta.
 - `POST /api/usuarios/:id/firma (ajena)` aparece con ❌ para los no admin **aunque la ruta permita el caso legítimo**: firmar la propia firma lo hace cualquiera, y el `403` llega desde la lógica de negocio del controlador, no desde `requireRole`. Por eso la matriz prueba explícitamente el caso "ajena".
+- **`POST /api/auth/register` con coordinador**: ✅* = el coordinador crea solo **estudiantes y tutores**; la creación de administradores y coordinadores devuelve `403` (controlador, no `requireRole`). La matriz prueba ambos caminos.
+- **Carga masiva:** `GET /plantilla.xlsx` y `POST /importar` suben el archivo como `multipart/form-data` en el campo `archivo` (multer, memoria, tope `maxDocumentoMb`). El import solo crea rol `estudiante`; crea la cuenta con `password_temporal = true` y clave inicial = cédula (o una generada si la cédula no cumple la política). Documentado en `server/src/lib/plantilla.ts` y `server/src/lib/importar.ts`.
 - Los cuatro endpoints de archivos (`POST /grupos/:id/documentos`, `POST /configuracion/plantillas/:id/documento`, firma y sello) suben `multipart/form-data`, y la prueba adjunta un PNG y un PDF reales.
 
 ---
@@ -190,7 +217,7 @@ Notas sobre las filas que no son obvias:
 
 ```powershell
 cd server
-npm test              # 368 pruebas en 8 archivos, ~40 s
+npm test              # 402 pruebas en 10 archivos, ~2 min
 npm run test:watch    # durante el desarrollo
 npm run typecheck:tests
 npm run db:test       # recrea app_iunav_test desde cero (aborta si el nombre no termina en _test)
@@ -199,12 +226,14 @@ npm run db:test       # recrea app_iunav_test desde cero (aborta si el nombre no
 | Archivo | Pruebas | Qué cubre |
 |---|---:|---|
 | `tests/humo.test.ts` | 3 | La app arranca, `/api/health` responde, la resolución `.js` → `.ts` funciona |
-| `tests/auth.test.ts` | 16 | Login, `/auth/me`, `/auth/register` |
-| `tests/permisos.test.ts` | 250 | Matriz de 41 endpoints × 4 roles, token ausente e inválido, y cobertura de la matriz |
+| `tests/auth.test.ts` | 20 | Login, `/auth/me`, `/auth/register` (incluida la jerarquía coordinador → solo estudiante/tutor y el 409 de cédula duplicada) |
+| `tests/permisos.test.ts` | 262 | Matriz de 43 endpoints × 4 roles, token ausente e inválido, y cobertura de la matriz |
 | `tests/archivos.test.ts` | 31 | Subida y descarga autenticada, tipos y tamaños inválidos |
 | `tests/documentos.test.ts` | 22 | Proyecto escrito, diapositivas, firma y sello |
 | `tests/passwords.test.ts` | 19 | Cambio propio, reset del admin, claim `tmp`, bloqueo de rutas |
 | `tests/reportes.test.ts` | 25 | Las 4 descargas, cifras, nombres de archivo y alcance del tutor |
+| `tests/pdf.test.ts` | 9 | Maquetación del PDF: membrete, coordenadas de texto, truncado de celdas largas, 1 página sin páginas extra por el pie |
+| `tests/importar.test.ts` | 9 | Plantilla .xlsx descargable, alta en lote con la cédula como clave inicial, errores por fila, clave generada si la cédula no cumple la política, archivos inválidos |
 | `tests/subida-parcial.test.ts` | 2 | Archivos que llegan a medias |
 
 ### Decisiones ya tomadas (no volver a abrir)
@@ -226,13 +255,13 @@ npm run db:test       # recrea app_iunav_test desde cero (aborta si el nombre no
 
 > **El riesgo de resolución `.js` → `.ts` quedó descartado.** Vitest lo resuelve solo; no hizo falta alias ni `node:test`. Un test de humo lo verifica en cada corrida, así que si una actualización lo rompe, se nota de inmediato.
 
-### 5.2 Tests de auth — 16 casos
+### 5.2 Tests de auth — 20 casos
 
-Login correcto (y sin filtrar el hash), contraseña incorrecta, correo inexistente con el **mismo mensaje**, email malformado, cuenta desactivada, insensibilidad a mayúsculas, `/auth/me` con token válido / ausente / con firma manipulada / con rol alterado, y `/auth/register` (alta, duplicado, contraseña corta, rol inválido, sin token).
+Login correcto (y sin filtrar el hash), contraseña incorrecta, correo inexistente con el **mismo mensaje**, email malformado, cuenta desactivada, insensibilidad a mayúsculas, `/auth/me` con token válido / ausente / con firma manipulada / con rol alterado, y `/auth/register` (alta, duplicado, contraseña corta, rol inválido, sin token). Sumados los 4 casos nuevos de la jerarquía: el coordinador crea estudiante y tutor (201), no puede crear coordinador ni admin (403), el administrador crea un coordinador (201), y la cédula duplicada responde 409.
 
-### 5.3 Matriz de permisos — 250 casos
+### 5.3 Matriz de permisos — 262 casos
 
-164 de la matriz (41 endpoints × 4 roles), 82 de token ausente e inválido (41 × 2), 2 de intento de falsear el rol dentro del token y 2 que vigilan la propia matriz: uno que **falla si aparece un endpoint nuevo sin declarar su permiso**, y otro que falla si un caso no autoriza a ningún rol.
+172 de la matriz (43 endpoints × 4 roles), 86 de token ausente e inválido (43 × 2), 2 de intento de falsear el rol dentro del token y 2 que vigilan la propia matriz: uno que **falla si aparece un endpoint nuevo sin declarar su permiso**, y otro que falla si un caso no autoriza a ningún rol.
 
 ### 5.4 Pruebas manuales con los 4 roles
 
@@ -241,7 +270,9 @@ Recorrer los 9 módulos con admin, coordinador, tutor y estudiante. Casos que co
 - Estudiante sin grupo intentando registrar bitácora comunitaria → debe fallar con mensaje claro.
 - Tutor validando un registro que no es de su grupo → debe ser rechazado.
 - Tutor pidiendo el acta de un grupo que no es suyo → debe ser rechazado aunque el rol sea correcto.
-- El estudiante **no** debe ver el menú de Configuraciones ni el de Validación.
+- El estudiante **no** debe ver el menú de Configuraciones ni el de Validación; tampoco Registro de Usuarios ni Gestión de Usuarios.
+- El coordinador **no** debe ver Validación (item 19 resuelto), pero sí Registro de Usuarios y la carga masiva.
+- El tutor **no** debe ver Registro de Usuarios ni Gestión de Usuarios ni Configuraciones.
 - Escribir a mano `/usuarios` en la barra de direcciones con sesión de estudiante → debe rebotar al dashboard, no mostrar la pantalla.
 - Recargar a mitad de un formulario largo: no debe perderse nada.
 - Navegar con teclado y en móvil.
@@ -335,7 +366,7 @@ Lo que este despliegue **no** cubre, y sigue pendiente: migraciones versionadas 
 
 Lo que queda, en el orden en que más bloquea a un usuario real:
 
-1. **Commitear las Fases 1 a 7.** Hoy son 42 modificados, 39 borrados y 40 archivos nuevos sin rastrear: el riesgo más grande ahora mismo no es de código, es de git.
+1. **Commitear todo lo pendiente.** Hoy son las Fases 1 a 7 (42 modificados, 39 borrados y 40 archivos nuevos sin rastrear) más la Fase 8 de hoy (reportes PDF corregidos, nombres institucionales, menú por rol, jerarquía de registro, carga masiva, docs v1.1 y la matriz de 43 endpoints). El riesgo más grande ahora mismo no es de código, es de git.
 2. **README en la raíz** (item 12): clonar, `db:schema`, `db:seed`, dos terminales, cuentas de prueba.
 3. **Autoservicio de contraseña** (lo que quedó del item 4): correo de recuperación, no solo el reset del admin.
 4. **JWT en cookie `httpOnly`** (item 9). El `web/.env.example` ya está (item 8).
@@ -357,6 +388,6 @@ Lo que queda, en el orden en que más bloquea a un usuario real:
 - Si se toca el esquema, siempre `npm run db:schema` (usa `create table if not exists`, es idempotente) y luego `npm run db:seed -- --confirm-seed`.
 - **En una VPS, los secretos no están en el repo.** Viven en `/etc/iunav/server.env` (modo 640, grupo `iunav`), que genera `deploy/instalar.sh`. Ese archivo nunca se versiona.
 - El remoto de git para desplegar tiene que ser **privado**: en el historial están los commits viejos con la contraseña de Supabase que se borró del árbol de trabajo. Antes de publicar en cualquier sitio, rotar esa contraseña.
-- **Las pruebas nunca tocan `app_iunav`.** `tests/setup.ts` reemplaza la base antes de que se importe el pool, y `npm run db:test` se niega a dropear cualquier nombre que no termine en `_test`. Verificado tras 368 pruebas: `app_iunav` seguía en 8 usuarios / 4 grupos / 8 integrantes / 12 bitácoras / 10 servicios / 5 plantillas / 1 periodo.
+- **Las pruebas nunca tocan `app_iunav`.** `tests/setup.ts` reemplaza la base antes de que se importe el pool, y `npm run db:test` se niega a dropear cualquier nombre que no termine en `_test`. Verificado tras 402 pruebas: `app_iunav` seguía en 8 usuarios / 4 grupos / 8 integrantes / 12 bitácoras / 10 servicios / 5 plantillas / 1 periodo.
 - Para cambiar la matriz de permisos, edita la constante `CASOS` en `server/tests/permisos.test.ts` y la tabla de la sección 4. Los dos deben seguir diciendo lo mismo, y el test de cobertura falla si se te olvida uno de los dos.
 - `Servicio-Comunitario-IUNAV-Estado.pdf` está en la raíz, sin rastrear por git. Es documentación, no código: no lo borres sin leerlo.

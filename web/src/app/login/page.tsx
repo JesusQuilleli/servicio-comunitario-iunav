@@ -71,7 +71,9 @@ export default function LoginPage() {
             </div>
             <div>
               <h1 className="font-bold leading-tight">Comunidad IUNAV</h1>
-              <p className="text-sm text-white/70">Universidad IUNAV</p>
+              <p className="text-sm text-white/70">
+                Instituto Universitario Adventista de Venezuela
+              </p>
             </div>
           </div>
 
@@ -82,7 +84,7 @@ export default function LoginPage() {
             <p className="text-white/80 text-sm mt-3 leading-relaxed">
               Registro, seguimiento y validación de las horas de servicio comunitario
               (120h: 90h de trabajo directo + 30h de impacto social y ambiental) de los
-              estudiantes de la Universidad IUNAV.
+              estudiantes del Instituto Universitario Adventista de Venezuela.
             </p>
             <div className="mt-6 space-y-3">
               {[

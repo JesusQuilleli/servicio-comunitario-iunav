@@ -11,7 +11,7 @@ export interface DatosConsolidado {
 }
 
 const COLUMNAS = [
-  { titulo: 'Cedula', ancho: 65, alinear: 'left' as const },
+  { titulo: 'Cédula', ancho: 65, alinear: 'left' as const },
   { titulo: 'Estudiante', ancho: 180, alinear: 'left' as const },
   { titulo: 'Directas', ancho: 60, alinear: 'right' as const },
   { titulo: 'Pend.', ancho: 50, alinear: 'right' as const },
@@ -97,7 +97,7 @@ export async function generarConsolidadoExcel(d: DatosConsolidado): Promise<Buff
   });
 
   hoja.columns = [
-    { header: 'Cedula', key: 'cedula', width: 14 },
+    { header: 'Cédula', key: 'cedula', width: 14 },
     { header: 'Estudiante', key: 'estudiante', width: 32 },
     { header: `Directas (meta ${metas.horasDirectas})`, key: 'directas', width: 18 },
     { header: 'Directas pendientes', key: 'directasPend', width: 20 },

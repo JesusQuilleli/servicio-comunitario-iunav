@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import supertest from 'supertest';
 import { api, auth, tokenDe, type Rol } from './helpers/app.js';
+import { plantillaEstudiantes } from '../src/lib/plantilla.js';
 import {
   aplicarEsquema,
   asegurarBaseDePruebas,
@@ -29,6 +30,7 @@ const PNG = Buffer.from(
   'hex'
 );
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF');
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 const TODOS: Record<Rol, boolean> = {
   admin: true,
@@ -57,6 +59,8 @@ const CASOS: Caso[] = [
     permitido: TODOS,
   },
   {
+    // El coordinador tambien da de alta: el rol que envia es estudiante, que es
+    // el que le toca. Crear administradores o coordinadores es del admin.
     nombre: 'POST /api/auth/register',
     metodo: 'post',
     ruta: () => '/api/auth/register',
@@ -67,7 +71,7 @@ const CASOS: Caso[] = [
       password: 'clave1234',
       rol: 'estudiante',
     }),
-    permitido: SOLO_ADMIN,
+    permitido: GESTION,
   },
   {
     nombre: 'PATCH /api/auth/password',
@@ -112,6 +116,27 @@ const CASOS: Caso[] = [
     permitido: GESTION_Y_TUTOR,
   },
   { nombre: 'GET /api/usuarios', metodo: 'get', ruta: () => '/api/usuarios', permitido: GESTION },
+  {
+    nombre: 'GET /api/usuarios/plantilla.xlsx',
+    metodo: 'get',
+    ruta: () => '/api/usuarios/plantilla.xlsx',
+    permitido: GESTION,
+  },
+  {
+    // La plantilla trae dos filas de ejemplo validas: el 201 crea esas cuentas.
+    // La base se reinicia antes de cada caso (ver `beforeEach`), asi que no
+    // contamina a los demas.
+    nombre: 'POST /api/usuarios/importar',
+    metodo: 'post',
+    ruta: () => '/api/usuarios/importar',
+    permitido: GESTION,
+    adjunto: {
+      campo: 'archivo',
+      nombre: 'plantilla-estudiantes.xlsx',
+      tipo: XLSX_MIME,
+      cuerpo: plantillaEstudiantes(),
+    },
+  },
   {
     nombre: 'PATCH /api/usuarios/:id/activo',
     metodo: 'patch',
@@ -358,14 +383,14 @@ const CASOS: Caso[] = [
   },
 ];
 
-/** Adjunta un archivo de relleno a los casos que suben uno. */
-function adjuntar(peticion: supertest.Test, caso: Caso): supertest.Test {
+/** Adjunta un archivo de relleno a los casos que suben uno. El contenido puede ser promesa. */
+async function adjuntar(peticion: supertest.Test, caso: Caso): Promise<supertest.Test> {
   if (!caso.adjunto) return peticion;
   const { campo, nombre, tipo, cuerpo } = caso.adjunto;
-  return peticion.attach(campo, cuerpo, { filename: nombre, contentType: tipo });
+  return peticion.attach(campo, await cuerpo, { filename: nombre, contentType: tipo });
 }
 
-function pedir(caso: Caso, token: string, d: DatosSemilla): supertest.Test {
+async function pedir(caso: Caso, token: string, d: DatosSemilla): Promise<supertest.Test> {
   const a = api();
   const cabeceras = auth(token);
   const cuerpo = caso.cuerpo ? caso.cuerpo(d) : {};
@@ -460,8 +485,8 @@ describe('el rol no se puede falsear dentro del token', () => {
 });
 
 describe('cobertura de la matriz', () => {
-  it('cubre los 41 endpoints de la API', () => {
-    expect(CASOS).toHaveLength(41);
+  it('cubre los 43 endpoints de la API', () => {
+    expect(CASOS).toHaveLength(43);
   });
 
   it('todo caso declara al menos un rol autorizado', () => {

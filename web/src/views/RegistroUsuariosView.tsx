@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
 import type { UserRole, Usuario } from "@/lib/types";
 
 const ROLES: { value: UserRole; label: string }[] = [
@@ -16,6 +17,12 @@ const ROLES: { value: UserRole; label: string }[] = [
 ];
 
 export function RegistroUsuariosView() {
+  const usuario = useAuthStore((s) => s.usuario);
+  const esAdmin = usuario?.rol === "admin";
+  // El coordinador da de alta tutores y estudiantes; los roles por encima de
+  // el los crea el administrador.
+  const rolesDisponibles = esAdmin ? ROLES : ROLES.filter((r) => r.value === "estudiante" || r.value === "tutor");
+
   const [nombreCompleto, setNombreCompleto] = useState("");
   const [cedula, setCedula] = useState("");
   const [email, setEmail] = useState("");
@@ -32,8 +39,12 @@ export function RegistroUsuariosView() {
     setError(null);
     setExito(null);
 
-    if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError("La contraseña debe incluir al menos una letra y un número.");
       return;
     }
     if (password !== confirmar) {
@@ -73,7 +84,9 @@ export function RegistroUsuariosView() {
       <div>
         <h2 className="text-2xl font-bold text-foreground">Registro de Usuarios</h2>
         <p className="text-muted-foreground text-sm mt-1">
-          Crea cuentas para estudiantes, tutores, coordinadores y administradores.
+          {esAdmin
+            ? "Crea cuentas para estudiantes, tutores, coordinadores y administradores."
+            : "Crea cuentas para estudiantes y tutores."}
         </p>
       </div>
 
@@ -138,7 +151,7 @@ export function RegistroUsuariosView() {
                     onChange={(e) => setRol(e.target.value as UserRole)}
                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {ROLES.map((r) => (
+                    {rolesDisponibles.map((r) => (
                       <option key={r.value} value={r.value}>
                         {r.label}
                       </option>
@@ -155,7 +168,7 @@ export function RegistroUsuariosView() {
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Mínimo 8 caracteres, con letra y número"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required

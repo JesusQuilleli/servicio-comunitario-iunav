@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Servicio Comunitario IUNAV",
   description:
-    "Sistema de registro, seguimiento y validación del Servicio Comunitario de la Universidad IUNAV — Comunidad IUNAV.",
+    "Sistema de registro, seguimiento y validación del Servicio Comunitario del Instituto Universitario Adventista de Venezuela — Comunidad IUNAV.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

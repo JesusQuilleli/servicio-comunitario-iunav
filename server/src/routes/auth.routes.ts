@@ -11,12 +11,15 @@ router.post('/login', auth.login);
 // GET /api/auth/me      -> restaurar sesión (autenticado)
 router.get('/me', authenticate, auth.me);
 
-// POST /api/auth/register -> crear usuario (solo admin)
+// POST /api/auth/register -> crear usuario.
+// El admin crea cualquier rol; el coordinador solo tutores y estudiantes
+// (la jerarquia se comprueba en el controlador, porque requireRole no mira
+// el cuerpo de la peticion).
 router.post(
   '/register',
   authenticate,
   requiereCambioDePassword,
-  requireRole('admin'),
+  requireRole('admin', 'coordinador'),
   auth.register
 );
 

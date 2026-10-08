@@ -3,7 +3,7 @@ import { DocumentoPdf, horas, pdfSeguro, porcentaje } from './pdf.js';
 import { obtenerConfiguracion } from '../../models/configuracion.model.js';
 
 /**
- * Acta de culminacion del grupo.
+ * Acta de culminación del grupo.
  *
  * Es el documento que se firma al cierre del periodo, asi que deja huecos de
  * firma para el tutor, el coordinador y cada integrante.
@@ -13,7 +13,7 @@ export async function generarActaPdf(d: DatosActa, generadoPor: string): Promise
   const { grupo, periodo } = d;
 
   const pdf = new DocumentoPdf({
-    titulo: 'Acta de culminacion',
+    titulo: 'Acta de culminación',
     subtitulo: pdfSeguro(grupo.nombreProyecto),
     datos: [
       { etiqueta: 'Periodo', valor: periodo?.nombre ?? 'No asignado' },
@@ -29,7 +29,7 @@ export async function generarActaPdf(d: DatosActa, generadoPor: string): Promise
   });
 
   pdf.parrafo(
-    'Los undersigned firman el presente acta como constancia de haber culminado las ' +
+    'Los abajo firmantes firman el presente acta como constancia de haber culminado las ' +
       'horas de servicio comunitario del periodo indicado. Se hacen constar las horas ' +
       'aprobadas por el tutor segun el siguiente detalle:',
   );
@@ -70,7 +70,7 @@ export async function generarActaPdf(d: DatosActa, generadoPor: string): Promise
 
   if (incompletos.length > 0) {
     pdf.parrafo(
-      `Observacion: ${incompletos.length} de ${d.integrantes.length} integrantes no tienen ` +
+      `Observación: ${incompletos.length} de ${d.integrantes.length} integrantes no tienen ` +
         'estado final asignado o no alcanzan la meta de horas directas. El acta debe ' +
         'firmarse para los que si la cumplen.',
       { size: 8.5, color: '#9a3412' }
@@ -79,7 +79,7 @@ export async function generarActaPdf(d: DatosActa, generadoPor: string): Promise
 
   pdf.tituloSeccion('Firmas');
   pdf.parrafo(
-    'En Union, a los ____ dias del mes de ______________ de ______, firman los RESPONSABLES.',
+    'En unión, a los ____ días del mes de ______________ de ______, firman los RESPONSABLES.',
     { size: 9.5 }
   );
   pdf.nuevaPagina();
@@ -93,7 +93,7 @@ export async function generarActaPdf(d: DatosActa, generadoPor: string): Promise
   pdf.doc.font('Helvetica').fontSize(8).fillColor('#6b7280');
   const pares: [string, string][] = [
     ['Tutor', grupo.tutorNombre ?? ''],
-    ['Coordinacion', grupo.coordinadorNombre ?? ''],
+    ['Coordinación', grupo.coordinadorNombre ?? ''],
   ];
   pares.forEach(([rol, nombre], i) => {
     const x = 40 + i * 260;

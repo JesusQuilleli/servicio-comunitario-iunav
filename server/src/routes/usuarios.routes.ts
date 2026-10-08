@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import {
+  descargarPlantilla,
+  importarEstudiantes,
   listarUsuarios,
   restablecerPassword,
   subirFirma,
@@ -20,9 +22,23 @@ router.use(requiereCambioDePassword);
 // `config/almacenamiento.ts`).
 const conImagen = subirArchivo('firmas', 'archivo');
 const conSello = subirArchivo('sellos', 'archivo');
+const conPlantilla = subirArchivo('plantillas', 'archivo');
 
 // GET /api/usuarios  -> ver listado (admin o coordinador)
 router.get('/', requireRole('admin', 'coordinador'), listarUsuarios);
+
+// GET /api/usuarios/plantilla.xlsx -> plantilla de carga masiva (admin o coordinador)
+router.get('/plantilla.xlsx', requireRole('admin', 'coordinador'), descargarPlantilla);
+
+// POST /api/usuarios/importar -> alta de estudiantes desde un .xlsx.
+// Solo estudiantes: los tutores y coordinadores se crean de a uno (ver la
+// jerarquia de `POST /api/auth/register`).
+router.post(
+  '/importar',
+  requireRole('admin', 'coordinador'),
+  conPlantilla,
+  importarEstudiantes
+);
 
 // PATCH /api/usuarios/:id/activo -> activar/desactivar (solo admin)
 router.patch('/:id/activo', requireRole('admin'), toggleActivo);

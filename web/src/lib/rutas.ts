@@ -28,12 +28,12 @@ export type ViewKey = keyof typeof RUTAS;
 /** Roles que pueden abrir cada ruta. Coincide con la matriz de permisos del backend. */
 export const ROLES_POR_RUTA: Record<ViewKey, UserRole[]> = {
   dashboard: ["admin", "coordinador", "tutor", "estudiante"],
-  "registro-usuarios": ["admin"],
+  "registro-usuarios": ["admin", "coordinador"],
   usuarios: ["admin", "coordinador"],
   proyectos: ["admin", "coordinador", "tutor"],
   bitacora: ["admin", "coordinador", "tutor", "estudiante"],
   servicio: ["admin", "coordinador", "tutor", "estudiante"],
-  validacion: ["admin", "coordinador", "tutor"],
+  validacion: ["tutor"],
   configuracion: ["admin", "coordinador"],
   reportes: ["admin", "coordinador", "tutor"],
   password: ["admin", "coordinador", "tutor", "estudiante"],
