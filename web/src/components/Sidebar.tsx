@@ -11,7 +11,7 @@ import {
   ChevronRight,
   UserPlus,
   LogOut,
-  KeyRound,
+  User,
   FileBarChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ const navItems: NavItem[] = [
   { key: "validacion", label: "Validación", icon: CheckCircle },
   { key: "configuracion", label: "Configuraciones", icon: Settings },
   { key: "reportes", label: "Reportes", icon: FileBarChart },
-  { key: "password", label: "Mi contraseña", icon: KeyRound },
+  { key: "perfil", label: "Mi perfil", icon: User },
 ];
 
 const roleLabels: Record<UserRole, string> = {
@@ -113,25 +113,24 @@ export function Sidebar({ userRole, userName, onLogout }: SidebarProps) {
 
       <div className="border-t border-white/10 px-3 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-iunav-red text-xs font-bold">
-            {initials}
-          </div>
-          {!collapsed && (
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium truncate">{userName}</p>
-              <p className="text-[11px] text-white/50 truncate">{roleLabels[userRole]}</p>
+          <Link
+            href={RUTAS.perfil}
+            aria-label="Mi perfil"
+            title="Mi perfil"
+            className="flex items-center gap-3 flex-1 min-w-0 rounded-md py-1 pr-1 transition-colors hover:bg-white/5"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-iunav-red text-xs font-bold">
+              {initials}
             </div>
-          )}
+            {!collapsed && (
+              <div className="flex-1 overflow-hidden text-left">
+                <p className="text-sm font-medium truncate">{userName}</p>
+                <p className="text-[11px] text-white/50 truncate">{roleLabels[userRole]}</p>
+              </div>
+            )}
+          </Link>
           {!collapsed && (
             <div className="flex shrink-0 items-center gap-0.5">
-              <Link
-                href={RUTAS.password}
-                aria-label="Cambiar mi contraseña"
-                title="Cambiar mi contraseña"
-                className="flex h-7 w-7 items-center justify-center rounded-md text-white/50 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <KeyRound className="h-4 w-4" />
-              </Link>
               <Button
                 variant="ghost"
                 size="icon"

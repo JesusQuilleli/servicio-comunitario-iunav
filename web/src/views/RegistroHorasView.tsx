@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -11,6 +11,7 @@ import {
   Pencil,
   RefreshCw,
   Save,
+  Search,
   Trash2,
   X,
 } from "lucide-react";
@@ -102,6 +103,25 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
   const [errorForm, setErrorForm] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
 
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
+
+  // Precarga desde la URL al llegar de un enlace (dashboard o búsqueda global):
+  // /bitacora?estado=pendiente o /bitacora?q=...
+  // Se lee `window.location` en un efecto de una sola vez a propósito:
+  // `useSearchParams` exigiría un Suspense boundary en toda la vista.
+  /* eslint-disable react-hooks/set-state-in-effect -- carga única al montar */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q");
+    const estado = params.get("estado");
+    if (q) setBusqueda(q);
+    if (estado === "pendiente" || estado === "corregir" || estado === "aprobado" || estado === "rechazado") {
+      setFiltroEstado(estado);
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   const inputArchivo = useRef<HTMLInputElement>(null);
 
   if (!usuario) return null;
@@ -140,9 +160,13 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
     );
   }
 
-  const filtrados = (data?.registros ?? []).filter((r) =>
-    esComunitario ? r.tipo === "comunitario" : r.tipo === "social" || r.tipo === "ambiental"
-  );
+  const filtrados = (data?.registros ?? []).filter((r) => {
+    const coincideTipo = esComunitario ? r.tipo === "comunitario" : r.tipo === "social" || r.tipo === "ambiental";
+    const coincideEstado = filtroEstado === "todos" || r.estado === filtroEstado;
+    const q = busqueda.trim().toLowerCase();
+    const coincideTexto = q === "" || r.descripcion.toLowerCase().includes(q);
+    return coincideTipo && coincideEstado && coincideTexto;
+  });
 
   const editandoRegistro = filtrados.find((r) => r.id === editando) ?? null;
 
@@ -536,6 +560,28 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">Mis registros ({filtrados.length})</CardTitle>
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por descripción..."
+                className="pl-9 h-8 text-sm"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+              />
+            </div>
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              className="h-8 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="todos">Todos los estados</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="corregir">Por corregir</option>
+              <option value="aprobado">Aprobado</option>
+              <option value="rechazado">Rechazado</option>
+            </select>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -554,8 +600,10 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
             </div>
           ) : filtrados.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              Aún no has registrado{" "}
-              {esComunitario ? "horas de bitácora comunitaria" : "servicios sociales o ambientales"}.
+              {busqueda.trim() !== "" || filtroEstado !== "todos"
+                ? "No se encontraron registros con los filtros aplicados."
+                : <>Aún no has registrado{" "}
+                    {esComunitario ? "horas de bitácora comunitaria" : "servicios sociales o ambientales"}.</>}
             </p>
           ) : (
             <div className="space-y-3">

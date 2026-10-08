@@ -21,8 +21,8 @@ interface Caso {
   ruta: (d: DatosSemilla) => string;
   cuerpo?: (d: DatosSemilla) => Record<string, unknown>;
   permitido: Record<Rol, boolean>;
-  /** Archivo a adjuntar, para los endpoints que suben uno. */
-  adjunto?: { campo: string; nombre: string; tipo: string; cuerpo: Buffer };
+  /** Archivo a adjuntar, para los endpoints que suben uno. El contenido puede ser promesa. */
+  adjunto?: { campo: string; nombre: string; tipo: string; cuerpo: Buffer | Promise<Buffer> };
 }
 
 const PNG = Buffer.from(
@@ -81,6 +81,42 @@ const CASOS: Caso[] = [
     // en vez de toparse con el 400 de "contrasena actual incorrecta".
     cuerpo: () => ({ passwordActual: PASSWORD_SEMILLA, passwordNueva: 'claveNueva9' }),
     permitido: TODOS,
+  },
+  {
+    // Todos los roles actualizan su propio perfil; el estudiante genera una
+    // solicitud (201) y los demas aplican el cambio en el acto (200).
+    nombre: 'PATCH /api/auth/perfil',
+    metodo: 'patch',
+    ruta: () => '/api/auth/perfil',
+    cuerpo: () => ({ nombreCompleto: 'Nombre Actualizado Desde Pruebas' }),
+    permitido: TODOS,
+  },
+  {
+    nombre: 'GET /api/busqueda',
+    metodo: 'get',
+    ruta: () => '/api/busqueda?q=ana',
+    permitido: TODOS,
+  },
+  {
+    nombre: 'GET /api/solicitudes',
+    metodo: 'get',
+    ruta: () => '/api/solicitudes?estado=pendiente',
+    permitido: GESTION,
+  },
+  {
+    nombre: 'GET /api/solicitudes/mias',
+    metodo: 'get',
+    ruta: () => '/api/solicitudes/mias',
+    permitido: TODOS,
+  },
+  {
+    // Se rechaza (y no se aprueba) para que el caso no dependa de reglas de
+    // unicidad de correo: lo que se prueba aqui es quien puede resolver.
+    nombre: 'PATCH /api/solicitudes/:id',
+    metodo: 'patch',
+    ruta: (d) => `/api/solicitudes/${d.solicitud}`,
+    cuerpo: () => ({ accion: 'rechazar', comentario: 'Rechazada desde la matriz' }),
+    permitido: GESTION,
   },
   {
     nombre: 'POST /api/usuarios/:id/password',
@@ -485,8 +521,8 @@ describe('el rol no se puede falsear dentro del token', () => {
 });
 
 describe('cobertura de la matriz', () => {
-  it('cubre los 43 endpoints de la API', () => {
-    expect(CASOS).toHaveLength(43);
+  it('cubre los 48 endpoints de la API', () => {
+    expect(CASOS).toHaveLength(48);
   });
 
   it('todo caso declara al menos un rol autorizado', () => {

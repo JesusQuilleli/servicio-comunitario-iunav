@@ -1,8 +1,11 @@
 import { CheckCircle, XCircle, Clock, Users, AlertTriangle, Loader2, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useApiData } from "@/lib/useApiData";
+import { RUTAS } from "@/lib/rutas";
 import type { DashTutor, Usuario } from "@/lib/types";
 
 const tipoLabel: Record<string, string> = {
@@ -18,8 +21,8 @@ const tipoColor: Record<string, string> = {
 };
 
 const estadoColor: Record<string, "warning" | "outline"> = {
-  Pendiente: "warning",
-  Corregir: "outline",
+  pendiente: "warning",
+  corregir: "outline",
 };
 
 function formatoFecha(fecha?: string): string {
@@ -42,6 +45,7 @@ function EstadoProyecto({ estado }: { estado: string }) {
 
 export function TutorDashboard({ user }: { user: Usuario }) {
   const { data, loading, error, reload } = useApiData<DashTutor>("/dashboard");
+  const router = useRouter();
 
   if (loading) {
     return (
@@ -75,10 +79,10 @@ export function TutorDashboard({ user }: { user: Usuario }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <TarjetaMetrica icon={<Clock className="h-5 w-5 text-amber-600" />} bg="bg-amber-50" valor={data.resumen.pendientes} etiqueta="Pendientes por revisar" />
-        <TarjetaMetrica icon={<CheckCircle className="h-5 w-5 text-emerald-600" />} bg="bg-emerald-50" valor={data.resumen.aprobadas} etiqueta="Actividades aprobadas" />
-        <TarjetaMetrica icon={<XCircle className="h-5 w-5 text-red-600" />} bg="bg-red-50" valor={data.resumen.rechazadas} etiqueta="Actividades rechazadas" />
-        <TarjetaMetrica icon={<Users className="h-5 w-5 text-iunav-blue" />} bg="bg-blue-50" valor={data.resumen.estudiantes} etiqueta="Estudiantes asignados" />
+        <TarjetaMetrica icon={<Clock className="h-5 w-5 text-amber-600" />} bg="bg-amber-50" valor={data.resumen.pendientes} etiqueta="Pendientes por revisar" href={RUTAS.validacion} />
+        <TarjetaMetrica icon={<CheckCircle className="h-5 w-5 text-emerald-600" />} bg="bg-emerald-50" valor={data.resumen.aprobadas} etiqueta="Actividades aprobadas" href={RUTAS.validacion} />
+        <TarjetaMetrica icon={<XCircle className="h-5 w-5 text-red-600" />} bg="bg-red-50" valor={data.resumen.rechazadas} etiqueta="Actividades rechazadas" href={RUTAS.validacion} />
+        <TarjetaMetrica icon={<Users className="h-5 w-5 text-iunav-blue" />} bg="bg-blue-50" valor={data.resumen.estudiantes} etiqueta="Estudiantes asignados" href={RUTAS.proyectos} />
       </div>
 
       <Card className="border-0 shadow-sm">
@@ -93,7 +97,11 @@ export function TutorDashboard({ user }: { user: Usuario }) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {data.proyectos.map((proyecto) => (
-                <div key={proyecto.id} className="border rounded-lg p-4 hover:border-iunav-blue/30 transition-colors">
+                <Link
+                  key={proyecto.id}
+                  href={`${RUTAS.proyectos}?q=${encodeURIComponent(proyecto.nombre)}`}
+                  className="block border rounded-lg p-4 hover:border-iunav-blue/30 hover:bg-iunav-blue/5 transition-colors"
+                >
                   <h4 className="font-medium text-sm leading-snug">{proyecto.nombre}</h4>
                   <p className="text-xs text-muted-foreground mt-1">{proyecto.periodo}</p>
                   <div className="flex items-center gap-2 mt-2">
@@ -107,7 +115,7 @@ export function TutorDashboard({ user }: { user: Usuario }) {
                       </span>
                     ))}
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -115,12 +123,14 @@ export function TutorDashboard({ user }: { user: Usuario }) {
       </Card>
 
       <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            Actividades Pendientes de Revisión ({data.pendientes.length})
-          </CardTitle>
-        </CardHeader>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">
+              <Link href={RUTAS.validacion} className="flex items-center gap-2 hover:text-amber-600 transition-colors">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                Actividades Pendientes de Revisión ({data.pendientes.length})
+              </Link>
+            </CardTitle>
+          </CardHeader>
         <CardContent className="p-0">
           {data.pendientes.length === 0 ? (
             <div className="text-sm text-muted-foreground py-6 px-5">No hay actividades pendientes. ¡Todo al día!</div>
@@ -139,7 +149,11 @@ export function TutorDashboard({ user }: { user: Usuario }) {
                 </thead>
                 <tbody>
                   {data.pendientes.map((entrada) => (
-                    <tr key={entrada.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={entrada.id}
+                      onClick={() => router.push(RUTAS.validacion)}
+                      className="border-b last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                    >
                       <td className="px-5 py-3 font-medium">{entrada.estudianteNombre}</td>
                       <td className="px-5 py-3">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${tipoColor[entrada.tipo]}`}>
@@ -171,14 +185,16 @@ function TarjetaMetrica({
   bg,
   valor,
   etiqueta,
+  href,
 }: {
   icon: React.ReactNode;
   bg: string;
   valor: number;
   etiqueta: string;
+  href?: string;
 }) {
-  return (
-    <Card className="border-0 shadow-sm">
+  const contenido = (
+    <Card className="border-0 shadow-sm h-full transition-all hover:shadow-md hover:border-iunav-blue/30">
       <CardContent className="p-5 flex items-center gap-4">
         <div className={`p-3 rounded-xl ${bg}`}>{icon}</div>
         <div>
@@ -188,4 +204,5 @@ function TarjetaMetrica({
       </CardContent>
     </Card>
   );
+  return href ? <Link href={href} className="block">{contenido}</Link> : contenido;
 }

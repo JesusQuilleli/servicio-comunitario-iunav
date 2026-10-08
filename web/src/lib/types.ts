@@ -19,6 +19,48 @@ export interface LoginResponse {
   usuario: Usuario;
 }
 
+export interface ResultadoUsuario {
+  idUsuario: string;
+  nombre: string;
+  email: string;
+  rol: UserRole;
+}
+
+export interface ResultadoProyecto {
+  idGrupo: string;
+  nombre: string;
+  estado: string;
+  tutorNombre: string | null;
+  periodo: string | null;
+}
+
+export interface ResultadoBitacora {
+  id: string;
+  tipo: TipoRegistro;
+  descripcion: string;
+  estado: string;
+  fecha: string;
+  estudianteNombre: string;
+}
+
+export interface ResultadosBusqueda {
+  usuarios: ResultadoUsuario[];
+  proyectos: ResultadoProyecto[];
+  bitacoras: ResultadoBitacora[];
+}
+
+export interface SolicitudCambio {
+  idSolicitud: string;
+  campo: "nombre_completo" | "email";
+  valorAnterior: string | null;
+  valorNuevo: string;
+  estado: "pendiente" | "aprobada" | "rechazada";
+  comentario: string | null;
+  creadoEn: string;
+  resueltoEn: string | null;
+  estudianteNombre?: string;
+}
+
 export interface EntradaPendiente {
   id: string;
   tipo: "comunitario" | "social" | "ambiental";

@@ -45,6 +45,7 @@ const TABLAS = [
   'configuracion_sistema',
   'plantillas_documento',
   'periodos_academicos',
+  'solicitudes_cambio',
   'usuarios',
 ];
 
@@ -62,6 +63,7 @@ export interface DatosSemilla {
   plantilla: number;
   grupo: string;
   bitacoraPendiente: string;
+  solicitud: string;
 }
 
 export const PASSWORD_SEMILLA = 'pruebas123';
@@ -146,6 +148,15 @@ export async function sembrar(): Promise<DatosSemilla> {
     [estudianteA, grupo]
   );
 
+  // Solicitud de cambio pendiente del estudiante A: la resuelve la matriz de
+  // permisos (PATCH /api/solicitudes/:id) y la listan GET /solicitudes(/mias).
+  const { rows: s } = await pool.query<{ id_solicitud: string }>(
+    `insert into solicitudes_cambio (id_usuario, campo, valor_anterior, valor_nuevo, estado)
+     values ($1, 'email', 'estudianteana@test.local', 'ana.nuevo@test.local', 'pendiente')
+     returning id_solicitud`,
+    [estudianteA]
+  );
+
   return {
     admin,
     coordinador,
@@ -160,6 +171,7 @@ export async function sembrar(): Promise<DatosSemilla> {
     plantilla,
     grupo,
     bitacoraPendiente: b[0].id_bitacora,
+    solicitud: s[0].id_solicitud,
   };
 }
 

@@ -21,6 +21,7 @@ export const RUTAS = {
   configuracion: "/configuracion",
   reportes: "/reportes",
   password: "/password",
+  perfil: "/perfil",
 } as const;
 
 export type ViewKey = keyof typeof RUTAS;
@@ -31,12 +32,15 @@ export const ROLES_POR_RUTA: Record<ViewKey, UserRole[]> = {
   "registro-usuarios": ["admin", "coordinador"],
   usuarios: ["admin", "coordinador"],
   proyectos: ["admin", "coordinador", "tutor"],
-  bitacora: ["admin", "coordinador", "tutor", "estudiante"],
-  servicio: ["admin", "coordinador", "tutor", "estudiante"],
+  // Bitácora y servicio son de carga y consulta del estudiante: la vista lo
+  // bloquea a los demás, así que el menú tampoco debe ofrecérselo.
+  bitacora: ["estudiante"],
+  servicio: ["estudiante"],
   validacion: ["tutor"],
   configuracion: ["admin", "coordinador"],
   reportes: ["admin", "coordinador", "tutor"],
   password: ["admin", "coordinador", "tutor", "estudiante"],
+  perfil: ["admin", "coordinador", "tutor", "estudiante"],
 };
 
 export const TITULOS: Record<ViewKey, string> = {
@@ -50,6 +54,7 @@ export const TITULOS: Record<ViewKey, string> = {
   configuracion: "Configuraciones y Plantillas",
   reportes: "Reportes y certificados",
   password: "Mi contraseña",
+  perfil: "Mi perfil",
 };
 
 /** Vista a la que pertenece una ruta, o `null` si no es una ruta del panel. */

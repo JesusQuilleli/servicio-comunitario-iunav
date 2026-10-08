@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FolderKanban,
   Loader2,
@@ -106,6 +106,22 @@ export function ProyectosView() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<EstadoGrupo | "todos">("todos");
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>("todos");
+
+  // Precarga desde la URL cuando se llega de un enlace (dashboard o búsqueda
+  // global): /proyectos?estado=pendiente_aprobacion&q=...
+  // Se lee `window.location` en un efecto de una sola vez a propósito:
+  // `useSearchParams` exigiría un Suspense boundary en toda la vista.
+  /* eslint-disable react-hooks/set-state-in-effect -- carga única al montar */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q");
+    const estado = params.get("estado");
+    if (q) setBusqueda(q);
+    if (estado && (ESTADOS_GRUPO as readonly string[]).includes(estado)) {
+      setFiltroEstado(estado as EstadoGrupo);
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const url = useMemo(() => {
     const params = new URLSearchParams();

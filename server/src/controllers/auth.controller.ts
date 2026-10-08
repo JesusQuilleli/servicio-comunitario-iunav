@@ -7,6 +7,7 @@ import { pool } from '../db/pool.js';
 import { ApiError } from '../lib/errors.js';
 import { passwordSchema } from '../lib/password.js';
 import {
+  actualizarPerfil,
   actualizarPassword,
   crearUsuario,
   findUsuarioPorCedula,
@@ -14,6 +15,12 @@ import {
   findUsuarioPorId,
   mapUsuarioPublico,
 } from '../models/usuario.model.js';
+import {
+  crearSolicitud,
+  findPendientePorCampo,
+  mapSolicitudPublica,
+  type CampoSolicitud,
+} from '../models/solicitud.model.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import type { UserRole } from '../types.js';
 
@@ -38,6 +45,15 @@ const cambiarPasswordSchema = z
   .refine((v) => v.passwordActual !== v.passwordNueva, {
     message: 'La contraseña nueva debe ser distinta de la actual',
     path: ['passwordNueva'],
+  });
+
+const perfilSchema = z
+  .object({
+    nombreCompleto: z.string().trim().min(3, 'El nombre debe tener al menos 3 caracteres').optional(),
+    email: z.string().trim().email('Correo electrónico inválido').optional(),
+  })
+  .refine((v) => v.nombreCompleto !== undefined || v.email !== undefined, {
+    message: 'No hay cambios que guardar',
   });
 
 function firmaToken(idUsuario: string, rol: UserRole, passwordTemporal: boolean): string {
@@ -170,6 +186,90 @@ export async function cambiarPassword(
       token: firmaToken(idUsuario, actualizado.rol, false),
       usuario: mapUsuarioPublico(actualizado),
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Actualizacion de los datos de la cuenta desde "Mi perfil".
+ *
+ * Administradores, coordinadores y tutores aplican el cambio en el acto. El
+ * estudiante no edita su cuenta: la propuesta queda como solicitud pendiente
+ * que el coordinador (o el admin) aprueba o rechaza en Gestión de Usuarios.
+ */
+export async function actualizarPerfilPropio(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const idUsuario = requiereUsuario(req);
+    const body = perfilSchema.parse(req.body);
+
+    const usuario = await findUsuarioPorId(idUsuario);
+    if (!usuario || !usuario.activo) {
+      throw new ApiError(401, 'Usuario no encontrado o inactivo');
+    }
+
+    const cambios: { campo: CampoSolicitud; valorAnterior: string; valorNuevo: string }[] = [];
+
+    if (body.nombreCompleto !== undefined && body.nombreCompleto !== usuario.nombre_completo) {
+      cambios.push({
+        campo: 'nombre_completo',
+        valorAnterior: usuario.nombre_completo,
+        valorNuevo: body.nombreCompleto,
+      });
+    }
+
+    const emailNuevo = body.email?.toLowerCase();
+    if (emailNuevo !== undefined && emailNuevo !== usuario.email) {
+      const dueno = await findUsuarioPorEmail(emailNuevo);
+      if (dueno && dueno.id_usuario !== idUsuario) {
+        throw new ApiError(409, 'Ya existe un usuario con ese correo electrónico');
+      }
+      cambios.push({ campo: 'email', valorAnterior: usuario.email, valorNuevo: emailNuevo });
+    }
+
+    // Nada que tocar: respuesta idempotente con el usuario tal cual.
+    if (cambios.length === 0) {
+      res.json({ usuario: mapUsuarioPublico(usuario), solicitudes: [] });
+      return;
+    }
+
+    if (usuario.rol !== 'estudiante') {
+      const cambiosAplicados: { nombreCompleto?: string; email?: string } = {};
+      for (const cambio of cambios) {
+        if (cambio.campo === 'nombre_completo') cambiosAplicados.nombreCompleto = cambio.valorNuevo;
+        if (cambio.campo === 'email') cambiosAplicados.email = cambio.valorNuevo;
+      }
+      const actualizado = await actualizarPerfil(idUsuario, cambiosAplicados);
+      res.json({ usuario: mapUsuarioPublico(actualizado), solicitudes: [] });
+      return;
+    }
+
+    // Estudiante: una solicitud por campo, sin duplicados pendientes.
+    const creadas = [];
+    for (const cambio of cambios) {
+      const pendiente = await findPendientePorCampo(idUsuario, cambio.campo);
+      if (pendiente) {
+        throw new ApiError(
+          409,
+          `Ya tienes una solicitud de cambio de ${
+            cambio.campo === 'email' ? 'correo electrónico' : 'nombre completo'
+          } pendiente de aprobación`
+        );
+      }
+      const solicitud = await crearSolicitud({
+        idUsuario,
+        campo: cambio.campo,
+        valorAnterior: cambio.valorAnterior,
+        valorNuevo: cambio.valorNuevo,
+      });
+      creadas.push(mapSolicitudPublica(solicitud));
+    }
+
+    res.status(201).json({ usuario: mapUsuarioPublico(usuario), solicitudes: creadas });
   } catch (err) {
     next(err);
   }

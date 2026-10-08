@@ -67,6 +67,7 @@ export const RUTAS_CUBIERTAS: Record<ViewKey, true> = {
   configuracion: true,
   reportes: true,
   password: true,
+  perfil: true,
 };
 
 export const config = {
@@ -92,5 +93,7 @@ export const config = {
     "/reportes/:path*",
     "/password",
     "/password/:path*",
+    "/perfil",
+    "/perfil/:path*",
   ],
 };

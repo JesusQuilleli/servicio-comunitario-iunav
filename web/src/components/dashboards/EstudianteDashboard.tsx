@@ -1,9 +1,12 @@
 import { FolderKanban, CheckCircle, AlertTriangle, TrendingUp, Image as ImageIcon, Loader2, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useApiData } from "@/lib/useApiData";
+import { RUTAS } from "@/lib/rutas";
 import type { DashEstudiante, Usuario } from "@/lib/types";
 
 const tipoLabel: Record<string, string> = {
@@ -13,11 +16,16 @@ const tipoLabel: Record<string, string> = {
 };
 
 const estadoColor: Record<string, "warning" | "success" | "danger" | "outline"> = {
-  Pendiente: "warning",
-  Corregir: "outline",
-  Aprobado: "success",
-  Rechazado: "danger",
+  pendiente: "warning",
+  corregir: "outline",
+  aprobado: "success",
+  rechazado: "danger",
 };
+
+/** Cada tipo de registro vive en su propia sección del panel. */
+function rutaDeTipo(tipo: string): string {
+  return tipo === "comunitario" ? RUTAS.bitacora : RUTAS.servicio;
+}
 
 function formatoFecha(fecha?: string): string {
   if (!fecha) return "Sin fecha";
@@ -27,6 +35,7 @@ function formatoFecha(fecha?: string): string {
 }
 
 function SessionMeta({ d }: { d: DashEstudiante }) {
+  const router = useRouter();
   const total = d.totalHoras;
   const metaTotal = d.metas.directas + d.metas.impacto;
   const pctTotal = Math.min(100, Math.round((total / metaTotal) * 100));
@@ -89,7 +98,11 @@ function SessionMeta({ d }: { d: DashEstudiante }) {
                 </thead>
                 <tbody>
                   {d.pendientes.map((entrada) => (
-                    <tr key={entrada.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={entrada.id}
+                      onClick={() => router.push(`${rutaDeTipo(entrada.tipo)}?estado=${entrada.estado}`)}
+                      className="border-b last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                    >
                       <td className="px-5 py-3">
                         <Badge
                           variant={
@@ -142,7 +155,11 @@ function SessionMeta({ d }: { d: DashEstudiante }) {
                 </thead>
                 <tbody>
                   {d.aprobadasRecientes.map((entrada) => (
-                    <tr key={entrada.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={entrada.id}
+                      onClick={() => router.push(`${rutaDeTipo(entrada.tipo)}?estado=aprobado`)}
+                      className="border-b last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                    >
                       <td className="px-5 py-3">
                         <Badge
                           variant={
@@ -224,6 +241,20 @@ export function EstudianteDashboard({ user }: { user: Usuario }) {
                 comiences a registrar actividades, aquí aparecerá tu progreso de 120h.
               </p>
             </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link
+                href={RUTAS.bitacora}
+                className="inline-flex h-9 items-center rounded-md bg-iunav-blue px-4 text-sm font-medium text-white hover:bg-iunav-blue/90 transition-colors"
+              >
+                Registrar en Bitácora
+              </Link>
+              <Link
+                href={RUTAS.servicio}
+                className="inline-flex h-9 items-center rounded-md border border-input bg-transparent px-4 text-sm font-medium hover:bg-muted transition-colors"
+              >
+                Registrar Servicio
+              </Link>
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -235,7 +266,7 @@ export function EstudianteDashboard({ user }: { user: Usuario }) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Ticker icon={<FolderKanban className="h-5 w-5 text-iunav-blue" />} bg="bg-blue-50" valor={data.proyecto ? "1" : "0"} etiqueta="Proyecto Activo" />
             <Ticker icon={<AlertTriangle className="h-5 w-5 text-amber-600" />} bg="bg-amber-50" valor={String(data.pendientesCount)} etiqueta="Actividades Pendientes" />
-            <Ticker icon={<TrendingUp className="h-5 w-5 text-emerald-600" />} bg="bg-emerald-50" valor={`${data.pctDirecto}%`} etiqueta="Avance Trabajo Directo" />
+            <Ticker icon={<TrendingUp className="h-5 w-5 text-emerald-600" />} bg="bg-emerald-50" valor={`${data.pctDirecto}%`} etiqueta="Avance Trabajo Directo" href={RUTAS.bitacora} />
           </div>
 
           {data.proyecto && (
@@ -285,14 +316,16 @@ function Ticker({
   bg,
   valor,
   etiqueta,
+  href,
 }: {
   icon: React.ReactNode;
   bg: string;
   valor: string;
   etiqueta: string;
+  href?: string;
 }) {
-  return (
-    <Card className="border-0 shadow-sm">
+  const contenido = (
+    <Card className="border-0 shadow-sm h-full transition-all hover:shadow-md hover:border-iunav-blue/30">
       <CardContent className="p-5 flex items-center gap-4">
         <div className={`p-3 rounded-xl ${bg}`}>{icon}</div>
         <div>
@@ -302,4 +335,5 @@ function Ticker({
       </CardContent>
     </Card>
   );
+  return href ? <Link href={href} className="block">{contenido}</Link> : contenido;
 }

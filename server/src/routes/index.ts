@@ -8,6 +8,8 @@ import { periodosRouter } from './periodos.routes.js';
 import { configuracionRouter } from './configuracion.routes.js';
 import { archivoRouter } from './archivo.routes.js';
 import { reporteRouter } from './reporte.routes.js';
+import { busquedaRouter } from './busqueda.routes.js';
+import { solicitudesRouter } from './solicitud.routes.js';
 
 const router = Router();
 
@@ -20,5 +22,7 @@ router.use('/periodos', periodosRouter);
 router.use('/configuracion', configuracionRouter);
 router.use('/archivos', archivoRouter);
 router.use('/reportes', reporteRouter);
+router.use('/busqueda', busquedaRouter);
+router.use('/solicitudes', solicitudesRouter);
 
 export { router as apiRouter };

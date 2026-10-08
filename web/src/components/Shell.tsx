@@ -2,11 +2,11 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Search } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
+import { BuscadorGlobal } from "@/components/BuscadorGlobal";
 import { CambiarPassword } from "@/components/CambiarPassword";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/authStore";
 import { TITULOS, viewDeRuta } from "@/lib/rutas";
 
@@ -74,10 +74,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <header className="h-14 border-b bg-white flex items-center justify-between px-6 shrink-0">
           <h2 className="text-sm font-semibold text-foreground">{titulo}</h2>
           <div className="flex items-center gap-3">
-            <div className="relative hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar..." className="pl-9 w-56 h-8 text-sm" />
-            </div>
+            <BuscadorGlobal />
             <Button variant="ghost" size="icon" className="relative h-8 w-8">
               <Bell className="h-4 w-4" />
               <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-iunav-red text-[10px] font-bold text-white">

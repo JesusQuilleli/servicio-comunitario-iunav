@@ -28,4 +28,8 @@ router.post(
 // poder hacer mientras la clave es temporal.
 router.patch('/password', authenticate, auth.cambiarPassword);
 
+// PATCH /api/auth/perfil -> actualizar nombre/correo de la propia cuenta.
+// El estudiante no aplica el cambio: genera una solicitud para el coordinador.
+router.patch('/perfil', authenticate, requiereCambioDePassword, auth.actualizarPerfilPropio);
+
 export { router as authRouter };

@@ -1,13 +1,17 @@
 import { Users, Building2, Clock, TrendingUp, FileText, AlertTriangle, Loader2, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useApiData } from "@/lib/useApiData";
+import { RUTAS } from "@/lib/rutas";
 import type { DashGestion, Usuario } from "@/lib/types";
 
 export function CoordinadorDashboard({ user }: { user: Usuario }) {
   const { data, loading, error, reload } = useApiData<DashGestion>("/dashboard");
+  const router = useRouter();
 
   if (loading) {
     return (
@@ -59,18 +63,20 @@ export function CoordinadorDashboard({ user }: { user: Usuario }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Metrica icon={<Users className="h-5 w-5 text-iunav-blue" />} bg="bg-blue-50" valor={data.resumen.estudiantes} etiqueta="Estudiantes activos" />
-        <Metrica icon={<Building2 className="h-5 w-5 text-violet-600" />} bg="bg-violet-50" valor={data.resumen.proyectosEnCurso} etiqueta="Proyectos en curso" />
-        <Metrica icon={<TrendingUp className="h-5 w-5 text-emerald-600" />} bg="bg-emerald-50" valor={data.resumen.horasValidadas} etiqueta="Horas validadas" />
-        <Metrica icon={<Clock className="h-5 w-5 text-amber-600" />} bg="bg-amber-50" valor={data.resumen.pendientes} etiqueta="Bitácoras pendientes" />
+        <Metrica icon={<Users className="h-5 w-5 text-iunav-blue" />} bg="bg-blue-50" valor={data.resumen.estudiantes} etiqueta="Estudiantes activos" href={`${RUTAS.usuarios}?rol=estudiante`} />
+        <Metrica icon={<Building2 className="h-5 w-5 text-violet-600" />} bg="bg-violet-50" valor={data.resumen.proyectosEnCurso} etiqueta="Proyectos en curso" href={`${RUTAS.proyectos}?estado=en_curso`} />
+        <Metrica icon={<TrendingUp className="h-5 w-5 text-emerald-600" />} bg="bg-emerald-50" valor={data.resumen.horasValidadas} etiqueta="Horas validadas" href={RUTAS.reportes} />
+        <Metrica icon={<Clock className="h-5 w-5 text-amber-600" />} bg="bg-amber-50" valor={data.resumen.pendientes} etiqueta="Bitácoras pendientes" href={RUTAS.reportes} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="border-0 shadow-sm lg:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <FileText className="h-4 w-4 text-iunav-blue" />
-              Resumen de Horas por Tipo de Servicio
+            <CardTitle className="text-base font-semibold">
+              <Link href={RUTAS.reportes} className="flex items-center gap-2 hover:text-iunav-blue transition-colors">
+                <FileText className="h-4 w-4 text-iunav-blue" />
+                Resumen de Horas por Tipo de Servicio
+              </Link>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -106,9 +112,14 @@ export function CoordinadorDashboard({ user }: { user: Usuario }) {
 
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-              Proyectos por Aprobar ({data.proyectosPendientes.length})
+            <CardTitle className="text-base font-semibold">
+              <Link
+                href={`${RUTAS.proyectos}?estado=pendiente_aprobacion`}
+                className="flex items-center gap-2 hover:text-amber-600 transition-colors"
+              >
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                Proyectos por Aprobar ({data.proyectosPendientes.length})
+              </Link>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -116,7 +127,11 @@ export function CoordinadorDashboard({ user }: { user: Usuario }) {
               <p className="text-sm text-muted-foreground">No hay proyectos pendientes.</p>
             ) : (
               data.proyectosPendientes.map((p) => (
-                <div key={p.idGrupo} className="border rounded-lg p-3">
+                <Link
+                  key={p.idGrupo}
+                  href={`${RUTAS.proyectos}?estado=pendiente_aprobacion&q=${encodeURIComponent(p.nombre)}`}
+                  className="block border rounded-lg p-3 hover:border-amber-300 hover:bg-amber-50/50 transition-colors"
+                >
                   <p className="text-sm font-medium leading-snug">{p.nombre}</p>
                   <p className="text-xs text-muted-foreground mt-1">Tutor: {p.tutorNombre ?? "Por asignar"}</p>
                   <div className="flex items-center gap-2 mt-2">
@@ -127,7 +142,7 @@ export function CoordinadorDashboard({ user }: { user: Usuario }) {
                       <span className="text-xs text-muted-foreground">Falta material</span>
                     )}
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </CardContent>
@@ -137,7 +152,11 @@ export function CoordinadorDashboard({ user }: { user: Usuario }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Tutores Registrados</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              <Link href={`${RUTAS.usuarios}?rol=tutor`} className="hover:text-iunav-blue transition-colors">
+                Tutores Registrados
+              </Link>
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -152,7 +171,11 @@ export function CoordinadorDashboard({ user }: { user: Usuario }) {
                 </thead>
                 <tbody>
                   {data.tutores.map((tutor) => (
-                    <tr key={tutor.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={tutor.id}
+                      onClick={() => router.push(`${RUTAS.usuarios}?rol=tutor&q=${encodeURIComponent(tutor.nombre)}`)}
+                      className="border-b last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                    >
                       <td className="px-5 py-3 font-medium">{tutor.nombre}</td>
                       <td className="px-5 py-3">{tutor.cedula}</td>
                       <td className="px-5 py-3">
@@ -206,14 +229,16 @@ function Metrica({
   bg,
   valor,
   etiqueta,
+  href,
 }: {
   icon: React.ReactNode;
   bg: string;
   valor: number;
   etiqueta: string;
+  href?: string;
 }) {
-  return (
-    <Card className="border-0 shadow-sm">
+  const contenido = (
+    <Card className="border-0 shadow-sm h-full transition-all hover:shadow-md hover:border-iunav-blue/30">
       <CardContent className="p-5 flex items-center gap-4">
         <div className={`p-3 rounded-xl ${bg}`}>{icon}</div>
         <div>
@@ -223,4 +248,5 @@ function Metrica({
       </CardContent>
     </Card>
   );
+  return href ? <Link href={href} className="block">{contenido}</Link> : contenido;
 }

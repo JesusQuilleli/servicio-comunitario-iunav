@@ -127,6 +127,25 @@ create table if not exists plantillas_documento (
 );
 
 -- ------------------------------------------------------------
+-- solicitudes_cambio (cambios de datos de cuenta bajo autorizacion)
+-- ------------------------------------------------------------
+-- El estudiante no edita su cuenta: propone y el coordinador (o el admin)
+-- aprueba. Cada fila es un campo pedido; al aprobarse se aplica al usuario.
+create table if not exists solicitudes_cambio (
+  id_solicitud uuid primary key default gen_random_uuid(),
+  id_usuario uuid not null references usuarios(id_usuario) on delete cascade,
+  campo text not null check (campo in ('nombre_completo', 'email')),
+  valor_anterior text,
+  valor_nuevo text not null,
+  estado text not null default 'pendiente'
+    check (estado in ('pendiente', 'aprobada', 'rechazada')),
+  comentario text,
+  id_resolvio uuid references usuarios(id_usuario),
+  creado_en timestamptz not null default now(),
+  resuelto_en timestamptz
+);
+
+-- ------------------------------------------------------------
 -- Índices
 -- ------------------------------------------------------------
 create unique index if not exists idx_configuracion_unica on configuracion_sistema ((true));
@@ -136,6 +155,8 @@ create index if not exists idx_bitacoras_estudiante on bitacoras_comunitario(id_
 create index if not exists idx_control_estudiante on control_servicios_institucionales(id_estudiante);
 create index if not exists idx_grupos_tutor on grupos_proyectos(id_tutor);
 create index if not exists idx_integrantes_estudiante on integrantes_grupo(id_estudiante);
+create index if not exists idx_solicitudes_estado on solicitudes_cambio(estado);
+create index if not exists idx_solicitudes_usuario on solicitudes_cambio(id_usuario);
 
 -- ------------------------------------------------------------
 -- Ajustes sobre bases ya creadas

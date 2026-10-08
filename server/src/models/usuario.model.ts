@@ -101,6 +101,25 @@ export async function actualizarPassword(
   return rows[0];
 }
 
+/**
+ * Actualiza los datos de la cuenta (nombre y/o correo). Los campos que llegan
+ * en `null` se conservan tal cual.
+ */
+export async function actualizarPerfil(
+  idUsuario: string,
+  datos: { nombreCompleto?: string | null; email?: string | null }
+): Promise<UsuarioRow> {
+  const { rows } = await pool.query<UsuarioRow>(
+    `update usuarios
+     set nombre_completo = coalesce($2, nombre_completo),
+         email = coalesce($3, email)
+     where id_usuario = $1
+     returning *`,
+    [idUsuario, datos.nombreCompleto ?? null, datos.email ?? null]
+  );
+  return rows[0];
+}
+
 export interface ResultadoImportacion {
   creados: number;
   asignados: number;
