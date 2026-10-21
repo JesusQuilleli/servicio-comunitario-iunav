@@ -104,45 +104,16 @@ rem 6) Ventanas de la API y de la web
 rem ---------------------------------------------------------------
 echo [4/5] Abriendo la API y la web...
 if "!ARRANCAR_API!"=="1" (
-  call :levantar_ventana "API" "%PROYECTO%\server" "%DIR_LOGS%\api.pid"
-  if errorlevel 1 goto :error
-) else (
-  echo     - La API ya estaba en marcha.
+  call :levantar_ventana
+set "TITULO=%~1"
+set "CARPETA=%~2"
+set "ARCHIVO_PID=%~3"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "=[char]34;  = 'set DATABASE_URL=%DATABASE_URL%&& set TEST_DATABASE_URL=%TEST_DATABASE_URL%&& set DB_SSL=%DB_SSL%&& set JWT_SECRET=%JWT_SECRET%&& set JWT_EXPIRES_IN=%JWT_EXPIRES_IN%&& set PORT=%PORT%&& set API_HOST=%API_HOST%&& set FRONTEND_URL=%FRONTEND_URL%&& set UPLOAD_DIR=%UPLOAD_DIR%&& set NODE_ENV=%NODE_ENV%&& set NEXT_PUBLIC_API_URL=http://localhost:4000&& title %TITULO% && npm run dev'; ='/k ' +  +  + ; =Start-Process -FilePath 'cmd.exe' -ArgumentList  -WorkingDirectory '%CARPETA%' -PassThru; Set-Content -Path '%ARCHIVO_PID%' -Value .Id"
+if errorlevel 1 (
+  echo [ERROR] No se pudo abrir la ventana de %TITULO%.
+  exit /b 1
 )
-if "!ARRANCAR_WEB!"=="1" (
-  call :levantar_ventana "Web" "%PROYECTO%\web" "%DIR_LOGS%\web.pid"
-  if errorlevel 1 goto :error
-) else (
-  echo     - La web ya estaba en marcha.
-)
-echo.
-
-rem ---------------------------------------------------------------
-rem 7) Esperar a que todo responda
-rem ---------------------------------------------------------------
-echo [5/5] Esperando a que el sistema este listo...
-call :esperar_url "http://localhost:4000/api/health" 90 "La API"
-if errorlevel 1 goto :error_servidor
-call :esperar_url "http://localhost:3000/login" 180 "La web"
-if errorlevel 1 goto :error_servidor
-echo.
-
-echo ============================================================
-echo    El sistema esta listo.
-echo.
-echo    Direccion:  http://localhost:3000
-echo.
-echo    Cuentas de prueba:
-echo      Administrador  cmendoza@iunav.edu.ve   admin123
-echo      Coordinador   mlopez@iunav.edu.ve      coord123
-echo      Tutor          jperez@iunav.edu.ve      tutor123
-echo      Estudiante     gmartinez@iunav.edu.ve   est123
-echo.
-echo    Para cerrar todo, haz doble clic en "detener.cmd".
-echo ============================================================
-echo.
-start "" "http://localhost:3000"
-pause
+echo     - Ventana %TITULO% abierta.
 exit /b 0
 
 rem ===============================================================
@@ -225,7 +196,7 @@ exit /b 0
 set "TITULO=%~1"
 set "CARPETA=%~2"
 set "ARCHIVO_PID=%~3"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$q=[char]34; $a='/k ' + $q + 'title %TITULO% & npm run dev' + $q; $p=Start-Process -FilePath 'cmd.exe' -ArgumentList $a -WorkingDirectory '%CARPETA%' -PassThru; Set-Content -Path '%ARCHIVO_PID%' -Value $p.Id"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "=[char]34;  = 'set DATABASE_URL=%DATABASE_URL%&& set TEST_DATABASE_URL=%TEST_DATABASE_URL%&& set DB_SSL=%DB_SSL%&& set JWT_SECRET=%JWT_SECRET%&& set JWT_EXPIRES_IN=%JWT_EXPIRES_IN%&& set PORT=%PORT%&& set API_HOST=%API_HOST%&& set FRONTEND_URL=%FRONTEND_URL%&& set UPLOAD_DIR=%UPLOAD_DIR%&& set NODE_ENV=%NODE_ENV%&& set NEXT_PUBLIC_API_URL=http://localhost:4000&& title %TITULO% && npm run dev'; ='/k ' +  +  + ; =Start-Process -FilePath 'cmd.exe' -ArgumentList  -WorkingDirectory '%CARPETA%' -PassThru; Set-Content -Path '%ARCHIVO_PID%' -Value .Id"
 if errorlevel 1 (
   echo [ERROR] No se pudo abrir la ventana de %TITULO%.
   exit /b 1
@@ -297,3 +268,4 @@ echo ============================================================
 echo.
 pause
 exit /b 1
+
