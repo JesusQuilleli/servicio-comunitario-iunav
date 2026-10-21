@@ -108,11 +108,7 @@ if "!ARRANCAR_API!"=="1" (
 set "TITULO=%~1"
 set "CARPETA=%~2"
 set "ARCHIVO_PID=%~3"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "=[char]34;  = 'set DATABASE_URL=%DATABASE_URL%&& set TEST_DATABASE_URL=%TEST_DATABASE_URL%&& set DB_SSL=%DB_SSL%&& set JWT_SECRET=%JWT_SECRET%&& set JWT_EXPIRES_IN=%JWT_EXPIRES_IN%&& set PORT=%PORT%&& set API_HOST=%API_HOST%&& set FRONTEND_URL=%FRONTEND_URL%&& set UPLOAD_DIR=%UPLOAD_DIR%&& set NODE_ENV=%NODE_ENV%&& set NEXT_PUBLIC_API_URL=http://localhost:4000&& title %TITULO% && npm run dev'; ='/k ' +  +  + ; =Start-Process -FilePath 'cmd.exe' -ArgumentList  -WorkingDirectory '%CARPETA%' -PassThru; Set-Content -Path '%ARCHIVO_PID%' -Value .Id"
-if errorlevel 1 (
-  echo [ERROR] No se pudo abrir la ventana de %TITULO%.
-  exit /b 1
-)
+start "%TITULO%" cmd /k "cd /d %CARPETA% && set DATABASE_URL=%DATABASE_URL% && set TEST_DATABASE_URL=%TEST_DATABASE_URL% && set DB_SSL=%DB_SSL% && set JWT_SECRET=%JWT_SECRET% && set JWT_EXPIRES_IN=%JWT_EXPIRES_IN% && set PORT=%PORT% && set API_HOST=%API_HOST% && set FRONTEND_URL=%FRONTEND_URL% && set UPLOAD_DIR=%UPLOAD_DIR% && set NODE_ENV=%NODE_ENV% && set NEXT_PUBLIC_API_URL=http://localhost:4000 && npm run dev"
 echo     - Ventana %TITULO% abierta.
 exit /b 0
 
@@ -196,11 +192,7 @@ exit /b 0
 set "TITULO=%~1"
 set "CARPETA=%~2"
 set "ARCHIVO_PID=%~3"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "=[char]34;  = 'set DATABASE_URL=%DATABASE_URL%&& set TEST_DATABASE_URL=%TEST_DATABASE_URL%&& set DB_SSL=%DB_SSL%&& set JWT_SECRET=%JWT_SECRET%&& set JWT_EXPIRES_IN=%JWT_EXPIRES_IN%&& set PORT=%PORT%&& set API_HOST=%API_HOST%&& set FRONTEND_URL=%FRONTEND_URL%&& set UPLOAD_DIR=%UPLOAD_DIR%&& set NODE_ENV=%NODE_ENV%&& set NEXT_PUBLIC_API_URL=http://localhost:4000&& title %TITULO% && npm run dev'; ='/k ' +  +  + ; =Start-Process -FilePath 'cmd.exe' -ArgumentList  -WorkingDirectory '%CARPETA%' -PassThru; Set-Content -Path '%ARCHIVO_PID%' -Value .Id"
-if errorlevel 1 (
-  echo [ERROR] No se pudo abrir la ventana de %TITULO%.
-  exit /b 1
-)
+start "%TITULO%" cmd /k "cd /d %CARPETA% && set DATABASE_URL=%DATABASE_URL% && set TEST_DATABASE_URL=%TEST_DATABASE_URL% && set DB_SSL=%DB_SSL% && set JWT_SECRET=%JWT_SECRET% && set JWT_EXPIRES_IN=%JWT_EXPIRES_IN% && set PORT=%PORT% && set API_HOST=%API_HOST% && set FRONTEND_URL=%FRONTEND_URL% && set UPLOAD_DIR=%UPLOAD_DIR% && set NODE_ENV=%NODE_ENV% && set NEXT_PUBLIC_API_URL=http://localhost:4000 && npm run dev"
 echo     - Ventana %TITULO% abierta.
 exit /b 0
 
@@ -268,4 +260,5 @@ echo ============================================================
 echo.
 pause
 exit /b 1
+
 
