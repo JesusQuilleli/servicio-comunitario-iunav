@@ -69,8 +69,19 @@ async function crearBasesQueFalten(pg) {
         nombre
       ]);
       if (rows.length === 0) {
-        await cliente.query(`create database "${nombre}"`);
-        console.log(`Base de datos creada: ${nombre}`);
+        try {
+          await cliente.query(`create database "${nombre}"`);
+          console.log(`Base de datos creada: ${nombre}`);
+        } catch (err) {
+          // Si el demonio la creo al mismo tiempo, PostgreSQL responde con
+          // 42P04 (duplicate_database) o 23505 (indice unico de pg_database).
+          // En ese caso el resultado ya es el que queriamos.
+          if (err?.code === '42P04' || err?.code === '23505') {
+            console.log(`Base de datos ya existe: ${nombre}`);
+          } else {
+            throw err;
+          }
+        }
       } else {
         console.log(`Base de datos ya existe: ${nombre}`);
       }
@@ -262,6 +273,17 @@ async function comandoStart() {
   if (!(await comprobarConexion(valores.PG_PASSWORD))) {
     console.error('ERROR: el cluster arranco pero no se puede conectar con la contrasena guardada.');
     console.error(`Revisa el archivo ${ARCHIVO_LOG_PG}.`);
+    process.exit(1);
+  }
+
+  // No se espera al demonio: las bases se aseguran aqui, antes de devolver el
+  // control, para que quien llame a `start` (instalar.cmd, iniciar.cmd) pueda
+  // crear el esquema sin carreras con la creacion que hace el demonio.
+  const pg = new EmbeddedPostgres(opcionesCluster(valores.PG_PASSWORD));
+  try {
+    await crearBasesQueFalten(pg);
+  } catch (err) {
+    console.error('ERROR: no se pudieron crear las bases de datos:', err?.message ?? err);
     process.exit(1);
   }
 
