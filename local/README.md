@@ -18,6 +18,9 @@ Este kit deja el sistema funcionando **en este equipo** sin tener que instalar P
 
 - **Iniciar:** abre `local\iniciar.cmd` y espera a que se abra el navegador en [http://localhost:3000](http://localhost:3000).
 - **Detener:** abre `local\detener.cmd` para cerrar todo (API, web y base de datos).
+- **Volver a empezar:** si algo se queda raro, ejecuta `detener.cmd` y luego `iniciar.cmd`.
+
+> La API y la web se ejecutan **en segundo plano** (no verás dos ventanas negras). Su PID queda en `local\logs\api.pid` y `local\logs\web.pid`, y su salida en `local\logs\api.log` y `local\logs\web.log`. Si algo falla, esos dos archivos son lo que hay que revisar (o adjuntar al reportar un problema).
 
 ## Cuentas de prueba
 
@@ -45,4 +48,7 @@ node pg.mjs start
 node pg.mjs stop
 node pg.mjs status
 node pg.mjs ensure-db
+node app.mjs start
+node app.mjs stop
+node app.mjs status
 ```
