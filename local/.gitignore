@@ -1,0 +1,12 @@
+# Dependencias del kit local (PostgreSQL embebido).
+node_modules/
+
+# Carpeta de datos del cluster de PostgreSQL: es la copia de trabajo del
+# usuario. No se versiona (son cientos de megabytes y datos personales).
+.pgdata/
+
+# Contrasena de la base local y secreto del JWT. Se generan una sola vez.
+.env.local
+
+# PIDs y logs de las ventanas de la API, la web y PostgreSQL.
+logs/

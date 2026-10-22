@@ -1,6 +1,7 @@
 import type { PoolClient } from 'pg';
 import { pool } from '../db/pool.js';
 import { ApiError } from '../lib/errors.js';
+import type { Paginacion } from '../lib/paginacion.js';
 
 export type TipoRegistro = 'comunitario' | 'social' | 'ambiental';
 
@@ -29,21 +30,13 @@ export interface Metas {
 /** Estados en los que el estudiante todavia puede tocar su propio registro. */
 export const ESTADOS_EDITABLES = ['pendiente', 'corregir'] as const;
 
-export async function listarMisRegistros(idEstudiante: string): Promise<FilaMisRegistro[]> {
-  const { rows } = await pool.query<{
-    id: string;
-    tipo: TipoRegistro;
-    semana: number | null;
-    fecha: string;
-    descripcion: string;
-    horas: string;
-    evidencia_url: string | null;
-    estado: string;
-    comentario_tutor: string | null;
-    proyecto: string | null;
-    creado_en: string;
-  }>(
-    `select b.id_bitacora as id, 'comunitario' as tipo, b.numero_semana as semana,
+/**
+ * Los registros propios salen de dos tablas (comunitaria y servicios). El
+ * `union all` se encapsula para poder paginarlo y contarlo con el mismo SQL:
+ * el `order by` tiene que ir fuera, o PostgreSQL lo aplicaria a cada mitad.
+ */
+const SELECT_MIS_REGISTROS = `
+     select b.id_bitacora as id, 'comunitario' as tipo, b.numero_semana as semana,
             b.fecha_actividad::text as fecha, b.descripcion, b.horas_invertidas::text as horas,
             b.evidencia_foto_url as evidencia_url, b.estado,
             b.comentario_tutor, g.nombre_proyecto as proyecto, b.creado_en::text as creado_en
@@ -56,11 +49,24 @@ export async function listarMisRegistros(idEstudiante: string): Promise<FilaMisR
             c.evidencia_foto_url as evidencia_url, c.estado,
             c.comentario_tutor, null as proyecto, c.creado_en::text as creado_en
      from control_servicios_institucionales c
-     where c.id_estudiante = $1
-     order by fecha desc, creado_en desc`,
-    [idEstudiante]
-  );
-  return rows.map((r) => ({
+     where c.id_estudiante = $1`;
+
+interface MisRegistroRow {
+  id: string;
+  tipo: TipoRegistro;
+  semana: number | null;
+  fecha: string;
+  descripcion: string;
+  horas: string;
+  evidencia_url: string | null;
+  estado: string;
+  comentario_tutor: string | null;
+  proyecto: string | null;
+  creado_en: string;
+}
+
+function mapMisRegistro(r: MisRegistroRow): FilaMisRegistro {
+  return {
     id: r.id,
     tipo: r.tipo,
     semana: r.semana,
@@ -72,7 +78,26 @@ export async function listarMisRegistros(idEstudiante: string): Promise<FilaMisR
     comentarioTutor: r.comentario_tutor,
     proyecto: r.proyecto,
     creadoEn: r.creado_en,
-  }));
+  };
+}
+
+export async function listarMisRegistros(
+  idEstudiante: string,
+  paginacion: Paginacion
+): Promise<{ items: FilaMisRegistro[]; total: number }> {
+  const [datos, cuenta] = await Promise.all([
+    pool.query<MisRegistroRow>(
+      `select * from (${SELECT_MIS_REGISTROS}) as registros
+       order by fecha desc, creado_en desc
+       limit $2 offset $3`,
+      [idEstudiante, paginacion.porPagina, paginacion.offset]
+    ),
+    pool.query<{ total: number }>(
+      `select count(*)::int as total from (${SELECT_MIS_REGISTROS}) as registros`,
+      [idEstudiante]
+    ),
+  ]);
+  return { items: datos.rows.map(mapMisRegistro), total: cuenta.rows[0].total };
 }
 
 export async function obtenerGruposEstudiante(
@@ -493,22 +518,12 @@ export interface FilaPendienteTutor {
   estado: string;
 }
 
-export async function obtenerPendientesTutor(idTutor: string): Promise<FilaPendienteTutor[]> {
-  const { rows } = await pool.query<{
-    id: string;
-    id_estudiante: string;
-    estudiante_nombre: string;
-    id_grupo: string | null;
-    proyecto_nombre: string | null;
-    tipo: TipoRegistro;
-    semana: number | null;
-    fecha: string;
-    descripcion: string;
-    horas: string;
-    evidencia_url: string | null;
-    estado: string;
-  }>(
-    `select b.id_bitacora as id, b.id_estudiante, u.nombre_completo as estudiante_nombre,
+/**
+ * Pendientes del tutor: comunitarias de sus grupos + servicios de sus
+ * estudiantes. El `union all` se reutiliza para la pagina y para el conteo.
+ */
+const SELECT_PENDIENTES_TUTOR = `
+     select b.id_bitacora as id, b.id_estudiante, u.nombre_completo as estudiante_nombre,
             b.id_grupo, g.nombre_proyecto as proyecto_nombre, 'comunitario' as tipo,
             b.numero_semana as semana, b.fecha_actividad::text as fecha, b.descripcion,
             b.horas_invertidas::text as horas, b.evidencia_foto_url as evidencia_url, b.estado
@@ -525,11 +540,25 @@ export async function obtenerPendientesTutor(idTutor: string): Promise<FilaPendi
      join integrantes_grupo ig on ig.id_estudiante = c.id_estudiante
      join grupos_proyectos g on g.id_grupo = ig.id_grupo
      join usuarios u on u.id_usuario = c.id_estudiante
-     where g.id_tutor = $1 and c.estado in ('pendiente', 'corregir')
-     order by fecha asc`,
-    [idTutor]
-  );
-  return rows.map((r) => ({
+     where g.id_tutor = $1 and c.estado in ('pendiente', 'corregir')`;
+
+interface PendienteTutorRow {
+  id: string;
+  id_estudiante: string;
+  estudiante_nombre: string;
+  id_grupo: string | null;
+  proyecto_nombre: string | null;
+  tipo: TipoRegistro;
+  semana: number | null;
+  fecha: string;
+  descripcion: string;
+  horas: string;
+  evidencia_url: string | null;
+  estado: string;
+}
+
+function mapPendienteTutor(r: PendienteTutorRow): FilaPendienteTutor {
+  return {
     id: r.id,
     idEstudiante: r.id_estudiante,
     estudianteNombre: r.estudiante_nombre,
@@ -542,7 +571,26 @@ export async function obtenerPendientesTutor(idTutor: string): Promise<FilaPendi
     horas: Number(r.horas),
     evidenciaUrl: r.evidencia_url,
     estado: r.estado,
-  }));
+  };
+}
+
+export async function obtenerPendientesTutor(
+  idTutor: string,
+  paginacion: Paginacion
+): Promise<{ items: FilaPendienteTutor[]; total: number }> {
+  const [datos, cuenta] = await Promise.all([
+    pool.query<PendienteTutorRow>(
+      `select * from (${SELECT_PENDIENTES_TUTOR}) as pendientes
+       order by fecha asc, id asc
+       limit $2 offset $3`,
+      [idTutor, paginacion.porPagina, paginacion.offset]
+    ),
+    pool.query<{ total: number }>(
+      `select count(*)::int as total from (${SELECT_PENDIENTES_TUTOR}) as pendientes`,
+      [idTutor]
+    ),
+  ]);
+  return { items: datos.rows.map(mapPendienteTutor), total: cuenta.rows[0].total };
 }
 
 export async function cambiarEstadoRegistro(

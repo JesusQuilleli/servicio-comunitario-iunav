@@ -7,11 +7,13 @@ import { borrarArchivo, guardarArchivo } from '../lib/archivos.js';
 import { leerPlantilla } from '../lib/importar.js';
 import { generarPasswordTemporal } from '../lib/password.js';
 import { plantillaEstudiantes } from '../lib/plantilla.js';
+import { leerPaginacion, respuestaPaginada } from '../lib/paginacion.js';
 import { archivoDe } from '../middleware/subida.js';
 import { escribirRuta, leerRuta } from '../models/archivo.model.js';
 import {
   actualizarPassword,
   importarEstudiantesEnLote,
+  listarUsuariosPaginado,
   mapUsuarioPublico,
   type UsuarioRow,
 } from '../models/usuario.model.js';
@@ -23,10 +25,12 @@ export async function listarUsuarios(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { rows } = await pool.query<UsuarioRow>(
-      'select * from usuarios order by nombre_completo asc'
-    );
-    res.json({ usuarios: rows.map(mapUsuarioPublico) });
+    const paginacion = leerPaginacion(req.query);
+    const { items, total } = await listarUsuariosPaginado(paginacion);
+    const usuarios = items.map(mapUsuarioPublico);
+    // `usuarios` se conserva por retrocompatibilidad: es lo que ya consumia la
+    // web. `items` es la misma pagina y es la clave que usara la UI nueva.
+    res.json({ usuarios, ...respuestaPaginada(usuarios, total, paginacion) });
   } catch (err) {
     next(err);
   }

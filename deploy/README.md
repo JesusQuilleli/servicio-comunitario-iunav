@@ -247,6 +247,94 @@ curl -s localhost:4000/api/health      # sonda: 200 si API y base responden
 
 Los logs van a journald, no a archivos. `sudo journalctl -u iunav-api -f`.
 
+## Rotación de secretos
+
+Esta seccion dice **que** rotar, **donde** vive cada valor y **cuando** hacerlo.
+Los valores reales **no viven en el repo** ni se pegan aqui: en la VPS estan en
+`/etc/iunav/server.env` (modo 640, grupo `iunav`) y en el panel del proveedor que
+corresponda. Los nombres que aparecen abajo (`TU_SMTP_HOST`, etc.) son
+marcadores de posicion, no valores reales.
+
+| Secreto | Donde vive | Cuando rotar | Que queda invalidado |
+|---|---|---|---|
+| Contrasena del proyecto Supabase | Panel de Supabase (fuera del repo) | Una vez, antes de publicar o de dar acceso; el historial git antiguo la contuvo | Nada del codigo actual: el proyecto ya no se usa (ver `HANDOFF.md` §8) |
+| `JWT_SECRET` | `/etc/iunav/server.env` (VPS); en local, `server/.env` | Si se filtra, si sale alguien con acceso, o por calendario | **Todos** los JWT: cada sesion abierta deja de valer y todos vuelven a entrar |
+| Credenciales SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`) | `/etc/iunav/server.env` (cuando existan, tarea C19) | Si el proveedor las revoca, cambia de proveedor, o hay sospecha de filtracion | Nada persistido: solo hay que reescribirlas y reiniciar el API |
+| Contrasena inicial del seed / admin | Semilla en `server/src/db/seed.ts` (publicada en el repo) | En el **primer ingreso** tras `--con-datos`, obligatorio en una VPS publica | No invalida JWT (sin revocacion hoy): hay que cerrar sesion en los equipos afectados |
+
+### Contrasena del proyecto Supabase
+
+El proyecto Supabase ya no se usa: `server/sql/schema.sql` y `.env.example`
+apuntan a PostgreSQL local y no queda rastro en el codigo. **Lo unico pendiente
+esta fuera del codigo:** la contrasena del panel de Supabase, que el historial
+git antiguo llego a contener (ver `HANDOFF.md` §8). Rotarla (o eliminar el
+proyecto si ya no se necesita) es una accion de una sola vez en el panel de
+Supabase, con la cuenta propietaria. No toca este repositorio ni los servicios de
+la VPS: **no hay nada que reiniciar**.
+
+### `JWT_SECRET`
+
+Vive en `/etc/iunav/server.env` (lo genera `deploy/instalar.sh` y lo imprime una
+sola vez) y, en desarrollo, en `server/.env`. En la VPS:
+
+```bash
+# 1. Editar el valor de JWT_SECRET (sin pegarlo en el repo ni en el chat)
+sudo nano /etc/iunav/server.env
+
+# 2. Reiniciar el API para que lo relea
+sudo systemctl restart iunav-api
+curl -s localhost:4000/api/health      # debe responder 200
+```
+
+**Impacto:** el token esta firmado con este secreto, asi que al cambiarlo se
+invalida **todo** lo emitido: cada usuario con la sesion abierta queda fuera y
+tiene que volver a entrar con su contrasena. No hace falta tocar la web ni
+recompilar nada (el secreto no llega al bundle del navegador); basta reiniciar el
+API. `deploy/arrancar.sh` tambien lo relee porque lee `/etc/iunav/server.env`,
+pero para solo rotar el secreto no hace falta recompilar.
+
+### Credenciales SMTP (cuando existan)
+
+Cuando el envio real de correo este implementado (tarea C19, hoy bloqueada por
+falta de proveedor), las cinco variables `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
+`SMTP_PASS` y `MAIL_FROM` viviran tambien en `/etc/iunav/server.env`, con
+marcadores como `SMTP_HOST=TU_SMTP_HOST`. Se rotan en el panel del proveedor
+SMTP y se reescriben en ese archivo; despues, reiniciar el API:
+
+```bash
+sudo systemctl restart iunav-api
+```
+
+**Impacto:** rotarlas no invalida datos ni sesiones; solo hace falta reiniciar
+para que el proceso tome los valores nuevos. Si el proveedor entrega un usuario
+o una clave nueva, actualizar las cinco (incluido `MAIL_FROM`, que debe seguir
+siendo una direccion propia del proyecto).
+
+### Contrasena inicial del seed / admin
+
+`deploy/arrancar.sh --con-datos` siembra cuentas de prueba cuyas claves estan
+publicadas en el repo (`server/src/db/seed.ts`). Antes de exponer la VPS hay que
+**cambiar la clave del admin en el primer ingreso** (y, si aplica, la de las
+demas cuentas). El cambio se hace desde la propia aplicacion, ya autenticado como
+ese usuario.
+
+**Impacto:** como hoy el JWT no tiene revocacion, cambiar la contrasena **no**
+expulsa a quien tenga un token vigente: si se rota una clave por filtracion,
+tambien hay que rotar `JWT_SECRET` (arriba) para cortar las sesiones vivas.
+
+### Comprobar que el repo quedo sin valores
+
+Ningun secreto real debe quedar en `deploy/` ni en `docs/`. Antes de publicar:
+
+```bash
+grep -rniE 'password|secret|smtp_pass|jwt_secret|api[_-]?key' deploy docs \
+  --include='*.sh' --include='*.md' --include='*.env*' --include='*.html'
+```
+
+El resultado solo debe mostrar **nombres** de variable, marcadores
+(`TU_SMTP_HOST`, `...`) y las cuentas de prueba ya documentadas; ningun valor
+secreto.
+
 ## Si algo falla
 
 | Sintoma | Causa casi segura |

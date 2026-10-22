@@ -1,0 +1,16 @@
+{
+  "name": "iunav-local",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Kit local autocontenido del Servicio Comunitario IUNAV (PostgreSQL embebido + API + web de un clic)",
+  "scripts": {
+    "pg": "node pg.mjs",
+    "pg:start": "node pg.mjs start",
+    "pg:stop": "node pg.mjs stop",
+    "pg:status": "node pg.mjs status"
+  },
+  "dependencies": {
+    "embedded-postgres": "17.10.0-beta.17"
+  }
+}

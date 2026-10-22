@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { pool } from '../db/pool.js';
 import { ApiError } from '../lib/errors.js';
 import { validarFila, type ErrorImportacion, type FilaImportacion } from '../lib/importar.js';
+import type { Paginacion } from '../lib/paginacion.js';
 import { generarPasswordTemporal, passwordSchema } from '../lib/password.js';
 import type { UserRole, UsuarioPublico } from '../types.js';
 
@@ -33,6 +34,26 @@ export function mapUsuarioPublico(row: UsuarioRow): UsuarioPublico {
     creadoEn: row.creado_en,
     passwordTemporal: row.password_temporal,
   };
+}
+
+export interface PaginaUsuarios {
+  items: UsuarioRow[];
+  total: number;
+}
+
+/**
+ * Listado paginado para gestion. El `total` es el de la tabla completa (no el
+ * de la pagina): es lo que necesita la UI para calcular cuantas paginas hay.
+ */
+export async function listarUsuariosPaginado(paginacion: Paginacion): Promise<PaginaUsuarios> {
+  const [datos, cuenta] = await Promise.all([
+    pool.query<UsuarioRow>(
+      'select * from usuarios order by nombre_completo asc, id_usuario asc limit $1 offset $2',
+      [paginacion.porPagina, paginacion.offset]
+    ),
+    pool.query<{ total: number }>('select count(*)::int as total from usuarios'),
+  ]);
+  return { items: datos.rows, total: cuenta.rows[0].total };
 }
 
 export async function findUsuarioPorEmail(email: string): Promise<UsuarioRow | null> {

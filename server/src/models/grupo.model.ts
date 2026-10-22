@@ -1,6 +1,7 @@
 import type { PoolClient } from 'pg';
 import { pool } from '../db/pool.js';
 import { ApiError } from '../lib/errors.js';
+import type { Paginacion } from '../lib/paginacion.js';
 import type { UserRole } from '../types.js';
 
 export type EstadoGrupo = 'en_curso' | 'pendiente_aprobacion' | 'finalizado' | 'suspendido';
@@ -107,17 +108,38 @@ export interface FiltrosGrupos {
   busqueda: string | null;
 }
 
-export async function listarGrupos(filtros: FiltrosGrupos): Promise<FilaGrupo[]> {
-  const { rows } = await pool.query<GrupoRow>(
-    `${SELECT_GRUPO}
+/**
+ * El `where` se comparte entre el listado y el conteo: si uno cambiara sin el
+ * otro, `total` dejaria de describir la pagina y la UI calcularia mal las
+ * paginas. Los filtros solo tocan columnas de `grupos_proyectos`, asi que el
+ * conteo no necesita los joins del `SELECT_GRUPO`.
+ */
+const WHERE_GRUPOS = `
      where ($1::int is null or g.id_periodo = $1)
        and ($2::text is null or g.estado = $2)
        and ($3::uuid is null or g.id_tutor = $3)
-       and ($4::text is null or g.nombre_proyecto ilike '%' || $4 || '%')
-     order by g.creado_en desc`,
-    [filtros.periodoId, filtros.estado, filtros.tutorId, filtros.busqueda]
-  );
-  return rows.map(mapGrupo);
+       and ($4::text is null or g.nombre_proyecto ilike '%' || $4 || '%')`;
+
+export async function listarGrupos(
+  filtros: FiltrosGrupos,
+  paginacion: Paginacion
+): Promise<{ items: FilaGrupo[]; total: number }> {
+  const parametros = [filtros.periodoId, filtros.estado, filtros.tutorId, filtros.busqueda];
+  const [datos, cuenta] = await Promise.all([
+    pool.query<GrupoRow>(
+      // `id_grupo` desempata `creado_en`: sin un orden total, dos filas con la
+      // misma fecha podrian repetirse o desaparecer al cambiar de pagina.
+      `${SELECT_GRUPO}${WHERE_GRUPOS}
+       order by g.creado_en desc, g.id_grupo asc
+       limit $5 offset $6`,
+      [...parametros, paginacion.porPagina, paginacion.offset]
+    ),
+    pool.query<{ total: number }>(
+      `select count(*)::int as total from grupos_proyectos g${WHERE_GRUPOS}`,
+      parametros
+    ),
+  ]);
+  return { items: datos.rows.map(mapGrupo), total: cuenta.rows[0].total };
 }
 
 async function obtenerIntegrantes(idGrupo: string): Promise<FilaIntegrante[]> {

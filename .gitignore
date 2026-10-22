@@ -26,3 +26,7 @@ supabase_config.txt
 # Notas locales de la VPS: contienen la contrasena de acceso. Nunca al repo.
 VPS.txt
 Logs Github.txt
+
+# Infraestructura de agentes (opencode): tablero, skills y agentes. Es
+# tooling de desarrollo, no parte del sistema que se entrega.
+.opencode/

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AuthRequest } from '../middleware/auth.js';
 import { ApiError } from '../lib/errors.js';
 import { guardarArchivo, borrarArchivo } from '../lib/archivos.js';
+import { leerPaginacion, respuestaPaginada } from '../lib/paginacion.js';
 import { archivoDe } from '../middleware/subida.js';
 import * as model from '../models/bitacora.model.js';
 
@@ -99,8 +100,10 @@ export async function getMisRegistros(
 ): Promise<void> {
   try {
     const { idUsuario } = requiereUsuario(req);
-    const registros = await model.listarMisRegistros(idUsuario);
-    res.json({ registros });
+    const paginacion = leerPaginacion(req.query);
+    const { items, total } = await model.listarMisRegistros(idUsuario, paginacion);
+    // `registros` se conserva para los consumidores actuales; `items` es la pagina.
+    res.json({ registros: items, ...respuestaPaginada(items, total, paginacion) });
   } catch (err) {
     next(err);
   }
@@ -244,8 +247,10 @@ export async function getPendientesTutor(
 ): Promise<void> {
   try {
     const { idUsuario } = requiereUsuario(req);
-    const pendientes = await model.obtenerPendientesTutor(idUsuario);
-    res.json({ pendientes });
+    const paginacion = leerPaginacion(req.query);
+    const { items, total } = await model.obtenerPendientesTutor(idUsuario, paginacion);
+    // `pendientes` se conserva para los consumidores actuales; `items` es la pagina.
+    res.json({ pendientes: items, ...respuestaPaginada(items, total, paginacion) });
   } catch (err) {
     next(err);
   }

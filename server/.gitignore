@@ -7,3 +7,8 @@ dist/
 # Nunca se versionan: son datos personales de estudiantes.
 uploads/
 uploads-test/
+
+# Cluster PostgreSQL embebido que se usa para verificar el backend sin tocar
+# la base de trabajo. El kit de un clic de local/ ya trae el suyo en el puerto
+# 55432 (ver local/README.md); este es el que usa `npm test` (base app_iunav_test).
+.pgdata/

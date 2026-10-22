@@ -10,7 +10,12 @@ if (!principal) {
   throw new Error('Falta DATABASE_URL en server/.env');
 }
 
-const basePruebas = process.env.TEST_DATABASE_URL ?? 'app_iunav_test';
+// `TEST_DATABASE_URL` admite las dos formas que ya usa el proyecto: la URL
+// completa (como en server/.env.example y en tests/setup.ts, que la parsea con
+// `new URL`) o el nombre pelado. Sin esta normalizacion se creaba una base
+// llamada literalmente "postgresql://postgres:admin@localhost:5432/...".
+const crudo = process.env.TEST_DATABASE_URL ?? 'app_iunav_test';
+const basePruebas = crudo.includes('://') ? new URL(crudo).pathname.slice(1) : crudo;
 if (!basePruebas.endsWith('_test')) {
   throw new Error(`Refusaje destruir "${basePruebas}": el nombre debe terminar en _test`);
 }

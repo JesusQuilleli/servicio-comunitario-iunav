@@ -153,13 +153,18 @@ Además, por la misma jerarquía: `POST /api/auth/register` ahora es **admin + c
 
 ## 4. Matriz de permisos actual
 
-**43 endpoints**, extraída de `server/tests/permisos.test.ts` (constante `CASOS`), que es la misma fuente que ejecuta las pruebas.
+**48 endpoints**, extraída de `server/tests/permisos.test.ts` (constante `CASOS`), que es la misma fuente que ejecuta las pruebas.
 
 | Endpoint | admin | coordinador | tutor | estudiante |
 |---|:-:|:-:|:-:|:-:|
 | `GET /api/auth/me` | ✅ | ✅ | ✅ | ✅ |
 | `POST /api/auth/register` | ✅ | ✅* | ❌ | ❌ |
 | `PATCH /api/auth/password` | ✅ | ✅ | ✅ | ✅ |
+| `PATCH /api/auth/perfil` | ✅ | ✅ | ✅ | ✅ |
+| `GET /api/busqueda` | ✅ | ✅ | ✅ | ✅ |
+| `GET /api/solicitudes` | ✅ | ✅ | ❌ | ❌ |
+| `GET /api/solicitudes/mias` | ✅ | ✅ | ✅ | ✅ |
+| `PATCH /api/solicitudes/:id` | ✅ | ✅ | ❌ | ❌ |
 | `POST /api/usuarios/:id/password` | ✅ | ❌ | ❌ | ❌ |
 | `GET /api/dashboard` | ✅ | ✅ | ✅ | ✅ |
 | `GET /api/reportes/consolidado-horas.pdf` | ✅ | ✅ | ✅ | ❌ |
@@ -208,6 +213,9 @@ Notas sobre las filas que no son obvias:
 - **Los reportes son `gestion` + tutor.** El estudiante no baja ninguno. Y `requireRole` no basta: el tutor además tiene que ser dueño del grupo o tener al estudiante, comprobado en `reporte.model.ts` (`esIntegranteDeTutor`), no solo en la ruta.
 - `POST /api/usuarios/:id/firma (ajena)` aparece con ❌ para los no admin **aunque la ruta permita el caso legítimo**: firmar la propia firma lo hace cualquiera, y el `403` llega desde la lógica de negocio del controlador, no desde `requireRole`. Por eso la matriz prueba explícitamente el caso "ajena".
 - **`POST /api/auth/register` con coordinador**: ✅* = el coordinador crea solo **estudiantes y tutores**; la creación de administradores y coordinadores devuelve `403` (controlador, no `requireRole`). La matriz prueba ambos caminos.
+- **`PATCH /api/auth/perfil`**: cualquiera edita **su propio** perfil. El estudiante genera una solicitud de cambio (201, la resuelve coordinación); los demás roles aplican el cambio en el acto (200).
+- **`GET /api/busqueda`**: solo exige autenticación; los resultados se acotan por rol dentro del controlador, no con `requireRole`.
+- **Solicitudes:** `GET /api/solicitudes` (bandeja de aprobación) y `PATCH /api/solicitudes/:id` (aprobar/rechazar) son de `gestion` (`requireRole('admin','coordinador')`); `GET /api/solicitudes/mias` lo ve cualquier rol autenticado.
 - **Carga masiva:** `GET /plantilla.xlsx` y `POST /importar` suben el archivo como `multipart/form-data` en el campo `archivo` (multer, memoria, tope `maxDocumentoMb`). El import solo crea rol `estudiante`; crea la cuenta con `password_temporal = true` y clave inicial = cédula (o una generada si la cédula no cumple la política). Documentado en `server/src/lib/plantilla.ts` y `server/src/lib/importar.ts`.
 - Los cuatro endpoints de archivos (`POST /grupos/:id/documentos`, `POST /configuracion/plantillas/:id/documento`, firma y sello) suben `multipart/form-data`, y la prueba adjunta un PNG y un PDF reales.
 

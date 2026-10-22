@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AuthRequest } from '../middleware/auth.js';
 import { ApiError } from '../lib/errors.js';
 import { borrarArchivo, guardarArchivo } from '../lib/archivos.js';
+import { leerPaginacion, respuestaPaginada } from '../lib/paginacion.js';
 import { archivoDeCampo } from '../middleware/subida.js';
 import { escribirRuta, leerRuta } from '../models/archivo.model.js';
 import * as model from '../models/grupo.model.js';
@@ -64,15 +65,20 @@ export async function listarGrupos(req: AuthRequest, res: Response, next: NextFu
   try {
     const usuario = requiereUsuario(req);
     const filtros = filtrosSchema.parse(req.query);
+    const paginacion = leerPaginacion(req.query);
 
-    const grupos = await model.listarGrupos({
-      periodoId: filtros.periodo ?? null,
-      estado: filtros.estado ?? null,
-      tutorId: filtros.tutor ?? (usuario.rol === 'tutor' ? usuario.idUsuario : null),
-      busqueda: filtros.q ?? null,
-    });
+    const { items, total } = await model.listarGrupos(
+      {
+        periodoId: filtros.periodo ?? null,
+        estado: filtros.estado ?? null,
+        tutorId: filtros.tutor ?? (usuario.rol === 'tutor' ? usuario.idUsuario : null),
+        busqueda: filtros.q ?? null,
+      },
+      paginacion
+    );
 
-    res.json({ grupos });
+    // `grupos` se conserva para los consumidores actuales; `items` es la pagina.
+    res.json({ grupos: items, ...respuestaPaginada(items, total, paginacion) });
   } catch (err) {
     next(err);
   }
