@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Manual de instalación local — Sistema de Servicio Comunitario IUNAV</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+
+  :root {
+    --verde: #0f5132;
+    --verde-claro: #e8f2ec;
+    --gris: #5b6670;
+    --borde: #d8dee3;
+    --ambar: #8a5a00;
+    --ambar-claro: #fdf3e0;
+    --rojo: #8f1d1d;
+    --rojo-claro: #fbeaea;
+    --azul: #14304a;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.4pt;
+    line-height: 1.5;
+    color: #1c2328;
+    margin: 0;
+  }
+
+  /* ---------- Portada ---------- */
+  .portada {
+    height: 240mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-top: 14px solid var(--verde);
+    padding-top: 8mm;
+    page-break-after: always;
+  }
+  .portada .kicker {
+    font-size: 9pt; letter-spacing: 2.4px; text-transform: uppercase;
+    color: var(--verde); font-weight: 700; margin-bottom: 6mm;
+  }
+  .portada h1 {
+    font-size: 29pt; line-height: 1.15; margin: 0 0 5mm; color: var(--verde);
+    font-weight: 700; letter-spacing: -0.4px;
+  }
+  .portada .sub { font-size: 13pt; color: var(--gris); margin-bottom: 12mm; max-width: 145mm; }
+  .portada .meta {
+    border-top: 1px solid var(--borde); padding-top: 5mm;
+    font-size: 9.5pt; color: var(--gris);
+  }
+  .portada .meta div { margin-bottom: 2mm; }
+  .portada .sello {
+    margin-top: 8mm; background: var(--verde-claro); border-left: 4px solid var(--verde);
+    padding: 5mm 6mm; max-width: 145mm; font-size: 9.5pt;
+  }
+
+  /* ---------- Estructura ---------- */
+  h2 {
+    font-size: 15pt; color: var(--verde); margin: 0 0 4mm;
+    padding-bottom: 2mm; border-bottom: 2px solid var(--verde);
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11.5pt; color: var(--azul); margin: 6mm 0 2.5mm;
+    page-break-after: avoid;
+  }
+  h4 { font-size: 10.4pt; margin: 4mm 0 1.5mm; page-break-after: avoid; }
+
+  section { page-break-before: always; }
+  section:first-of-type { page-break-before: auto; }
+
+  p { margin: 0 0 2.5mm; text-align: justify; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.2mm; }
+
+  /* ---------- Tablas ---------- */
+  table {
+    width: 100%; border-collapse: collapse; margin: 2mm 0 4mm;
+    font-size: 9.4pt; page-break-inside: avoid;
+  }
+  th {
+    background: var(--verde); color: #fff; text-align: left;
+    padding: 2.2mm 2.5mm; font-weight: 600; border: 1px solid var(--verde);
+  }
+  td { padding: 2mm 2.5mm; border: 1px solid var(--borde); vertical-align: top; }
+  tbody tr:nth-child(even) td { background: #f7f9fa; }
+  td.centro, th.centro { text-align: center; }
+  td.mono, .mono { font-family: Consolas, "Courier New", monospace; font-size: 9pt; }
+
+  /* ---------- Cajas ---------- */
+  .nota, .aviso, .tip {
+    padding: 3.5mm 4.5mm; margin: 3mm 0 4mm;
+    page-break-inside: avoid; font-size: 9.8pt;
+  }
+  .nota { background: var(--verde-claro); border-left: 4px solid var(--verde); }
+  .aviso { background: var(--rojo-claro); border-left: 4px solid var(--rojo); }
+  .tip { background: var(--ambar-claro); border-left: 4px solid var(--ambar); }
+  .nota strong, .aviso strong, .tip strong { display: block; margin-bottom: 1.5mm; }
+
+  .paso {
+    border: 1px solid var(--borde); border-left: 5px solid var(--verde);
+    padding: 3.5mm 4.5mm; margin: 2mm 0 4mm; page-break-inside: avoid;
+  }
+  .paso .titulo { font-weight: 700; color: var(--verde); margin-bottom: 1.5mm; font-size: 11pt; }
+
+  ol.pasos { counter-reset: paso; list-style: none; padding-left: 0; }
+  ol.pasos > li {
+    counter-increment: paso; position: relative;
+    padding-left: 9mm; margin-bottom: 2.5mm;
+  }
+  ol.pasos > li::before {
+    content: counter(paso); position: absolute; left: 0; top: 0.3mm;
+    width: 6mm; height: 6mm; border-radius: 50%;
+    background: var(--verde); color: #fff;
+    font-size: 8.4pt; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .chip {
+    display: inline-block; padding: 0.5mm 2mm; border-radius: 2mm;
+    font-size: 8.4pt; font-weight: 700; color: #fff; margin-right: 1mm;
+  }
+  .chip.si { background: #1a7f4b; }
+  .chip.no { background: #b0413e; }
+  .chip.parcial { background: #b8860b; }
+  .chip.win { background: #1d6fa5; }
+
+  code {
+    font-family: Consolas, "Courier New", monospace; font-size: 9pt;
+    background: #eef1f3; padding: 0.3mm 1.2mm; border-radius: 1mm;
+  }
+
+  pre {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8.9pt; line-height: 1.45;
+    background: #1e252b; color: #e6edf3;
+    padding: 3mm 4mm; border-radius: 1.5mm;
+    margin: 2mm 0 3.5mm; overflow: hidden;
+    white-space: pre-wrap; word-break: break-word;
+    page-break-inside: avoid;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+  pre .c { color: #8b98a5; }
+
+  .ruta { font-family: Consolas, "Courier New", monospace; font-weight: 700; }
+
+  .arbol {
+    font-family: Consolas, "Courier New", monospace; font-size: 8.6pt;
+    background: #f7f9fa; border: 1px solid var(--borde);
+    padding: 3mm 4mm; margin: 2mm 0 4mm;
+    white-space: pre; page-break-inside: avoid;
+  }
+
+  .pie {
+    margin-top: 8mm; padding-top: 3mm; border-top: 1px solid var(--borde);
+    font-size: 8.6pt; color: var(--gris);
+  }
+
+  .indice { font-size: 10.2pt; }
+  .indice ol { padding-left: 7mm; }
+  .indice li { margin-bottom: 1.6mm; }
+  .indice .n { color: var(--verde); font-weight: 700; display: inline-block; width: 7mm; }
+</style>
+</head>
+<body>
+
+<!-- ================= PORTADA ================= -->
+<div class="portada">
+  <div class="kicker">Instituto Universitario Adventista de Venezuela</div>
+  <h1>Manual de instalación local</h1>
+  <div class="sub">
+    Cómo descargar el Sistema de Servicio Comunitario, preparar la base de datos
+    y ejecutarlo en su computadora para revisarlo y probarlo.
+  </div>
+  <div class="sello">
+    <strong>Para quién es este manual</strong>
+    Para el tutor o evaluador que va a revisar el sistema. No hace falta saber
+    programar ni instalar PostgreSQL: el proyecto trae su propia base de datos.
+    Solo hay que descargar, hacer doble clic en dos archivos y abrir el navegador.
+  </div>
+  <div class="meta">
+    <div><strong>Versión del manual:</strong> 1.0</div>
+    <div><strong>Dirigido a:</strong> tutor / evaluador del proyecto</div>
+    <div><strong>Tiempo de instalación:</strong> entre 5 y 15 minutos la primera vez</div>
+    <div><strong>Sistema operativo:</strong> Windows 10 u 11 (64 bits)</div>
+    <div><strong>Repositorio:</strong> github.com/JesusQuilleli/servicio-comunitario-iunav</div>
+  </div>
+</div>
+
+<!-- ================= ÍNDICE ================= -->
+<section>
+  <h2>Contenido</h2>
+
+  <div class="indice">
+    <ol>
+      <li><span class="n">1.</span> Qué va a instalar y cómo funciona</li>
+      <li><span class="n">2.</span> Requisitos</li>
+      <li><span class="n">3.</span> Paso 1: descargar el proyecto</li>
+      <li><span class="n">4.</span> Paso 2: instalar (una sola vez)</li>
+      <li><span class="n">5.</span> Paso 3: iniciar el sistema</li>
+      <li><span class="n">6.</span> Paso 4: verificar que todo esté bien</li>
+      <li><span class="n">7.</span> Paso 5: detener el sistema</li>
+      <li><span class="n">8.</span> Las cuentas de prueba y qué revisar con cada rol</li>
+      <li><span class="n">9.</span> La base de datos: cómo se crea, cómo se reinicia y cómo se respalda</li>
+      <li><span class="n">10.</span> Si algo falla</li>
+      <li><span class="n">11.</span> Opción B: instalación manual (otro sistema operativo o si el kit falla)</li>
+      <li><span class="n">12.</span> Cómo desinstalar y dejar el equipo limpio</li>
+      <li><span class="n">13.</span> Anexo: estructura y comandos</li>
+    </ol>
+  </div>
+
+  <div class="nota" style="margin-top:8mm">
+    <strong>Resumen en una frase</strong>
+    Descargue el proyecto, haga doble clic en <code>local\instalar.cmd</code> una
+    sola vez, y después abra el sistema con <code>local\iniciar.cmd</code>. La base
+    de datos se crea y se llena sola.
+  </div>
+</section>
+
+<!-- ================= 1. QUÉ VA A INSTALAR ================= -->
+<section>
+  <h2>1. Qué va a instalar y cómo funciona</h2>
+
+  <p>
+    El proyecto tiene dos partes que deben estar encendidas al mismo tiempo:
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:26%">Parte</th><th style="width:18%">Qué es</th><th>Qué hace</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>La web</strong></td>
+        <td>La aplicación que usted ve</td>
+        <td>Pantallas de inicio de sesión, panel, bitácoras, validación, reportes. Hecha con Next.js.</td>
+      </tr>
+      <tr>
+        <td><strong>La API</strong></td>
+        <td>El servidor de datos</td>
+        <td>Recibe lo que hace la web, aplica las reglas (por ejemplo, que solo el tutor valide) y guarda todo. Hecha con Express.</td>
+      </tr>
+      <tr>
+        <td><strong>La base de datos</strong></td>
+        <td>Donde se guarda todo</td>
+        <td>PostgreSQL. <strong>Viene incluida dentro del proyecto</strong>: no hay que instalarla por separado.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Qué significa “local”</h3>
+
+  <p>
+    Todo se ejecuta <strong>dentro de su computadora</strong>. No se conecta a
+    internet, no toca ningún servidor externo y no necesita claves de terceros.
+    La única vez que se usa internet es durante la instalación, para descargar
+    las dependencias del proyecto.
+  </p>
+
+  <h3>Las direcciones que se usan</h3>
+
+  <table>
+    <thead>
+      <tr><th style="width:28%">Servicio</th><th style="width:16%">Dirección</th><th>Para qué</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Web (la aplicación)</td><td class="mono">http://localhost:3000</td><td>Es la que se abre en el navegador.</td></tr>
+      <tr><td>API (los datos)</td><td class="mono">http://localhost:4000</td><td>La usa la web por dentro. También sirve para comprobar que está viva.</td></tr>
+      <tr><td>Base de datos</td><td class="mono">localhost:55432</td><td>Solo la usa la API. No se abre en el navegador.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="nota">
+    <strong>Por qué la base usa el puerto 55432 y no el 5432</strong>
+    El 5432 es el puerto normal de PostgreSQL. Se usa el 55432 a propósito para
+    no chocar con un PostgreSQL que usted ya tenga instalado. Si lo tiene, no
+    pasa nada: este proyecto usa el suyo propio y no lo toca.
+  </div>
+
+  <h3>Qué va a encontrar</h3>
+
+  <ul>
+    <li><strong>4 tipos de usuario:</strong> administrador, coordinador, tutor y estudiante.</li>
+    <li><strong>8 cuentas de prueba ya creadas</strong> (4 roles, con varios estudiantes y tutores).</li>
+    <li><strong>Datos de ejemplo:</strong> un período académico, grupos, bitácoras y servicios ya registrados.</li>
+    <li><strong>Reportes</strong> en PDF y Excel, y documentos como actas y certificados.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>No hay que crear la base de datos a mano</strong>
+    El instalador crea la base, las 9 tablas y los datos de ejemplo
+    automáticamente. Usted no escribe ni una línea de SQL.
+  </div>
+</section>
+
+<!-- ================= 2. REQUISITOS ================= -->
+<section>
+  <h2>2. Requisitos</h2>
+
+  <table>
+    <thead>
+      <tr><th style="width:30%">Requisito</th><th style="width:22%">Versión</th><th>Cómo comprobarlo</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Windows</strong></td>
+        <td>10 u 11, 64 bits</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><strong>Node.js</strong></td>
+        <td>20.9 o superior<br>(se recomienda 22 LTS)</td>
+        <td>Abra una terminal y escriba <code>node -v</code>. Debe mostrar <code>v22…</code> o superior.</td>
+      </tr>
+      <tr>
+        <td><strong>Git</strong></td>
+        <td>Cualquier versión reciente</td>
+        <td>Escriba <code>git --version</code>. Si no lo tiene, puede usar el ZIP (ver paso 1).</td>
+      </tr>
+      <tr>
+        <td><strong>Espacio en disco</strong></td>
+        <td>Unos 4 GB libres</td>
+        <td>Las dependencias y la base local ocupan alrededor de 2 GB.</td>
+      </tr>
+      <tr>
+        <td><strong>Internet</strong></td>
+        <td>Solo la primera vez</td>
+        <td>Se descargan las dependencias y PostgreSQL (unos 200 MB).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Si no tiene Node.js</h3>
+
+  <p>
+    La forma más rápida es con <strong>winget</strong> (viene con Windows 10 y 11).
+    Abra una terminal y ejecute:
+  </p>
+
+  <pre><code>winget install OpenJS.NodeJS.LTS</code></pre>
+
+  <p>
+    Si no tiene winget, descárguelo de <strong>https://nodejs.org/es/download</strong>
+    (elija la versión <em>LTS</em>) e instálelo con las opciones por defecto.
+    Después <strong>cierre y vuelva a abrir</strong> la terminal para que Windows
+    reconozca el comando.
+  </p>
+
+  <div class="aviso">
+    <strong>Windows puede pedir permiso</strong>
+    Al ejecutar los archivos <code>.cmd</code>, Windows puede mostrar un aviso de
+    seguridad. Elija <em>“Más información” → “Ejecutar de todas formas”</em>.
+    Son archivos de texto que puede abrir con el Bloc de notas para revisarlos
+    antes de ejecutarlos.
+  </div>
+
+  <div class="tip">
+    <strong>Antivirus</strong>
+    Algunos antivirus corporativos bloquean programas que “abren un servidor
+    local”. Si el sistema no arranca y no hay un error claro, agregue una
+    excepción para la carpeta del proyecto o consulte con el área de sistemas.
+  </div>
+</section>
+
+<!-- ================= 3. DESCARGAR ================= -->
+<section>
+  <h2>3. Paso 1: descargar el proyecto</h2>
+
+  <p>Elija <strong>una</strong> de las dos formas. La primera es la recomendada.</p>
+
+  <h3>Forma A — con Git (recomendada)</h3>
+
+  <ol class="pasos">
+    <li>Abra una terminal (menú Inicio → escriba <code>PowerShell</code> → Enter).</li>
+    <li>Vaya a la carpeta donde quiere guardar el proyecto. Por ejemplo:
+      <pre><code>cd $HOME\Documents</code></pre>
+    </li>
+    <li>Descargue el proyecto:
+      <pre><code>git clone https://github.com/JesusQuilleli/servicio-comunitario-iunav.git</code></pre>
+    </li>
+    <li>Entre a la carpeta descargada:
+      <pre><code>cd servicio-comunitario-iunav</code></pre>
+    </li>
+  </ol>
+
+  <h3>Forma B — con el ZIP (si no tiene Git)</h3>
+
+  <ol class="pasos">
+    <li>Abra en el navegador:<br>
+      <span class="mono">https://github.com/JesusQuilleli/servicio-comunitario-iunav</span></li>
+    <li>Pulse el botón verde <strong>“Code”</strong> y luego <strong>“Download ZIP”</strong>.</li>
+    <li>Descomprima el archivo. Windows crea una carpeta como
+      <span class="ruta">servicio-comunitario-iunav-master</span>.</li>
+    <li>Abra esa carpeta. Dentro debe ver las carpetas <span class="ruta">local</span>,
+      <span class="ruta">server</span>, <span class="ruta">web</span> y
+      <span class="ruta">docs</span>.</li>
+  </ol>
+
+  <h3>Cómo saber que la descarga quedó bien</h3>
+
+  <p>La carpeta principal debe tener esta forma:</p>
+
+  <div class="arbol">servicio-comunitario-iunav\
+├── local\        ← el kit de instalación (aquí están los .cmd)
+├── server\       ← la API
+├── web\          ← la web
+├── deploy\       ← scripts para publicarlo en un servidor (no se usan aquí)
+├── docs\         ← este manual y otras guías
+└── HANDOFF.md    ← ficha técnica del proyecto</div>
+
+  <div class="aviso">
+    <strong>Error frecuente: descomprimir “un nivel de más”</strong>
+    A veces el ZIP crea una carpeta dentro de otra con el mismo nombre. Si al
+    entrar a <span class="ruta">local</span> no ve los archivos
+    <code>instalar.cmd</code>, <code>iniciar.cmd</code> y <code>detener.cmd</code>,
+    retroceda un nivel: está en la carpeta equivocada.
+  </div>
+</section>
+
+<!-- ================= 4. INSTALAR ================= -->
+<section>
+  <h2>4. Paso 2: instalar (una sola vez)</h2>
+
+  <p>
+    Este paso se hace <strong>una única vez</strong>. Prepara las dependencias,
+    la base de datos y los datos de ejemplo.
+  </p>
+
+  <div class="paso">
+    <div class="titulo">Haga doble clic en <span class="ruta">local\instalar.cmd</span></div>
+    <p style="margin-bottom:0">
+      Se abre una ventana negra que va mostrando el progreso. No la cierre.
+    </p>
+  </div>
+
+  <h3>Qué va a ver</h3>
+
+  <pre><code>============================================================
+   Servicio Comunitario IUNAV
+   Instalacion local (una sola vez)
+============================================================
+
+Node.js 22.x.x detectado.
+[1/4] Revisando las dependencias del proyecto...
+    - local: instalando dependencias. Puede tardar varios minutos...
+    - server: instalando dependencias. Puede tardar varios minutos...
+    - web: instalando dependencias. Puede tardar varios minutos...
+
+[2/4] Preparando la base de datos local...
+Primera vez: se prepara la base de datos local. Puede tardar un minuto...
+Base de datos local preparada.
+Base de datos local lista en el puerto 55432.
+
+[3/4] Creando las tablas y los datos de ejemplo...
+Esquema aplicado correctamente.
+  + creado cmendoza@iunav.edu.ve (admin)
+  ...
+Seed completado.
+
+[4/4] Instalacion terminada.
+
+============================================================
+   Listo. Para usar el sistema:
+
+     1. Abre la carpeta "local" y haz doble clic en
+        "iniciar.cmd".
+     2. Se abrira el navegador con el sistema ya en marcha.
+     3. Para cerrar todo, haz doble clic en "detener.cmd".
+
+   Cuentas de prueba:
+     Administrador  cmendoza@iunav.edu.ve   admin123
+     Coordinador   mlopez@iunav.edu.ve      coord123
+     Tutor          jperez@iunav.edu.ve      tutor123
+     Estudiante     gmartinez@iunav.edu.ve   est123
+============================================================</code></pre>
+
+  <h3>Cuánto tarda</h3>
+
+  <p>
+    Entre <strong>5 y 15 minutos</strong>, según la velocidad de su conexión.
+    La mayor parte del tiempo se va descargando las dependencias y PostgreSQL.
+  </p>
+
+  <div class="nota">
+    <strong>Es normal que parezca “congelado”</strong>
+    Durante la descarga, la ventana puede quedarse quieta varios minutos. No la
+    cierre: está trabajando. Al final siempre aparece la palabra
+    <strong>“Listo”</strong>.
+  </div>
+
+  <div class="aviso">
+    <strong>Si la instalación falla</strong>
+    La ventana se queda abierta y muestra un mensaje con la causa. Anótelo (o
+    tome una foto de la pantalla) y revise la sección <strong>“10. Si algo falla”</strong>.
+    Lo más común es que no haya internet o que Node.js sea una versión vieja.
+  </div>
+
+  <h3>Qué acaba de pasar por dentro</h3>
+
+  <table>
+    <thead>
+      <tr><th style="width:34%">Se creó</th><th>Para qué</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="mono">local\.pgdata\</td><td>La base de datos completa (su información vive aquí).</td></tr>
+      <tr><td class="mono">local\.env.local</td><td>La contraseña de esa base y el secreto de las sesiones. Se genera una sola vez.</td></tr>
+      <tr><td class="mono">web\.env.local</td><td>Le dice a la web dónde está la API.</td></tr>
+      <tr><td class="mono">server\sql\schema.sql</td><td>Ya venía en el proyecto: define las 9 tablas.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 5. INICIAR ================= -->
+<section>
+  <h2>5. Paso 3: iniciar el sistema</h2>
+
+  <div class="paso">
+    <div class="titulo">Haga doble clic en <span class="ruta">local\iniciar.cmd</span></div>
+    <p style="margin-bottom:0">
+      Levanta la base de datos, la API y la web, y abre el navegador
+      automáticamente.
+    </p>
+  </div>
+
+  <h3>Qué va a ver</h3>
+
+  <pre><code>============================================================
+   Servicio Comunitario IUNAV
+   Inicio local
+============================================================
+
+Node.js 22.x.x detectado.
+[1/4] Levantando la base de datos local...
+Base de datos local lista en el puerto 55432.
+
+[2/4] Actualizando el esquema y los datos de ejemplo...
+        (es seguro repetirlo: no borra lo que ya hayas creado)
+Esquema aplicado correctamente.
+Seed completado.
+
+[3/4] Iniciando la API y la web...
+        La primera vez puede tardar un minuto: la web compila.
+  - Iniciando la API...
+  - Iniciando la web (la primera vez compila y tarda mas)...
+  - Esperando a que la API conecte con la base de datos...
+    API lista.
+  - Esperando a que la web responda...
+    Web lista.
+
+  Abriendo el navegador...
+
+  Sistema en marcha: http://localhost:3000
+
+[4/4] Abriendo el navegador...
+
+============================================================
+   Sistema en marcha
+
+     Web:  http://localhost:3000
+     API:  http://localhost:4000/api/health
+
+   Cuentas de prueba:
+     Administrador  cmendoza@iunav.edu.ve   admin123
+     Coordinador    mlopez@iunav.edu.ve     coord123
+     Tutor          jperez@iunav.edu.ve     tutor123
+     Estudiante     gmartinez@iunav.edu.ve  est123
+
+   Para cerrarlo todo: doble clic en detener.cmd
+============================================================</code></pre>
+
+  <p>
+    Al final se abre el navegador en <strong>http://localhost:3000</strong> con la
+    pantalla de inicio de sesión.
+  </p>
+
+  <div class="nota">
+    <strong>La API y la web trabajan en segundo plano</strong>
+    A diferencia de la instalación, aquí <strong>no</strong> se abren dos ventanas
+    negras. Los servicios corren ocultos y dejan su registro en
+    <span class="ruta">local\logs\</span>. Eso es correcto: la ventana del
+    <code>iniciar.cmd</code> se puede cerrar después de que diga
+    “Sistema en marcha”.
+  </div>
+
+  <div class="tip">
+    <strong>La primera vez tarda más</strong>
+    La web compila al arrancar. Puede tardar entre 20 y 60 segundos. En los
+    arranques siguientes es mucho más rápido (unos 10 segundos).
+  </div>
+
+  <h3>Qué hacer si el navegador no se abre solo</h3>
+
+  <p>Abra el navegador y escriba la dirección a mano:</p>
+
+  <pre><code>http://localhost:3000</code></pre>
+</section>
+
+<!-- ================= 6. VERIFICAR ================= -->
+<section>
+  <h2>6. Paso 4: verificar que todo esté bien</h2>
+
+  <p>Haga estas dos comprobaciones. Toman menos de un minuto.</p>
+
+  <h3>Comprobación 1: la API y la base están conectadas</h3>
+
+  <p>En el navegador abra:</p>
+
+  <pre><code>http://localhost:4000/api/health</code></pre>
+
+  <p>Debe ver un texto parecido a este:</p>
+
+  <pre><code>{"ok":true,"baseDeDatos":true,"servicio":"IUNAV Servicio Comunitario API","hora":"..."}</code></pre>
+
+  <table>
+    <thead><tr><th style="width:45%">Qué ve</th><th>Qué significa</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>"ok":true,"baseDeDatos":true</code></td>
+        <td><span class="chip si">BIEN</span> Todo está conectado.</td>
+      </tr>
+      <tr>
+        <td><code>"ok":false</code> o <code>"baseDeDatos":false</code></td>
+        <td><span class="chip no">MAL</span> La API está viva pero no llega a la base. Ejecute <code>detener.cmd</code> y vuelva a <code>iniciar.cmd</code>.</td>
+      </tr>
+      <tr>
+        <td>La página no carga</td>
+        <td><span class="chip no">MAL</span> La API no está corriendo. Vuelva a ejecutar <code>iniciar.cmd</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Comprobación 2: se puede entrar con cada rol</h3>
+
+  <p>
+    Abra <span class="mono">http://localhost:3000</span> y pruebe las cuatro
+    cuentas de la sección 8. Cada una debe entrar a un panel distinto, con un
+    menú lateral diferente.
+  </p>
+
+  <div class="nota">
+    <strong>La pantalla de inicio de sesión muestra las cuentas</strong>
+    En la parte inferior del formulario aparecen las cuentas de demostración.
+    Puede pulsarlas para que se rellenen solas.
+  </div>
+
+  <div class="aviso">
+    <strong>Si después de varios intentos fallidos el sistema no lo deja entrar</strong>
+    Por seguridad, el inicio de sesión permite 10 intentos cada 15 minutos.
+    Si se pasa, espere un rato o reinicie con <code>detener.cmd</code> y
+    <code>iniciar.cmd</code>.
+  </div>
+</section>
+
+<!-- ================= 7. DETENER ================= -->
+<section>
+  <h2>7. Paso 5: detener el sistema</h2>
+
+  <div class="paso">
+    <div class="titulo">Haga doble clic en <span class="ruta">local\detener.cmd</span></div>
+    <p style="margin-bottom:0">
+      Cierra la web, la API y la base de datos, en ese orden.
+    </p>
+  </div>
+
+  <pre><code>============================================================
+   Servicio Comunitario IUNAV
+   Detener el sistema local
+============================================================
+
+[1/2] Cerrando la API y la web...
+  - Cerrando la API (pid 1234)...
+  - Cerrando la web (pid 5678)...
+
+[2/2] Cerrando la base de datos local...
+Cerrando la base de datos local...
+Base de datos local detenida.
+
+============================================================
+   Todo cerrado. Ya puedes apagar el equipo.
+============================================================</code></pre>
+
+  <div class="nota">
+    <strong>Es seguro hacerlo siempre</strong>
+    Los datos que haya creado se conservan. La próxima vez que abra
+    <code>iniciar.cmd</code> todo sigue donde lo dejó.
+  </div>
+
+  <p>
+    Si intenta iniciar dos veces seguidas sin detener, el sistema se da cuenta y
+    le dice que ya está en marcha, en lugar de fallar.
+  </p>
+</section>
+
+<!-- ================= 8. CUENTAS ================= -->
+<section>
+  <h2>8. Las cuentas de prueba y qué revisar con cada rol</h2>
+
+  <table>
+    <thead>
+      <tr><th style="width:20%">Rol</th><th style="width:33%">Correo</th><th style="width:16%">Contraseña</th><th>Qué puede hacer</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Administrador</strong></td>
+        <td class="mono">cmendoza@iunav.edu.ve</td>
+        <td class="mono">admin123</td>
+        <td>Todo: usuarios, configuración, períodos, reportes.</td>
+      </tr>
+      <tr>
+        <td><strong>Coordinador</strong></td>
+        <td class="mono">mlopez@iunav.edu.ve</td>
+        <td class="mono">coord123</td>
+        <td>Usuarios, grupos, configuración y reportes.</td>
+      </tr>
+      <tr>
+        <td><strong>Tutor</strong></td>
+        <td class="mono">jperez@iunav.edu.ve</td>
+        <td class="mono">tutor123</td>
+        <td>Validar bitácoras y servicios, ver sus grupos y reportes.</td>
+      </tr>
+      <tr>
+        <td><strong>Estudiante</strong></td>
+        <td class="mono">gmartinez@iunav.edu.ve</td>
+        <td class="mono">est123</td>
+        <td>Registrar sus horas (bitácora y servicio) y ver su avance.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Además existen <strong>otras cuentas</strong> con los mismos roles, para probar
+    grupos con varios integrantes: <code>ltorres@iunav.edu.ve</code> (tutor),
+    <code>dhernandez@iunav.edu.ve</code>, <code>vgarcia@iunav.edu.ve</code> y
+    <code>ssanchez@iunav.edu.ve</code> (estudiantes, contraseña <code>est123</code>).
+  </p>
+
+  <h3>Guion sugerido de revisión</h3>
+
+  <p>
+    Si quiere comprobar que las reglas del sistema se cumplen, este recorrido
+    toca lo más importante en unos 10 minutos:
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:16%">Con la cuenta</th><th style="width:34%">Haga esto</th><th>Qué debe pasar</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Estudiante</strong></td>
+        <td>Registrar una bitácora con una foto de evidencia.</td>
+        <td>Queda en estado <em>Pendiente</em> y suma 0 horas al avance.</td>
+      </tr>
+      <tr>
+        <td><strong>Estudiante</strong></td>
+        <td>Intentar entrar a “Validación” escribiendo la dirección a mano
+          (<span class="mono">/validacion</span>).</td>
+        <td>El sistema lo devuelve a su panel: no tiene permiso.</td>
+      </tr>
+      <tr>
+        <td><strong>Tutor</strong></td>
+        <td>Abrir “Validación” y aprobar la bitácora recién creada.</td>
+        <td>El registro pasa a <em>Aprobado</em> y suma a las horas del estudiante.</td>
+      </tr>
+      <tr>
+        <td><strong>Tutor</strong></td>
+        <td>Registrar horas o crear usuarios.</td>
+        <td>No puede: esas opciones no aparecen en su menú.</td>
+      </tr>
+      <tr>
+        <td><strong>Coordinador</strong></td>
+        <td>Crear un grupo y asignarle tutor y estudiantes.</td>
+        <td>El grupo aparece en el panel del tutor asignado.</td>
+      </tr>
+      <tr>
+        <td><strong>Administrador</strong></td>
+        <td>Generar el consolidado en PDF y en Excel desde “Reportes”.</td>
+        <td>Se descarga el archivo con las horas del período.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>Cada rol tiene su propio menú</strong>
+    Si una opción no aparece, no es un error: es que ese rol no tiene permiso
+    para ella. El sistema lo controla en el servidor, no solo en la pantalla.
+  </div>
+</section>
+
+<!-- ================= 9. BASE DE DATOS ================= -->
+<section>
+  <h2>9. La base de datos: cómo se crea, cómo se reinicia y cómo se respalda</h2>
+
+  <h3>No hay que pasarle ninguna base de datos</h3>
+
+  <p>
+    El proyecto <strong>crea la base solo</strong>. El archivo
+    <span class="ruta">server\sql\schema.sql</span> define las 9 tablas y el
+    instalador lo aplica. Después, el <em>seed</em> llena esa base con los datos
+    de ejemplo (usuarios, período, grupos, bitácoras).
+  </p>
+
+  <h3>Las 9 tablas que se crean</h3>
+
+  <table>
+    <thead><tr><th style="width:38%">Tabla</th><th>Qué guarda</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">usuarios</td><td>Las personas y su rol (admin, coordinador, tutor, estudiante).</td></tr>
+      <tr><td class="mono">periodos_academicos</td><td>Los períodos (por ejemplo, 2026-I).</td></tr>
+      <tr><td class="mono">grupos_proyectos</td><td>Los proyectos comunitarios y quién los tutoriza.</td></tr>
+      <tr><td class="mono">integrantes_grupo</td><td>Qué estudiantes pertenecen a cada grupo.</td></tr>
+      <tr><td class="mono">bitacoras_comunitario</td><td>Las horas registradas y su validación.</td></tr>
+      <tr><td class="mono">control_servicios_institucionales</td><td>Las horas de servicio social o ambiental.</td></tr>
+      <tr><td class="mono">configuracion_sistema</td><td>Las metas de horas (90 directas y 30 de impacto).</td></tr>
+      <tr><td class="mono">plantillas_documento</td><td>Los documentos modelo (bitácora, acta, informe, certificado).</td></tr>
+      <tr><td class="mono">solicitudes_cambio</td><td>Los cambios de datos de cuenta que requieren autorización.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Sus datos se conservan</h3>
+
+  <p>
+    Todo lo que usted cree queda guardado en <span class="ruta">local\.pgdata\</span>.
+    Al cerrar y volver a abrir, sigue ahí. El <em>seed</em> es inteligente: si un
+    usuario o un grupo ya existe, no lo vuelve a crear ni lo borra.
+  </p>
+
+  <h3>Cómo empezar de cero</h3>
+
+  <p>
+    Si quiere volver al estado inicial (solo las cuentas y datos de ejemplo),
+    ejecute desde <span class="ruta">server\</span>:
+  </p>
+
+  <pre><code>npm run db:wipe</code></pre>
+
+  <p>
+    Eso limpia los datos y deja un administrador con la contraseña
+    <code>admin123</code>. <strong>Atención:</strong> borra todo lo que haya
+    cargado.
+  </p>
+
+  <h3>Cómo respaldar y restaurar</h3>
+
+  <p>
+    Lo más simple es copiar la carpeta completa mientras el sistema está
+    detenido:
+  </p>
+
+  <ol class="pasos">
+    <li>Ejecute <code>detener.cmd</code>.</li>
+    <li>Copie la carpeta <span class="ruta">local\.pgdata\</span> a un lugar seguro.</li>
+    <li>Para restaurar, pegue esa carpeta en el mismo lugar y abra
+      <code>iniciar.cmd</code>.</li>
+  </ol>
+
+  <div class="aviso">
+    <strong>No borre <span class="ruta">local\.env.local</span></strong>
+    Ese archivo guarda la contraseña con la que se creó la base. Si lo borra
+    pero conserva <span class="ruta">local\.pgdata\</span>, la base queda
+    inaccesible. Si le pasa, tendrá que borrar también <span class="ruta">.pgdata\</span>
+    y empezar de cero.
+  </div>
+</section>
+
+<!-- ================= 10. PROBLEMAS ================= -->
+<section>
+  <h2>10. Si algo falla</h2>
+
+  <p>
+    Antes de nada: <strong>ejecute <code>detener.cmd</code> y luego
+    <code>iniciar.cmd</code></strong>. Eso resuelve la mayoría de los casos.
+    Si no, busque su síntoma en esta tabla.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:30%">Lo que ve</th><th style="width:26%">Causa probable</th><th>Solución</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>“No se encontro Node.js en este equipo”</td>
+        <td>Node.js no está instalado o la terminal es vieja.</td>
+        <td>Instale con <code>winget install OpenJS.NodeJS.LTS</code>, cierre la ventana y vuelva a abrir el <code>.cmd</code>.</td>
+      </tr>
+      <tr>
+        <td>“La version de Node.js instalada es la … y hace falta la 20.9”</td>
+        <td>Node.js viejo.</td>
+        <td>Actualice con <code>winget upgrade OpenJS.NodeJS.LTS</code>.</td>
+      </tr>
+      <tr>
+        <td>“Cannot find module 'embedded-postgres'”</td>
+        <td>La instalación no terminó de bajar las dependencias de <span class="ruta">local\</span>.</td>
+        <td>Vuelva a ejecutar <code>instalar.cmd</code> con internet.</td>
+      </tr>
+      <tr>
+        <td>“el puerto 4000 ya esta ocupado” (o 3000)</td>
+        <td>Quedó una ejecución anterior viva o hay otro programa en ese puerto.</td>
+        <td>Ejecute <code>detener.cmd</code>. Si sigue, cierre el otro programa o reinicie el equipo.</td>
+      </tr>
+      <tr>
+        <td>“no se pudo conectar a PostgreSQL” / <code>"baseDeDatos":false</code></td>
+        <td>La base no arrancó o se cerró.</td>
+        <td><code>detener.cmd</code> y <code>iniciar.cmd</code>. Si persiste, revise <span class="ruta">local\logs\postgres.log</span>.</td>
+      </tr>
+      <tr>
+        <td>La API no arranca y el log dice algo de <code>admin</code> o contraseña</td>
+        <td>Se borró o editó <span class="ruta">local\.env.local</span>.</td>
+        <td>Borre <span class="ruta">local\.pgdata\</span> y <span class="ruta">local\.env.local</span>, y ejecute <code>instalar.cmd</code> otra vez.</td>
+      </tr>
+      <tr>
+        <td>La web muestra una pantalla en blanco o un error de compilación</td>
+        <td>Caché de Next.js dañada.</td>
+        <td>Detenga todo, borre la carpeta <span class="ruta">web\.next\</span> y vuelva a <code>iniciar.cmd</code>.</td>
+      </tr>
+      <tr>
+        <td>“Too many requests” al iniciar sesión</td>
+        <td>Más de 10 intentos en 15 minutos.</td>
+        <td>Espere 15 minutos o reinicie con <code>detener.cmd</code> + <code>iniciar.cmd</code>.</td>
+      </tr>
+      <tr>
+        <td>La instalación se queda “congelada”</td>
+        <td>Está descargando dependencias (200 MB o más).</td>
+        <td>Espere. No cierre la ventana. Verifique que tenga internet.</td>
+      </tr>
+      <tr>
+        <td>El antivirus impide arrancar la base</td>
+        <td>El antivirus bloquea procesos que escuchan en un puerto.</td>
+        <td>Agregue una excepción para la carpeta del proyecto.</td>
+      </tr>
+      <tr>
+        <td>Windows no deja ejecutar el <code>.cmd</code></td>
+        <td>Aviso de seguridad.</td>
+        <td><em>Más información → Ejecutar de todas formas</em>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Qué enviar si pide ayuda</h3>
+
+  <p>Adjunte estos datos; con ellos se puede diagnosticar casi cualquier fallo:</p>
+
+  <ul>
+    <li>Una foto o captura de la ventana con el error.</li>
+    <li>El archivo <span class="ruta">local\logs\api.log</span>.</li>
+    <li>El archivo <span class="ruta">local\logs\web.log</span>.</li>
+    <li>El archivo <span class="ruta">local\logs\postgres.log</span>.</li>
+    <li>La salida de <code>node -v</code>.</li>
+  </ul>
+
+  <div class="nota">
+    <strong>Los registros no contienen contraseñas</strong>
+    Son texto de diagnóstico. Aun así, revíselos antes de compartirlos.
+  </div>
+</section>
+
+<!-- ================= 11. OPCIÓN B ================= -->
+<section>
+  <h2>11. Opción B: instalación manual</h2>
+
+  <p>
+    Use esta opción solo si el kit de un clic no funciona, o si necesita
+    instalarlo en Linux o macOS. Aquí sí hay que instalar PostgreSQL aparte.
+  </p>
+
+  <h3>Requisitos adicionales</h3>
+
+  <p>
+    PostgreSQL 14 o superior, corriendo en el puerto normal <strong>5432</strong>.
+    Debe conocer la contraseña del usuario <code>postgres</code>.
+  </p>
+
+  <h3>Paso 1 — Crear las bases de datos</h3>
+
+  <p>Con pgAdmin o con <code>psql</code>, ejecute:</p>
+
+  <pre><code>CREATE DATABASE app_iunav;
+CREATE DATABASE app_iunav_test;</code></pre>
+
+  <p>
+    La segunda es opcional: solo se usa para las pruebas automáticas del
+    proyecto.
+  </p>
+
+  <h3>Paso 2 — Configurar la API</h3>
+
+  <p>
+    Dentro de <span class="ruta">server\</span>, copie el archivo de ejemplo y
+    edítelo:
+  </p>
+
+  <pre><code>cd server
+copy .env.example .env        <span class="c">:: Windows CMD</span>
+# En PowerShell o Linux/macOS:  cp .env.example .env</code></pre>
+
+  <p>Los valores mínimos que debe revisar en <span class="ruta">server\.env</span>:</p>
+
+  <pre><code>DATABASE_URL=postgresql://postgres:TU_CONTRASENA@localhost:5432/app_iunav
+DB_SSL=false
+JWT_SECRET=una-clave-larga-y-aleatoria-de-al-menos-32-caracteres
+FRONTEND_URL=http://localhost:3000
+PORT=4000
+API_HOST=127.0.0.1</code></pre>
+
+  <div class="aviso">
+    <strong>DB_SSL debe quedar en <code>false</code></strong>
+    En local no hay cifrado. Si se deja en <code>true</code>, la conexión a la
+    base falla.
+  </div>
+
+  <h3>Paso 3 — Instalar, crear el esquema y cargar los datos</h3>
+
+  <pre><code>cd server
+npm ci
+npm run db:schema
+npm run db:seed -- --confirm-seed</code></pre>
+
+  <h3>Paso 4 — Levantar la API (primera terminal)</h3>
+
+  <pre><code>cd server
+npm run dev</code></pre>
+
+  <p>Debe quedar escuchando en <span class="mono">http://localhost:4000</span>.</p>
+
+  <h3>Paso 5 — Levantar la web (segunda terminal)</h3>
+
+  <pre><code>cd web
+npm ci
+npm run dev</code></pre>
+
+  <p>
+    Abra <span class="mono">http://localhost:3000</span>. Si la web no encuentra
+    la API, cree el archivo <span class="ruta">web\.env.local</span> con una sola
+    línea:
+  </p>
+
+  <pre><code>NEXT_PUBLIC_API_URL=http://localhost:4000</code></pre>
+
+  <h3>Paso 6 — Detener</h3>
+
+  <p>
+    En cada terminal, pulse <code>Ctrl</code> + <code>C</code>. Para apagar
+    PostgreSQL, use el panel del servicio o <code>pg_ctl stop</code>.
+  </p>
+
+  <div class="nota">
+    <strong>Diferencias con la Opción A</strong>
+    En la Opción B usted administra PostgreSQL. En la Opción A el proyecto lo
+    hace todo: no hay que crear bases ni editar <code>server\.env</code>.
+  </div>
+</section>
+
+<!-- ================= 12. DESINSTALAR ================= -->
+<section>
+  <h2>12. Cómo desinstalar y dejar el equipo limpio</h2>
+
+  <p>
+    El proyecto no instala nada fuera de su carpeta: no toca el registro de
+    Windows, no crea servicios y no deja programas residentes. Para eliminarlo:
+  </p>
+
+  <ol class="pasos">
+    <li>Ejecute <code>detener.cmd</code> para apagar todo.</li>
+    <li>Borre la carpeta completa del proyecto.</li>
+    <li>Opcional: desinstale Node.js desde <em>Configuración → Aplicaciones</em>
+      si no lo usa para otra cosa.</li>
+  </ol>
+
+  <p>
+    La base de datos vive dentro de <span class="ruta">local\.pgdata\</span>, así
+    que se borra junto con la carpeta. No queda nada suelto en el sistema.
+  </p>
+
+  <div class="tip">
+    <strong>Puede mover el proyecto de carpeta</strong>
+    Si lo copia completo (incluyendo <span class="ruta">local\.pgdata\</span> y
+    <span class="ruta">local\.env.local</span>), sigue funcionando. Solo no lo
+    mueva mientras esté en marcha.
+  </div>
+</section>
+
+<!-- ================= 13. ANEXO ================= -->
+<section>
+  <h2>13. Anexo: estructura y comandos</h2>
+
+  <h3>Qué hay en cada carpeta</h3>
+
+  <div class="arbol">servicio-comunitario-iunav\
+├── local\
+│   ├── instalar.cmd    ← prepara todo (una sola vez)
+│   ├── iniciar.cmd     ← arranca el sistema
+│   ├── detener.cmd     ← lo apaga
+│   ├── app.mjs         ← lanzador de la API y la web
+│   ├── pg.mjs          ← control del PostgreSQL incluido
+│   ├── .pgdata\        ← la base de datos (se crea al instalar)
+│   ├── .env.local      ← contraseñas locales (se crea al instalar)
+│   └── logs\           ← registros de cada servicio
+├── server\             ← la API (Express + PostgreSQL)
+│   ├── sql\schema.sql  ← las 9 tablas
+│   └── src\            ← el código
+├── web\                ← la web (Next.js)
+│   └── src\            ← pantallas y componentes
+├── deploy\             ← scripts para publicar en un servidor (no se usan aquí)
+└── docs\               ← este manual y las guías de usuario</div>
+
+  <h3>Comandos útiles</h3>
+
+  <p>Desde la carpeta <span class="ruta">local\</span>:</p>
+
+  <table>
+    <thead><tr><th style="width:42%">Comando</th><th>Qué hace</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">node app.mjs status</td><td>Dice si la API y la web están corriendo y si la base responde.</td></tr>
+      <tr><td class="mono">node app.mjs start</td><td>Arranca API y web (lo que hace <code>iniciar.cmd</code>).</td></tr>
+      <tr><td class="mono">node app.mjs stop</td><td>Cierra API y web.</td></tr>
+      <tr><td class="mono">node pg.mjs status</td><td>Estado de la base de datos local.</td></tr>
+      <tr><td class="mono">node pg.mjs stop</td><td>Apaga la base de datos.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Desde la carpeta <span class="ruta">server\</span>:</p>
+
+  <table>
+    <thead><tr><th style="width:42%">Comando</th><th>Qué hace</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">npm run db:schema</td><td>Crea o actualiza las tablas.</td></tr>
+      <tr><td class="mono">npm run db:seed -- --confirm-seed</td><td>Carga los datos de ejemplo.</td></tr>
+      <tr><td class="mono">npm run db:wipe</td><td>Borra los datos y deja un administrador.</td></tr>
+      <tr><td class="mono">npm test</td><td>Ejecuta las 449 pruebas automáticas del proyecto.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Documentación complementaria</h3>
+
+  <p>En la carpeta <span class="ruta">docs\</span> del proyecto:</p>
+
+  <table>
+    <thead><tr><th style="width:34%">Archivo</th><th>Contenido</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">Guia-de-Usuario-IUNAV.pdf</td><td>Qué puede hacer cada rol, paso a paso.</td></tr>
+      <tr><td class="mono">Flujo-de-Uso-IUNAV.pdf</td><td>El ciclo completo del programa, por etapas.</td></tr>
+      <tr><td class="mono">Manual-Despliegue-Local.pdf</td><td>Este documento.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Ficha técnica</h3>
+
+  <table>
+    <thead><tr><th style="width:34%">Aspecto</th><th>Detalle</th></tr></thead>
+    <tbody>
+      <tr><td>Lenguaje</td><td>TypeScript</td></tr>
+      <tr><td>API</td><td>Node.js + Express 4</td></tr>
+      <tr><td>Web</td><td>Next.js 16 + React 19 + Tailwind 4</td></tr>
+      <tr><td>Base de datos</td><td>PostgreSQL 17</td></tr>
+      <tr><td>Autenticación</td><td>JWT con 4 roles y permisos por endpoint</td></tr>
+      <tr><td>Pruebas</td><td>449 pruebas automáticas (Vitest + Supertest)</td></tr>
+      <tr><td>Endpoints</td><td>48 rutas con su matriz de permisos</td></tr>
+    </tbody>
+  </table>
+
+  <div class="pie">
+    Sistema de Servicio Comunitario · Manual de instalación local, versión 1.0.
+    Instituto Universitario Adventista de Venezuela.
+    Los datos y cuentas de este manual son de demostración.
+  </div>
+</section>
+
+</body>
+</html>
