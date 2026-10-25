@@ -16,6 +16,10 @@ Solo hay que hacer esto la primera vez:
 
 El paso a paso completo, con capturas de lo que muestra cada ventana, solución de problemas y cómo desinstalar, está en **[`docs/Manual-Despliegue-Local.pdf`](docs/Manual-Despliegue-Local.pdf)**.
 
+### Instalación manual (sin kit)
+
+Si prefiere instalar Node.js y PostgreSQL manualmente, o si el kit no funciona en su equipo, siga **[`docs/Manual-Instalacion-Sin-Kit.pdf`](docs/Manual-Instalacion-Sin-Kit.pdf)**. Está pensado para Windows 10/11 y cubre la instalación de Node.js 24 LTS y PostgreSQL 17, la creación de la base `app_iunav`, la configuración de `server/.env`, la carga del esquema y los datos de ejemplo, y el arranque de la API y la web en dos terminales.
+
 ## Cuentas de prueba
 
 | Rol | Correo | Contraseña |
@@ -31,7 +35,8 @@ Hay más cuentas de ejemplo en la base de datos para probar grupos con varios in
 
 | Archivo | Contenido |
 |---|---|
-| [`docs/Manual-Despliegue-Local.pdf`](docs/Manual-Despliegue-Local.pdf) | Instalación local paso a paso (para el tutor evaluador). |
+| [`docs/Manual-Despliegue-Local.pdf`](docs/Manual-Despliegue-Local.pdf) | Instalación local con el kit de un clic (para el tutor evaluador). |
+| [`docs/Manual-Instalacion-Sin-Kit.pdf`](docs/Manual-Instalacion-Sin-Kit.pdf) | Instalación manual con Node.js + PostgreSQL, sin el kit (para el tutor evaluador). |
 | [`docs/Guia-de-Usuario-IUNAV.pdf`](docs/Guia-de-Usuario-IUNAV.pdf) | Qué puede hacer cada rol. |
 | [`docs/Flujo-de-Uso-IUNAV.pdf`](docs/Flujo-de-Uso-IUNAV.pdf) | El ciclo completo del programa, por etapas. |
 | [`local/README.md`](local/README.md) | Detalles técnicos del kit local. |

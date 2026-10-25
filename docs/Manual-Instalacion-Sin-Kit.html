@@ -1,0 +1,1314 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="author" content="Sistema de Servicio Comunitario IUNAV">
+<title>Manual de instalación local sin kit - Sistema de Servicio Comunitario IUNAV</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 14mm 14mm; }
+
+  :root {
+    --verde: #0f5132;
+    --verde-claro: #e8f2ec;
+    --gris: #5b6670;
+    --borde: #d8dee3;
+    --ambar: #8a5a00;
+    --ambar-claro: #fdf3e0;
+    --rojo: #8f1d1d;
+    --rojo-claro: #fbeaea;
+    --azul: #14304a;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.42;
+    color: #1c2328;
+    margin: 0;
+  }
+
+  /* ---------- Portada ---------- */
+  .portada {
+    height: 240mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-top: 14px solid var(--verde);
+    padding-top: 8mm;
+    page-break-after: always;
+  }
+  .portada .kicker {
+    font-size: 9pt; letter-spacing: 2.4px; text-transform: uppercase;
+    color: var(--verde); font-weight: 700; margin-bottom: 6mm;
+  }
+  .portada h1 {
+    font-size: 28pt; line-height: 1.15; margin: 0 0 5mm; color: var(--verde);
+    font-weight: 700; letter-spacing: -0.4px;
+  }
+  .portada .sub { font-size: 13pt; color: var(--gris); margin-bottom: 12mm; max-width: 150mm; }
+  .portada .meta {
+    border-top: 1px solid var(--borde); padding-top: 5mm;
+    font-size: 9.5pt; color: var(--gris);
+  }
+  .portada .meta div { margin-bottom: 2mm; }
+  .portada .sello {
+    margin-top: 8mm; background: var(--verde-claro); border-left: 4px solid var(--verde);
+    padding: 5mm 6mm; max-width: 150mm; font-size: 9.5pt;
+  }
+
+  /* ---------- Estructura ---------- */
+  h2 {
+    font-size: 14pt; color: var(--verde); margin: 0 0 3mm;
+    padding-bottom: 1.6mm; border-bottom: 2px solid var(--verde);
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11pt; color: var(--azul); margin: 4.2mm 0 2mm;
+    page-break-after: avoid;
+  }
+  h4 { font-size: 10pt; margin: 3mm 0 1.2mm; page-break-after: avoid; }
+
+  section { page-break-before: always; }
+  section:first-of-type { page-break-before: auto; }
+
+  p { margin: 0 0 2.5mm; text-align: justify; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.2mm; }
+
+  /* ---------- Tablas ---------- */
+  table {
+    width: 100%; border-collapse: collapse; margin: 1.6mm 0 3mm;
+    font-size: 9pt; page-break-inside: avoid;
+  }
+  th {
+    background: var(--verde); color: #fff; text-align: left;
+    padding: 1.8mm 2.2mm; font-weight: 600; border: 1px solid var(--verde);
+  }
+  td { padding: 1.6mm 2.2mm; border: 1px solid var(--borde); vertical-align: top; }
+  table.tabla-larga { page-break-inside: auto; }
+  table.tabla-larga tr { page-break-inside: avoid; }
+  tbody tr:nth-child(even) td { background: #f7f9fa; }
+  td.centro, th.centro { text-align: center; }
+  td.mono, .mono { font-family: Consolas, "Courier New", monospace; font-size: 9pt; }
+
+  /* ---------- Cajas ---------- */
+  .nota, .aviso, .tip {
+    padding: 2.8mm 4mm; margin: 2.4mm 0 3mm;
+    page-break-inside: avoid; font-size: 9.5pt;
+  }
+  .nota { background: var(--verde-claro); border-left: 4px solid var(--verde); }
+  .aviso { background: var(--rojo-claro); border-left: 4px solid var(--rojo); }
+  .tip { background: var(--ambar-claro); border-left: 4px solid var(--ambar); }
+  .nota strong, .aviso strong, .tip strong { display: block; margin-bottom: 1.5mm; }
+
+  .paso {
+    border: 1px solid var(--borde); border-left: 5px solid var(--verde);
+    padding: 3.5mm 4.5mm; margin: 2mm 0 4mm; page-break-inside: avoid;
+  }
+  .paso .titulo { font-weight: 700; color: var(--verde); margin-bottom: 1.5mm; font-size: 11pt; }
+
+  ol.pasos { counter-reset: paso; list-style: none; padding-left: 0; }
+  ol.pasos > li {
+    counter-increment: paso; position: relative;
+    padding-left: 9mm; margin-bottom: 2.5mm;
+  }
+  ol.pasos > li::before {
+    content: counter(paso); position: absolute; left: 0; top: 0.3mm;
+    width: 6mm; height: 6mm; border-radius: 50%;
+    background: var(--verde); color: #fff;
+    font-size: 8.4pt; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .chip {
+    display: inline-block; padding: 0.5mm 2mm; border-radius: 2mm;
+    font-size: 8.4pt; font-weight: 700; color: #fff; margin-right: 1mm;
+  }
+  .chip.si { background: #1a7f4b; }
+  .chip.no { background: #b0413e; }
+  .chip.opcional { background: #b8860b; }
+  .chip.win { background: #1d6fa5; }
+
+  code {
+    font-family: Consolas, "Courier New", monospace; font-size: 9pt;
+    background: #eef1f3; padding: 0.3mm 1.2mm; border-radius: 1mm;
+  }
+
+  pre {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8.5pt; line-height: 1.38;
+    background: #1e252b; color: #e6edf3;
+    padding: 2.4mm 3.4mm; border-radius: 1.5mm;
+    margin: 1.6mm 0 2.6mm; overflow: hidden;
+    white-space: pre-wrap; word-break: break-word;
+    page-break-inside: avoid;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+  pre .c { color: #8b98a5; }
+  pre .ok { color: #7ee787; }
+
+  .ruta { font-family: Consolas, "Courier New", monospace; font-weight: 700; }
+
+  .arbol {
+    font-family: Consolas, "Courier New", monospace; font-size: 8.6pt;
+    background: #f7f9fa; border: 1px solid var(--borde);
+    padding: 3mm 4mm; margin: 2mm 0 4mm;
+    white-space: pre; page-break-inside: avoid;
+  }
+
+  .pie {
+    margin-top: 8mm; padding-top: 3mm; border-top: 1px solid var(--borde);
+    font-size: 8.6pt; color: var(--gris);
+  }
+
+  .indice { font-size: 10.2pt; }
+  .indice ol { list-style: none; padding-left: 0; }
+  .indice li { margin-bottom: 1.4mm; }
+  .indice .n { color: var(--verde); font-weight: 700; display: inline-block; width: 8mm; }
+
+  .checklist { list-style: none; padding-left: 0; margin: 2mm 0 4mm; }
+  .checklist li { padding-left: 8mm; position: relative; margin-bottom: 2mm; }
+  .checklist li::before {
+    content: ""; position: absolute; left: 0; top: 1mm;
+    width: 4mm; height: 4mm; border: 1.5px solid var(--verde);
+    border-radius: 0.8mm; background: #fff;
+  }
+
+  .dos-columnas { column-count: 2; column-gap: 8mm; }
+  .dos-columnas p, .dos-columnas li { break-inside: avoid; }
+
+  .salto-pagina { page-break-before: always; }
+
+  .pie-pagina {
+    font-size: 8.4pt; color: var(--gris); margin-top: 6mm;
+    border-top: 1px solid var(--borde); padding-top: 2mm;
+  }
+</style>
+</head>
+<body>
+
+<div class="portada">
+  <div class="kicker">Sistema de Servicio Comunitario · IUNAV</div>
+  <h1>Manual de instalación local<br>sin kit</h1>
+  <div class="sub">
+    Guía paso a paso para instalar Node.js y PostgreSQL,
+    configurar el proyecto y levantar la API y la web en Windows 10/11.
+  </div>
+  <div class="meta">
+    <div><strong>Dirigido a:</strong> tutor evaluador y personal que instalará el sistema.</div>
+    <div><strong>Versión del manual:</strong> 1.0 · octubre de 2026</div>
+    <div><strong>Tiempo estimado:</strong> 30 a 45 minutos la primera vez; 3 minutos después.</div>
+    <div><strong>Resultado esperado:</strong> sistema funcionando en <span class="mono">http://localhost:3000</span>.</div>
+  </div>
+  <div class="sello">
+    <strong>Este manual no usa el kit automático.</strong>
+    No ejecute <span class="mono">local\instalar.cmd</span>, <span class="mono">iniciar.cmd</span>
+    ni <span class="mono">detener.cmd</span>. Aquí se instala PostgreSQL aparte y se levanta
+    el proyecto con comandos de Node.js.
+  </div>
+</div>
+
+<section>
+  <h2>Cómo usar este manual</h2>
+
+  <p>
+    Siga los pasos en orden. Cada paso indica qué hacer, qué comando escribir y qué
+    debería ver. No avance al siguiente paso hasta que el anterior haya funcionado.
+    Si algo falla, vaya a la sección <strong>13. Si algo falla</strong> antes de repetir
+    la instalación desde cero.
+  </p>
+
+  <h3>Antes de empezar</h3>
+  <ul>
+    <li>Tenga a mano la contraseña del usuario <code>postgres</code> que va a crear. La necesitará varias veces.</li>
+    <li>Use una cuenta de Windows con permisos de administrador para instalar Node.js y PostgreSQL.</li>
+    <li>Necesita conexión a internet solo durante la instalación. Después el sistema funciona sin internet.</li>
+    <li>Libere unos 3 GB de disco y cierre programas que usen los puertos 3000, 4000 o 5432.</li>
+    <li>No instale el proyecto dentro de una carpeta con acentos o espacios raros. Se recomienda <span class="ruta">C:\IUNAV\servicio-comunitario-iunav</span>.</li>
+  </ul>
+
+  <h3>Lista de verificación</h3>
+  <p>Marque cada casilla a medida que avanza:</p>
+  <ul class="checklist">
+    <li>Node.js instalado y <code>node -v</code> responde.</li>
+    <li>PostgreSQL 17 instalado y el servicio está corriendo.</li>
+    <li>La base de datos <code>app_iunav</code> creada.</li>
+    <li><span class="ruta">server\.env</span> configurado con la contraseña correcta y <code>DB_SSL=false</code>.</li>
+    <li>Esquema aplicado con <code>npm run db:schema</code>.</li>
+    <li>Datos de ejemplo cargados con <code>npm run db:seed -- --confirm-seed</code>.</li>
+    <li>API respondiendo en <span class="mono">http://localhost:4000/api/health</span>.</li>
+    <li>Web abierta en <span class="mono">http://localhost:3000</span>.</li>
+    <li>Entró con el usuario administrador.</li>
+    <li>Probó los cuatro roles.</li>
+  </ul>
+
+  <div class="aviso">
+    <strong>El repositorio es público, pero el archivo server\.env es privado.</strong>
+    Ese archivo guarda la contraseña de su PostgreSQL y el secreto de las sesiones.
+    No lo comparta, no lo suba a GitHub y no lo envíe por correo.
+  </div>
+
+  <div class="nota">
+    <strong>Si ya tiene PostgreSQL instalado</strong>
+    No hace falta reinstalarlo. Anote la contraseña del usuario <code>postgres</code> y el
+    puerto (normalmente 5432), y empiece en el paso 4 para crear la base. Si el puerto es
+    distinto, ajuste <code>DATABASE_URL</code> en el paso 5. Si también tiene Node.js,
+    puede saltar el paso 1.
+  </div>
+</section>
+
+<section>
+  <h2>Contenido</h2>
+  <div class="indice">
+    <ol>
+      <li><span class="n">1.</span> Qué va a instalar y cómo funciona</li>
+      <li><span class="n">2.</span> Requisitos de la computadora</li>
+      <li><span class="n">3.</span> Paso 1: instalar Node.js</li>
+      <li><span class="n">4.</span> Paso 2: instalar PostgreSQL</li>
+      <li><span class="n">5.</span> Paso 3: descargar el proyecto</li>
+      <li><span class="n">6.</span> Paso 4: crear la base de datos</li>
+      <li><span class="n">7.</span> Paso 5: configurar la API</li>
+      <li><span class="n">8.</span> Paso 6: instalar dependencias, esquema y datos</li>
+      <li><span class="n">9.</span> Paso 7: levantar la API</li>
+      <li><span class="n">10.</span> Paso 8: levantar la web</li>
+      <li><span class="n">11.</span> Paso 9: verificar con los cuatro roles</li>
+      <li><span class="n">12.</span> Uso diario: iniciar, detener y reiniciar</li>
+      <li><span class="n">13.</span> Si algo falla</li>
+      <li><span class="n">14.</span> Reiniciar los datos y desinstalar</li>
+      <li><span class="n">15.</span> Anexo: estructura, puertos y comandos</li>
+    </ol>
+  </div>
+
+  <div class="pie">
+    Manual de instalación local sin kit · Sistema de Servicio Comunitario IUNAV · versión 1.0
+  </div>
+</section>
+
+<section>
+  <h2>1. Qué va a instalar y cómo funciona</h2>
+
+  <p>
+    El sistema tiene tres piezas que se ejecutan en su propia computadora:
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Pieza</th><th>Qué es</th><th>Dirección</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Web</strong></td>
+        <td>La interfaz que se abre en el navegador. Está hecha con Next.js y React.</td>
+        <td class="mono">http://localhost:3000</td>
+      </tr>
+      <tr>
+        <td><strong>API</strong></td>
+        <td>El servidor que valida usuarios, permisos y datos. Está hecho con Express y TypeScript.</td>
+        <td class="mono">http://localhost:4000</td>
+      </tr>
+      <tr>
+        <td><strong>Base de datos</strong></td>
+        <td>PostgreSQL, donde viven usuarios, grupos, bitácoras y servicios.</td>
+        <td class="mono">localhost:5432</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>El recorrido de una petición es este:</p>
+
+  <div class="arbol">Navegador
+  http://localhost:3000
+          |
+          v
+  Web (Next.js)  :3000
+          |
+          |  /api/*
+          v
+  API (Express)  :4000
+          |
+          v
+  PostgreSQL     :5432</div>
+
+  <h3>Qué significa "sin kit"</h3>
+  <p>
+    El proyecto incluye una carpeta <span class="ruta">local\</span> con un kit que instala
+    un PostgreSQL embebido y arranca todo con doble clic. <strong>Este manual no usa ese kit.</strong>
+    Aquí usted instala Node.js y PostgreSQL con sus instaladores oficiales, crea la base de
+    datos y ejecuta los comandos del proyecto. Es la instalación manual, paso a paso.
+  </p>
+
+  <div class="aviso">
+    <strong>No ejecute los archivos .cmd de la carpeta local\</strong>
+    Si ve <span class="mono">instalar.cmd</span>, <span class="mono">iniciar.cmd</span> o
+    <span class="mono">detener.cmd</span>, déjelos quietos. Este manual sigue otro camino:
+    PostgreSQL instalado aparte y dos terminales con <code>npm run dev</code>.
+  </div>
+
+  <h3>Qué va a quedar en su computadora</h3>
+  <ul>
+    <li>Node.js 24 LTS y npm.</li>
+    <li>PostgreSQL 17 y pgAdmin 4.</li>
+    <li>El proyecto en <span class="ruta">C:\IUNAV\servicio-comunitario-iunav</span>.</li>
+    <li>La base <code>app_iunav</code> con las tablas y los datos de ejemplo.</li>
+    <li>La web y la API corriendo mientras las terminales estén abiertas.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2. Requisitos de la computadora</h2>
+
+  <table>
+    <thead>
+      <tr><th>Requisito</th><th>Mínimo</th><th>Recomendado</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Sistema operativo</td><td>Windows 10 de 64 bits</td><td>Windows 11 de 64 bits</td></tr>
+      <tr><td>Memoria RAM</td><td>4 GB</td><td>8 GB o más</td></tr>
+      <tr><td>Espacio libre</td><td>3 GB</td><td>5 GB</td></tr>
+      <tr><td>Permisos</td><td>Administrador para instalar</td><td>Administrador</td></tr>
+      <tr><td>Internet</td><td>Solo para instalar</td><td>Solo para instalar</td></tr>
+      <tr><td>Puertos libres</td><td>3000, 4000 y 5432</td><td>Los mismos</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Programas que se van a instalar</h3>
+  <ul>
+    <li><strong>Node.js 24 LTS</strong> — mínimo 20.9. Incluye npm, que se usa para instalar dependencias y arrancar el proyecto.</li>
+    <li><strong>PostgreSQL 17</strong> — base de datos. El instalador incluye pgAdmin 4 y las herramientas de línea de comandos.</li>
+    <li><strong>Git</strong> <span class="chip opcional">OPCIONAL</span> — solo si va a descargar el proyecto con <code>git clone</code>. También puede usar el ZIP de GitHub.</li>
+  </ul>
+
+  <h3>Cómo saber si ya tiene algo instalado</h3>
+  <p>Abra PowerShell y ejecute estos comandos. Si responden con una versión, ya está instalado:</p>
+
+  <pre><code>node -v
+npm -v
+git --version</code></pre>
+
+  <p>
+    Para PostgreSQL, abra el menú Inicio y busque <strong>SQL Shell (psql)</strong> o
+    <strong>pgAdmin 4</strong>. También puede revisar <strong>Servicios</strong> y buscar
+    un servicio cuyo nombre empiece por <code>postgresql</code>.
+  </p>
+
+  <div class="tip">
+    <strong>No instale dos veces PostgreSQL</strong>
+    Si ya lo tiene, use el que existe. Solo necesita la contraseña del usuario
+    <code>postgres</code> y el puerto. Si no la recuerda, es mejor reinstalarlo o
+    pedir ayuda antes de seguir.
+  </div>
+
+  <h3>Revise que los puertos estén libres</h3>
+  <p>En PowerShell:</p>
+  <pre><code>netstat -ano | findstr :3000
+netstat -ano | findstr :4000
+netstat -ano | findstr :5432</code></pre>
+  <p>
+    Si algún comando devuelve una línea, hay un programa usando ese puerto. Cierre ese
+    programa antes de continuar. En la sección 13 se explica cómo identificar y cerrar
+    el proceso si es necesario.
+  </p>
+</section>
+
+<section>
+  <h2>3. Paso 1: instalar Node.js</h2>
+
+  <p>
+    Node.js es el programa que ejecuta la API y las herramientas de la web. Instale la
+    versión <strong>LTS</strong> (soporte a largo plazo), que hoy es la 24.
+  </p>
+
+  <h3>Opción A: instalador gráfico (recomendada)</h3>
+  <ol class="pasos">
+    <li>Abra <span class="mono">https://nodejs.org/es/download</span> en el navegador.</li>
+    <li>Descargue el instalador <strong>LTS para Windows (x64)</strong>.</li>
+    <li>Ejecute el archivo descargado y acepte los valores por defecto. Deje marcada la opción que agrega Node al PATH.</li>
+    <li>Al terminar, cierre todas las ventanas de PowerShell o CMD que tuviera abiertas y abra una nueva. El PATH recién se actualiza en las terminales nuevas.</li>
+  </ol>
+
+  <h3>Opción B: con winget</h3>
+  <p>Si prefiere la terminal, abra PowerShell como administrador y ejecute:</p>
+  <pre><code>winget install OpenJS.NodeJS.LTS</code></pre>
+  <p>Al terminar, cierre y vuelva a abrir PowerShell.</p>
+
+  <h3>Verificar</h3>
+  <p>En una terminal nueva:</p>
+  <pre><code>node -v
+npm -v</code></pre>
+
+  <p>Debe ver algo parecido a esto:</p>
+  <pre><code>v24.19.0
+11.6.0</code></pre>
+
+  <div class="nota">
+    <strong>La versión exacta puede variar</strong>
+    Lo importante es que Node sea <strong>24.x</strong> o, como mínimo, <strong>20.9</strong>.
+    Si ve una versión 18 o anterior, instale la LTS actual antes de continuar.
+  </div>
+
+  <div class="aviso">
+    <strong>Si PowerShell dice "node no se reconoce como un comando"</strong>
+    Cierre la terminal, abra una nueva y pruebe otra vez. Si sigue igual, reinstale Node.js
+    asegurándose de que la opción <em>Add to PATH</em> esté marcada.
+  </div>
+</section>
+
+<section>
+  <h2>4. Paso 2: instalar PostgreSQL</h2>
+
+  <p>
+    PostgreSQL guarda todos los datos del sistema. Se instala una sola vez y queda
+    funcionando como un servicio de Windows.
+  </p>
+
+  <h3>Descargar e instalar</h3>
+  <ol class="pasos">
+    <li>Abra <span class="mono">https://www.postgresql.org/download/windows/</span> y entre al instalador de <strong>EDB</strong>.</li>
+    <li>Descargue la versión <strong>17.x</strong> para Windows de 64 bits.</li>
+    <li>Ejecute el instalador con permisos de administrador.</li>
+    <li>Deje la carpeta de instalación por defecto: <span class="ruta">C:\Program Files\PostgreSQL\17</span>.</li>
+    <li>Seleccione como mínimo estos componentes:
+      <ul>
+        <li><strong>PostgreSQL Server</strong></li>
+        <li><strong>pgAdmin 4</strong></li>
+        <li><strong>Command Line Tools</strong></li>
+      </ul>
+    </li>
+    <li>Deje la carpeta de datos por defecto y escriba una <strong>contraseña para el usuario postgres</strong>.</li>
+    <li>Deje el puerto <strong>5432</strong> (a menos que ya esté ocupado; en ese caso use 5433 y anótelo).</li>
+    <li>Deje la configuración regional por defecto y continúe.</li>
+    <li>Al final, puede desmarcar <strong>Stack Builder</strong>; no hace falta para este proyecto.</li>
+  </ol>
+
+  <div class="aviso">
+    <strong>Anote la contraseña del usuario postgres</strong>
+    Se usa en el paso 5 dentro de <span class="ruta">server\.env</span>. Para evitar problemas,
+    use una contraseña de letras y números, sin <code>@</code>, <code>:</code>, <code>/</code>,
+    <code>#</code> ni <code>%</code>. Si usa esos caracteres, tendrá que codificarlos en la URL
+    de conexión.
+  </div>
+
+  <h3>Verificar que quedó instalado</h3>
+  <ol class="pasos">
+    <li>Abra el menú Inicio y busque <strong>SQL Shell (psql)</strong>.</li>
+    <li>Presione <code>Enter</code> para aceptar Servidor, Base de datos, Puerto y Usuario por defecto.</li>
+    <li>Escriba la contraseña de <code>postgres</code>. Al escribir no se ven los caracteres; es normal.</li>
+    <li>Debe aparecer el cursor <code>postgres=#</code>. Escriba:</li>
+  </ol>
+
+  <pre><code>SELECT version();
+\q</code></pre>
+
+  <p>
+    La respuesta debe empezar por <code>PostgreSQL 17</code>. Si el comando <code>psql</code>
+    no se reconoce desde PowerShell, no pasa nada: use siempre <strong>SQL Shell</strong> del
+    menú Inicio, o la ruta completa:
+  </p>
+
+  <pre><code>&amp; "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres</code></pre>
+
+  <h3>El servicio de PostgreSQL</h3>
+  <p>
+    El instalador crea un servicio llamado <code>postgresql-x64-17</code> que arranca
+    automáticamente con Windows. Puede comprobarlo en <strong>Servicios</strong> o con:
+  </p>
+
+  <pre><code>Get-Service postgresql*</code></pre>
+
+  <p>
+    Debe decir <code>Running</code>. Si está detenido, haga clic derecho y elija <strong>Iniciar</strong>.
+  </p>
+</section>
+
+<section>
+  <h2>5. Paso 3: descargar el proyecto</h2>
+
+  <p>
+    Descargue el proyecto en una carpeta fácil de encontrar. Para que los comandos de este
+    manual funcionen tal cual, use esta ruta:
+  </p>
+
+  <pre><code>C:\IUNAV\servicio-comunitario-iunav</code></pre>
+
+  <h3>Opción A: con Git (recomendada)</h3>
+  <p>Si instaló Git, abra PowerShell y ejecute:</p>
+
+  <pre><code>New-Item -ItemType Directory -Force C:\IUNAV
+cd C:\IUNAV
+git clone https://github.com/JesusQuilleli/servicio-comunitario-iunav.git
+cd servicio-comunitario-iunav</code></pre>
+
+  <h3>Opción B: con el ZIP de GitHub</h3>
+  <ol class="pasos">
+    <li>Abra <span class="mono">https://github.com/JesusQuilleli/servicio-comunitario-iunav</span>.</li>
+    <li>Haga clic en el botón verde <strong>Code</strong> y luego en <strong>Download ZIP</strong>.</li>
+    <li>Descomprima el archivo dentro de <span class="ruta">C:\IUNAV</span>.</li>
+    <li>La carpeta se llamará algo como <span class="ruta">servicio-comunitario-iunav-master</span>. Renómbrela a <span class="ruta">servicio-comunitario-iunav</span>.</li>
+    <li>Abra PowerShell dentro de esa carpeta o ejecute <code>cd C:\IUNAV\servicio-comunitario-iunav</code>.</li>
+  </ol>
+
+  <h3>Verificar la descarga</h3>
+  <p>Dentro de la carpeta del proyecto, ejecute:</p>
+
+  <pre><code>Get-ChildItem</code></pre>
+
+  <p>Debe ver, entre otras, estas carpetas y archivos:</p>
+
+  <div class="arbol">docs\
+local\        <- kit automático: NO se usa en este manual
+server\       <- API
+web\          <- interfaz web
+README.md</div>
+
+  <div class="aviso">
+    <strong>No use la carpeta local\</strong>
+    Es el kit automático. En este manual todo se hace desde <span class="ruta">server\</span>
+    y <span class="ruta">web\</span> con comandos de npm.
+  </div>
+
+  <div class="tip">
+    <strong>Si no tiene Git o no puede clonarlo</strong>
+    Pida al responsable del proyecto que le entregue el PDF y un ZIP del proyecto, o que le
+    dé acceso al repositorio. El ZIP debe incluir <span class="ruta">server\</span>,
+    <span class="ruta">web\</span> y <span class="ruta">docs\</span>, pero no debe incluir
+    <span class="ruta">server\.env</span> ni <span class="ruta">node_modules\</span>.
+  </div>
+</section>
+
+<section>
+  <h2>6. Paso 4: crear la base de datos</h2>
+
+  <p>
+    El proyecto trae el esquema de las tablas, pero <strong>no crea la base de datos</strong>.
+    Hay que crear una base vacía llamada <code>app_iunav</code>. Hágalo con pgAdmin o con psql.
+  </p>
+
+  <h3>Opción A: con pgAdmin 4 (recomendada)</h3>
+  <ol class="pasos">
+    <li>Abra <strong>pgAdmin 4</strong> desde el menú Inicio.</li>
+    <li>En el panel izquierdo, haga clic en <strong>Servers</strong> y luego en <strong>PostgreSQL 17</strong>.</li>
+    <li>Escriba la contraseña del usuario <code>postgres</code>.</li>
+    <li>Haga clic derecho sobre <strong>Databases</strong> y elija <strong>Create</strong> &gt; <strong>Database...</strong>.</li>
+    <li>En <strong>Database</strong>, escriba <code>app_iunav</code>.</li>
+    <li>Deje el propietario (<em>Owner</em>) en <code>postgres</code>.</li>
+    <li>Haga clic en <strong>Save</strong>.</li>
+    <li>Verifique que <code>app_iunav</code> aparece en la lista de bases de datos.</li>
+  </ol>
+
+  <h3>Opción B: con SQL Shell (psql)</h3>
+  <p>Abra <strong>SQL Shell (psql)</strong>, acepte los valores por defecto y escriba:</p>
+
+  <pre><code>CREATE DATABASE app_iunav;
+\q</code></pre>
+
+  <p>La respuesta debe ser <code>CREATE DATABASE</code>.</p>
+
+  <h3>Base opcional para pruebas automáticas</h3>
+  <p>
+    Si más adelante quiere ejecutar la suite de pruebas del proyecto, cree también una base
+    llamada <code>app_iunav_test</code>. No es necesaria para usar el sistema:
+  </p>
+
+  <pre><code>CREATE DATABASE app_iunav_test;</code></pre>
+
+  <div class="aviso">
+    <strong>La base debe llamarse exactamente app_iunav</strong>
+    El archivo <span class="ruta">server\.env</span> apunta a ese nombre. Si usa otro, la API
+    no encontrará las tablas y responderá con errores.
+  </div>
+
+  <div class="nota">
+    <strong>Si pgAdmin no conecta</strong>
+    Revise que el servicio <code>postgresql-x64-17</code> esté en <code>Running</code> y que
+    esté usando el puerto correcto. Si cambió la contraseña, use la nueva. Si no la recuerda,
+    es más rápido reinstalar PostgreSQL que adivinarla.
+  </div>
+</section>
+
+<section>
+  <h2>7. Paso 5: configurar la API</h2>
+
+  <p>
+    La API necesita un archivo <span class="ruta">server\.env</span> con la conexión a
+    PostgreSQL y un secreto para las sesiones. El proyecto incluye una plantilla llamada
+    <span class="ruta">.env.example</span>.
+  </p>
+
+  <h3>Crear el archivo</h3>
+  <p>En PowerShell:</p>
+
+  <pre><code>cd C:\IUNAV\servicio-comunitario-iunav\server
+Copy-Item .env.example .env
+notepad .env</code></pre>
+
+  <p>Se abrirá el Bloc de notas. Deje el archivo así, cambiando solo lo que se indica:</p>
+
+  <pre><code>DATABASE_URL=postgresql://postgres:TU_CLAVE@localhost:5432/app_iunav
+DB_SSL=false
+JWT_SECRET=PEGA_AQUI_EL_SECRETO_QUE_GENERASTE
+JWT_EXPIRES_IN=8h
+NODE_ENV=development
+PORT=4000
+API_HOST=127.0.0.1
+FRONTEND_URL=http://localhost:3000
+UPLOAD_DIR=uploads
+MAX_EVIDENCIA_MB=10
+MAX_DOCUMENTO_MB=25
+RATE_LIMIT_LOGIN=10
+RATE_LIMIT_LOGIN_VENTANA_MS=900000</code></pre>
+
+  <h3>Qué significa cada valor importante</h3>
+  <table>
+    <thead>
+      <tr><th>Variable</th><th>Qué poner</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono">DATABASE_URL</td>
+        <td>Reemplace <code>TU_CLAVE</code> por la contraseña real de <code>postgres</code>. Si su PostgreSQL usa el puerto 5433, cámbielo aquí.</td>
+      </tr>
+      <tr>
+        <td class="mono">DB_SSL</td>
+        <td>Debe quedar exactamente en <code>false</code>. En local no hay certificado TLS; si se deja en <code>true</code>, la conexión falla.</td>
+      </tr>
+      <tr>
+        <td class="mono">JWT_SECRET</td>
+        <td>Una cadena larga y aleatoria. Use el comando de abajo para generarla.</td>
+      </tr>
+      <tr>
+        <td class="mono">PORT</td>
+        <td>4000. Es el puerto de la API.</td>
+      </tr>
+      <tr>
+        <td class="mono">API_HOST</td>
+        <td>127.0.0.1. La API solo escucha en este equipo.</td>
+      </tr>
+      <tr>
+        <td class="mono">FRONTEND_URL</td>
+        <td>http://localhost:3000. Debe coincidir con la dirección donde abre la web.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Generar el JWT_SECRET</h3>
+  <p>En otra terminal, o antes de editar el archivo, ejecute:</p>
+
+  <pre><code>node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</code></pre>
+
+  <p>
+    Copie la salida completa (64 caracteres) y péguela después de <code>JWT_SECRET=</code>.
+    No use la misma clave en dos instalaciones distintas.
+  </p>
+
+  <h3 class="salto-pagina">Si la contraseña tiene caracteres especiales</h3>
+  <p>
+    En una URL, algunos caracteres deben codificarse. Si su contraseña es
+    <code>MiClave#2026</code>, la URL debe llevar <code>MiClave%232026</code>. Lo más simple
+    es usar una contraseña de solo letras y números. Ejemplos:
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Carácter</th><th>Se escribe como</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="mono">@</td><td class="mono">%40</td></tr>
+      <tr><td class="mono">:</td><td class="mono">%3A</td></tr>
+      <tr><td class="mono">/</td><td class="mono">%2F</td></tr>
+      <tr><td class="mono">#</td><td class="mono">%23</td></tr>
+      <tr><td class="mono">%</td><td class="mono">%25</td></tr>
+    </tbody>
+  </table>
+
+  <div class="aviso">
+    <strong>No use comillas ni espacios</strong>
+    Escriba <code>DB_SSL=false</code>, no <code>DB_SSL = "false"</code>. Guarde el archivo con
+    <code>Ctrl</code> + <code>S</code> y cierre el Bloc de notas. No suba este archivo a GitHub.
+  </div>
+
+  <div class="tip">
+    <strong>Si se equivoca, puede volver a empezar</strong>
+    Borre <span class="ruta">server\.env</span>, copie otra vez <span class="ruta">.env.example</span>
+    y repita este paso. No hace falta desinstalar nada.
+  </div>
+</section>
+
+<section>
+  <h2>8. Paso 6: instalar dependencias, esquema y datos</h2>
+
+  <p>
+    Ahora se descargan las librerías del proyecto, se crean las tablas y se cargan los datos
+    de ejemplo. Todo se ejecuta desde la carpeta <span class="ruta">server\</span>.
+  </p>
+
+  <h3>1. Instalar dependencias</h3>
+  <pre><code>cd C:\IUNAV\servicio-comunitario-iunav\server
+npm ci</code></pre>
+
+  <p>
+    Este paso descarga las librerías y puede tardar entre 3 y 10 minutos la primera vez.
+    Al terminar debe mostrar algo como <code>added 400 packages</code> y volver al cursor.
+  </p>
+
+  <div class="nota">
+    <strong>Si npm ci falla</strong>
+    Pruebe <code>npm install</code>. Si el error menciona la red o un proxy, revise la conexión
+    a internet. Si menciona permisos, abra PowerShell como administrador.
+  </div>
+
+  <h3>2. Crear las tablas</h3>
+  <pre><code>npm run db:schema</code></pre>
+
+  <p>Debe ver:</p>
+  <pre><code>Aplicando esquema desde sql/schema.sql ...
+<span class="ok">Esquema aplicado correctamente.</span></code></pre>
+
+  <p>
+    El esquema crea <strong>9 tablas</strong>: usuarios, periodos académicos, grupos,
+    integrantes, bitácoras, servicios institucionales, configuración, plantillas y solicitudes.
+    Se puede ejecutar más de una vez sin borrar datos.
+  </p>
+
+  <h3>3. Cargar los datos de ejemplo</h3>
+  <pre><code>npm run db:seed -- --confirm-seed</code></pre>
+
+  <p>Debe ver una salida parecida a esta:</p>
+  <pre><code>Ejecutando seed de la base de datos...
+Periodo académico 2026-I listo (id=1)
+  + creado cmendoza@iunav.edu.ve (admin)
+  + creado mlopez@iunav.edu.ve (coordinador)
+  + creado jperez@iunav.edu.ve (tutor)
+  ...
+  + configuracion_sistema creada (90h directas + 30h impacto)
+  + 5 plantillas documentales
+  + grupo Mantenimiento de Red Comunitaria ...
+  + 12 bitácoras comunitarias y 10 servicios sociales/ambientales
+<span class="ok">Seed completado.</span></code></pre>
+
+  <p>
+    El seed también se puede ejecutar más de una vez: no duplica usuarios ni grupos. La bandera
+    <code>--confirm-seed</code> es obligatoria porque las cuentas de ejemplo tienen contraseñas
+    conocidas y públicas; así se evita cargarlas por accidente en un servidor real.
+  </p>
+
+  <h3>4. Si algo falla en este paso</h3>
+  <table>
+    <thead>
+      <tr><th>Mensaje</th><th>Qué hacer</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono">database "app_iunav" does not exist</td>
+        <td>Falta crear la base. Vuelva al paso 4.</td>
+      </tr>
+      <tr>
+        <td class="mono">password authentication failed for user "postgres"</td>
+        <td>La contraseña de <code>DATABASE_URL</code> no es correcta. Corrija <span class="ruta">server\.env</span>.</td>
+      </tr>
+      <tr>
+        <td class="mono">self-signed certificate</td>
+        <td>Falta <code>DB_SSL=false</code> en <span class="ruta">server\.env</span>.</td>
+      </tr>
+      <tr>
+        <td class="mono">ECONNREFUSED 127.0.0.1:5432</td>
+        <td>PostgreSQL no está corriendo o el puerto es distinto. Inicie el servicio.</td>
+      </tr>
+      <tr>
+        <td class="mono">Este seed crea usuarios de prueba...</td>
+        <td>Faltó la bandera. Ejecute <code>npm run db:seed -- --confirm-seed</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>9. Paso 7: levantar la API</h2>
+
+  <p>
+    La API debe quedar corriendo en una terminal mientras use el sistema. Abra
+    <strong>PowerShell</strong> y ejecute:
+  </p>
+
+  <pre><code>cd C:\IUNAV\servicio-comunitario-iunav\server
+npm run dev</code></pre>
+
+  <p>Debe ver mensajes parecidos a estos:</p>
+
+  <pre><code>&gt; iunav-servicio-comunitario-server@0.1.0 dev
+&gt; tsx watch src/index.ts
+
+&gt;&gt; API IUNAV Servicio Comunitario escuchando en http://127.0.0.1:4000
+&gt;&gt; Health check: http://127.0.0.1:4000/api/health</code></pre>
+
+  <div class="nota">
+    <strong>Deje esta terminal abierta</strong>
+    No cierre la ventana mientras use la web. Si la cierra, la API se detiene y el navegador
+    no podrá cargar datos.
+  </div>
+
+  <h3>Comprobar la API</h3>
+  <p>Abra el navegador en:</p>
+
+  <pre><code>http://localhost:4000/api/health</code></pre>
+
+  <p>Debe ver un JSON parecido a este:</p>
+
+  <pre><code>{"ok":true,"baseDeDatos":true,"servicio":"IUNAV Servicio Comunitario API","hora":"..."}</code></pre>
+
+  <p>
+    <code>ok:true</code> y <code>baseDeDatos:true</code> significan que la API está viva y que
+    PostgreSQL responde. Si ve <code>503</code> o <code>baseDeDatos:false</code>, la API está
+    arriba pero no puede hablar con la base: revise el servicio de PostgreSQL y
+    <span class="ruta">server\.env</span>.
+  </p>
+
+  <h3>Si el puerto 4000 está ocupado</h3>
+  <p>El mensaje suele ser <code>EADDRINUSE</code>. Identifique el proceso y ciérrelo:</p>
+
+  <pre><code>netstat -ano | findstr :4000
+taskkill /PID NUMERO_DE_PID /F</code></pre>
+
+  <p>
+    Reemplace <code>NUMERO_DE_PID</code> por el número que aparece al final de la línea.
+    Si no está seguro de qué programa es, cierre otras terminales o aplicaciones y vuelva a
+    intentar. También puede cambiar <code>PORT</code> en <span class="ruta">server\.env</span>,
+    pero entonces tendrá que ajustar la web.
+  </p>
+</section>
+
+<section>
+  <h2>10. Paso 8: levantar la web</h2>
+
+  <p>
+    Abra una <strong>segunda</strong> terminal de PowerShell. La primera debe seguir con la API
+    corriendo. En la nueva terminal ejecute:
+  </p>
+
+  <pre><code>cd C:\IUNAV\servicio-comunitario-iunav\web
+npm ci
+npm run dev</code></pre>
+
+  <p>
+    La primera instalación de la web también tarda unos minutos. Al terminar debe ver algo
+    parecido a esto:
+  </p>
+
+  <pre><code>▲ Next.js 16.3.5
+- Local: http://localhost:3000
+- Network: http://192.168.x.x:3000
+✓ Ready in 2.1s</code></pre>
+
+  <p>Abra el navegador en:</p>
+
+  <pre><code>http://localhost:3000</code></pre>
+
+  <div class="aviso">
+    <strong>Use localhost, no 127.0.0.1, para abrir la web</strong>
+    La API solo acepta peticiones del origen <code>http://localhost:3000</code>. Si abre
+    <code>http://127.0.0.1:3000</code>, el navegador puede bloquear las peticiones por CORS y
+    el inicio de sesión no funcionará. Use siempre <code>localhost</code>.
+  </div>
+
+  <h3>Archivo opcional web\.env.local</h3>
+  <p>
+    Normalmente no hace falta. Si la web no encuentra la API, cree el archivo
+    <span class="ruta">web\.env.local</span> con esta línea:
+  </p>
+
+  <pre><code>NEXT_PUBLIC_API_URL=http://localhost:4000</code></pre>
+
+  <p>Para crearlo desde PowerShell:</p>
+
+  <pre><code>cd C:\IUNAV\servicio-comunitario-iunav\web
+Copy-Item .env.example .env.local
+notepad .env.local</code></pre>
+
+  <p>
+    Guarde y reinicie la web con <code>Ctrl</code> + <code>C</code> y luego
+    <code>npm run dev</code>. Este archivo tampoco se sube al repositorio.
+  </p>
+
+  <h3>Si el puerto 3000 está ocupado</h3>
+  <pre><code>netstat -ano | findstr :3000
+taskkill /PID NUMERO_DE_PID /F</code></pre>
+
+  <p>
+    Si decide usar otro puerto para la web, tendrá que cambiar <code>FRONTEND_URL</code> en
+    <span class="ruta">server\.env</span> y reiniciar la API. Para la demostración, lo más
+    simple es dejar la web en 3000.
+  </p>
+
+  <div class="nota">
+    <strong>La primera carga puede tardar</strong>
+    Next.js compila las páginas la primera vez que se abren. Es normal que el navegador tarde
+    unos segundos y que la terminal muestre actividad. No cierre nada.
+  </div>
+</section>
+
+<section>
+  <h2>11. Paso 9: verificar con los cuatro roles</h2>
+
+  <p>
+    Cuando la web abra en <span class="mono">http://localhost:3000</span>, inicie sesión con
+    las cuentas de ejemplo. Son cuentas de demostración: no las use en un sistema real.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Rol</th><th>Correo</th><th>Contraseña</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Administrador</td><td class="mono">cmendoza@iunav.edu.ve</td><td class="mono">admin123</td></tr>
+      <tr><td>Coordinador</td><td class="mono">mlopez@iunav.edu.ve</td><td class="mono">coord123</td></tr>
+      <tr><td>Tutor</td><td class="mono">jperez@iunav.edu.ve</td><td class="mono">tutor123</td></tr>
+      <tr><td>Estudiante</td><td class="mono">gmartinez@iunav.edu.ve</td><td class="mono">est123</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Recorrido de 10 minutos</h3>
+  <ol class="pasos">
+    <li>Entre como <strong>administrador</strong>. Debe ver el tablero con datos y el menú completo.</li>
+    <li>Abra <strong>Gestión de Usuarios</strong>. Debe aparecer la lista con los usuarios de ejemplo.</li>
+    <li>Abra <strong>Grupos y Proyectos</strong>. Debe ver los proyectos creados por el seed.</li>
+    <li>Cierre sesión y entre como <strong>coordinador</strong>. Debe ver el mismo menú que el administrador.</li>
+    <li>Cierre sesión y entre como <strong>tutor</strong>. Abra <strong>Validación</strong> y revise las bitácoras pendientes de sus grupos.</li>
+    <li>Cierre sesión y entre como <strong>estudiante</strong>. Abra <strong>Bitácora</strong> y revise las metas de 90 horas directas y 30 de impacto.</li>
+    <li>Genere un reporte desde el módulo <strong>Reportes</strong> con el usuario administrador o coordinador.</li>
+    <li>Si algo no coincide, revise la sección 13 antes de cambiar la instalación.</li>
+  </ol>
+
+  <h3>Qué debería ver cada rol en el menú</h3>
+  <table>
+    <thead>
+      <tr><th>Rol</th><th>Módulos visibles</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Administrador</td><td>Dashboard, Registro de Usuarios, Gestión de Usuarios, Grupos y Proyectos, Configuraciones, Reportes, Mi perfil.</td></tr>
+      <tr><td>Coordinador</td><td>Dashboard, Registro de Usuarios, Gestión de Usuarios, Grupos y Proyectos, Configuraciones, Reportes, Mi perfil.</td></tr>
+      <tr><td>Tutor</td><td>Dashboard, Grupos y Proyectos, Validación, Reportes, Mi perfil.</td></tr>
+      <tr><td>Estudiante</td><td>Dashboard, Bitácora Comunitario, Servicio Social y Ambiental, Mi perfil.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="nota">
+    <strong>Los datos son de demostración</strong>
+    Puede registrar, editar y validar información. Todo queda guardado en PostgreSQL y se
+    conserva al cerrar y volver a abrir el sistema. Si quiere volver a los datos iniciales,
+    vea la sección 14.
+  </div>
+</section>
+
+<section>
+  <h2>12. Uso diario: iniciar, detener y reiniciar</h2>
+
+  <h3>Iniciar el sistema</h3>
+  <p>Después de la primera instalación, solo necesita dos terminales:</p>
+
+  <pre><code><span class="c"># Terminal 1 - API</span>
+cd C:\IUNAV\servicio-comunitario-iunav\server
+npm run dev
+
+<span class="c"># Terminal 2 - Web</span>
+cd C:\IUNAV\servicio-comunitario-iunav\web
+npm run dev</code></pre>
+
+  <p>
+    Espere a que la API diga que está escuchando y a que la web diga <code>Ready</code>.
+    Luego abra <span class="mono">http://localhost:3000</span>.
+  </p>
+
+  <h3>Detener el sistema</h3>
+  <ol class="pasos">
+    <li>En la terminal de la web, presione <code>Ctrl</code> + <code>C</code>.</li>
+    <li>En la terminal de la API, presione <code>Ctrl</code> + <code>C</code>.</li>
+    <li>Puede cerrar las dos ventanas.</li>
+  </ol>
+
+  <p>
+    PostgreSQL puede seguir corriendo como servicio de Windows; no hace falta detenerlo cada
+    vez. Si desea apagarlo, use <strong>Servicios</strong> o, en PowerShell como administrador:
+  </p>
+
+  <pre><code>Stop-Service postgresql-x64-17</code></pre>
+
+  <p>Para volver a iniciarlo:</p>
+
+  <pre><code>Start-Service postgresql-x64-17</code></pre>
+
+  <h3>Reiniciar la computadora</h3>
+  <ul>
+    <li>PostgreSQL arranca solo con Windows, salvo que se haya desactivado el inicio automático.</li>
+    <li>Después de encender, abra las dos terminales y ejecute <code>npm run dev</code> en cada una.</li>
+    <li>No hace falta repetir <code>npm ci</code>, <code>db:schema</code> ni <code>db:seed</code>.</li>
+  </ul>
+
+  <h3>Qué se conserva y qué no</h3>
+  <table>
+    <thead>
+      <tr><th>Elemento</th><th>Se conserva al cerrar</th><th>Dónde está</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Usuarios, grupos, bitácoras y servicios</td><td>Sí</td><td>Base <code>app_iunav</code> en PostgreSQL</td></tr>
+      <tr><td>Archivos subidos (evidencias, firmas, documentos)</td><td>Sí</td><td><span class="ruta">server\uploads\</span></td></tr>
+      <tr><td>Configuración de la conexión</td><td>Sí</td><td><span class="ruta">server\.env</span></td></tr>
+      <tr><td>API y web encendidas</td><td>No</td><td>Hay que ejecutar <code>npm run dev</code> otra vez</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>Si algo queda raro</strong>
+    Cierre las dos terminales con <code>Ctrl</code> + <code>C</code>, abra dos nuevas y vuelva
+    a ejecutar <code>npm run dev</code> en <span class="ruta">server\</span> y
+    <span class="ruta">web\</span>. No reinstale nada.
+  </div>
+</section>
+
+<section>
+  <h2>13. Si algo falla</h2>
+
+  <p>
+    Busque el mensaje exacto en la tabla. Si no aparece, revise la terminal de la API y la de
+    la web: casi siempre el error real está allí.
+  </p>
+
+  <table class="tabla-larga">
+    <thead>
+      <tr><th>Síntoma o mensaje</th><th>Causa probable</th><th>Solución</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>node</code> o <code>npm</code> no se reconoce</td>
+        <td>Node no está instalado o el PATH no se actualizó.</td>
+        <td>Cierre y abra una terminal nueva. Si sigue, reinstale Node LTS con la opción <em>Add to PATH</em>.</td>
+      </tr>
+      <tr>
+        <td><code>psql</code> no se reconoce</td>
+        <td>La carpeta <code>bin</code> de PostgreSQL no está en el PATH.</td>
+        <td>Use <strong>SQL Shell</strong> del menú Inicio o la ruta <code>C:\Program Files\PostgreSQL\17\bin\psql.exe</code>.</td>
+      </tr>
+      <tr>
+        <td><code>password authentication failed for user "postgres"</code></td>
+        <td>La contraseña de <span class="ruta">server\.env</span> no coincide.</td>
+        <td>Corrija <code>DATABASE_URL</code>. Si olvidó la contraseña, reinstale PostgreSQL o pida ayuda.</td>
+      </tr>
+      <tr>
+        <td><code>database "app_iunav" does not exist</code></td>
+        <td>No se creó la base.</td>
+        <td>Vuelva al paso 4 y cree <code>app_iunav</code>.</td>
+      </tr>
+      <tr>
+        <td><code>self-signed certificate</code> o error de SSL</td>
+        <td>Falta <code>DB_SSL=false</code>.</td>
+        <td>Agregue o corrija esa línea en <span class="ruta">server\.env</span> y reinicie la API.</td>
+      </tr>
+      <tr>
+        <td><code>ECONNREFUSED 127.0.0.1:5432</code></td>
+        <td>PostgreSQL no está corriendo o usa otro puerto.</td>
+        <td>Inicie el servicio con <code>Start-Service postgresql-x64-17</code> o revise el puerto.</td>
+      </tr>
+      <tr>
+        <td><code>EADDRINUSE: address already in use :::4000</code></td>
+        <td>Otro proceso usa el puerto 4000.</td>
+        <td><code>netstat -ano | findstr :4000</code> y <code>taskkill /PID PID /F</code>.</td>
+      </tr>
+      <tr>
+        <td><code>EADDRINUSE: address already in use :::3000</code></td>
+        <td>Otro proceso usa el puerto 3000.</td>
+        <td><code>netstat -ano | findstr :3000</code> y <code>taskkill /PID PID /F</code>.</td>
+      </tr>
+      <tr>
+        <td><code>relation "usuarios" does not exist</code></td>
+        <td>No se aplicó el esquema.</td>
+        <td>Ejecute <code>npm run db:schema</code> desde <span class="ruta">server\</span>.</td>
+      </tr>
+      <tr>
+        <td>El seed se niega a ejecutarse</td>
+        <td>Falta la bandera de confirmación.</td>
+        <td>Use <code>npm run db:seed -- --confirm-seed</code>.</td>
+      </tr>
+      <tr>
+        <td>La web abre pero el login falla o queda cargando</td>
+        <td>La API está apagada, en otro puerto o el origen no coincide.</td>
+        <td>Compruebe <span class="mono">/api/health</span>; abra la web con <code>localhost</code> y revise <code>FRONTEND_URL</code>.</td>
+      </tr>
+      <tr>
+        <td>La web muestra una página en blanco o un error de compilación</td>
+        <td>Caché de Next corrupta o versión de Node incorrecta.</td>
+        <td>Cierre la web, borre <span class="ruta">web\.next</span> y ejecute <code>npm run dev</code> otra vez.</td>
+      </tr>
+      <tr>
+        <td><code>permission denied to create extension "pgcrypto"</code></td>
+        <td>Se conectó con un usuario sin permisos de superusuario.</td>
+        <td>Use el usuario <code>postgres</code> en <code>DATABASE_URL</code>.</td>
+      </tr>
+      <tr>
+        <td>El puerto 5432 está ocupado</td>
+        <td>Ya hay otro PostgreSQL instalado.</td>
+        <td>Use ese servidor, o instale este en 5433 y cambie el puerto en <code>DATABASE_URL</code>.</td>
+      </tr>
+      <tr>
+        <td>El antivirus bloquea npm o PostgreSQL</td>
+        <td>Protección en tiempo real sobre la carpeta del proyecto.</td>
+        <td>Agregue una exclusión para <span class="ruta">C:\IUNAV</span> o permita Node y PostgreSQL.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Comandos útiles para diagnosticar</h3>
+  <pre><code><span class="c"># Versiones instaladas</span>
+node -v
+npm -v
+
+<span class="c"># Servicio de PostgreSQL</span>
+Get-Service postgresql*
+
+<span class="c"># Puertos ocupados</span>
+netstat -ano | findstr :3000
+netstat -ano | findstr :4000
+netstat -ano | findstr :5432
+
+<span class="c"># Salud de la API (con la API corriendo)</span>
+Invoke-RestMethod http://localhost:4000/api/health</code></pre>
+
+  <div class="nota">
+    <strong>Qué enviar si pide ayuda</strong>
+    Envíe el número del paso donde falló, una captura de la ventana completa, el mensaje exacto,
+    la salida de <code>node -v</code> y <code>npm -v</code>, y si el servicio de PostgreSQL está
+    en <code>Running</code>. No envíe <span class="ruta">server\.env</span> ni su contraseña.
+  </div>
+</section>
+
+<section>
+  <h2>14. Reiniciar los datos y desinstalar</h2>
+
+  <h3>Volver a los datos de ejemplo</h3>
+  <p>
+    Esto borra todo lo que haya creado y deja la base como recién instalada. Úselo solo si
+    quiere empezar de cero.
+  </p>
+  <ol class="pasos">
+    <li>Detenga la API con <code>Ctrl</code> + <code>C</code>.</li>
+    <li>Abra pgAdmin y conéctese a PostgreSQL 17.</li>
+    <li>Haga clic derecho sobre <code>app_iunav</code> y elija <strong>Delete/Drop</strong>. Confirme.</li>
+    <li>Cree otra vez la base <code>app_iunav</code> como en el paso 4.</li>
+    <li>En <span class="ruta">server\</span>, ejecute:</li>
+  </ol>
+
+  <pre><code>cd C:\IUNAV\servicio-comunitario-iunav\server
+npm run db:schema
+npm run db:seed -- --confirm-seed
+npm run dev</code></pre>
+
+  <p>También puede hacerlo con SQL, conectado a la base <code>postgres</code>:</p>
+
+  <pre><code>DROP DATABASE app_iunav WITH (FORCE);
+CREATE DATABASE app_iunav;</code></pre>
+
+  <div class="aviso">
+    <strong>Esta operación borra usuarios, grupos, bitácoras y servicios</strong>
+    No hay forma de recuperarlos salvo que tenga un respaldo. Si solo quiere corregir un dato,
+    use la interfaz del sistema, no borre la base.
+  </div>
+
+  <h3>Desinstalar todo</h3>
+  <ol class="pasos">
+    <li>Detenga la web y la API con <code>Ctrl</code> + <code>C</code>.</li>
+    <li>Desinstale Node.js desde <strong>Configuración</strong> &gt; <strong>Aplicaciones</strong>.</li>
+    <li>Desinstale PostgreSQL desde <strong>Configuración</strong> &gt; <strong>Aplicaciones</strong>.</li>
+    <li>Si el desinstalador pregunta por la carpeta de datos, decida si quiere conservarla. Si la borra, se pierden todos los datos.</li>
+    <li>Borre la carpeta <span class="ruta">C:\IUNAV</span>.</li>
+  </ol>
+
+  <p>
+    Los datos de PostgreSQL no viven dentro de la carpeta del proyecto. Viven en la carpeta
+    de datos del servidor, normalmente <span class="ruta">C:\Program Files\PostgreSQL\17\data</span>.
+    Por eso, borrar solo el proyecto no borra la base.
+  </p>
+
+  <h3>Respaldo opcional</h3>
+  <p>Si quiere guardar una copia antes de desinstalar, desde PowerShell:</p>
+
+  <pre><code>&amp; "C:\Program Files\PostgreSQL\17\bin\pg_dump.exe" -U postgres -d app_iunav -f "$env:USERPROFILE\Desktop\respaldo-iunav.sql"</code></pre>
+
+  <p>Le pedirá la contraseña de <code>postgres</code>. El respaldo queda en el escritorio, fuera de la carpeta que va a borrar.</p>
+</section>
+
+<section>
+  <h2>15. Anexo: estructura, puertos y comandos</h2>
+
+  <h3>Qué hay en cada carpeta</h3>
+  <div class="arbol">servicio-comunitario-iunav\
+  docs\      manuales y guías en HTML y PDF
+  local\     kit automático: NO se usa en este manual
+  server\    API (Express + TypeScript)
+    .env.example   plantilla de configuración
+    sql\schema.sql esquema de las 9 tablas
+    src\           código de la API
+    uploads\       archivos subidos (se crea al usarlo)
+  web\       interfaz (Next.js + React)
+  README.md  resumen del proyecto</div>
+
+  <h3>Puertos</h3>
+  <table>
+    <thead>
+      <tr><th>Servicio</th><th>Puerto</th><th>Se abre en el navegador</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Web</td><td class="mono">3000</td><td>Sí: <span class="mono">http://localhost:3000</span></td></tr>
+      <tr><td>API</td><td class="mono">4000</td><td>Solo para diagnóstico: <span class="mono">http://localhost:4000/api/health</span></td></tr>
+      <tr><td>PostgreSQL</td><td class="mono">5432</td><td>No. Solo lo usa la API.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Comandos de referencia</h3>
+  <table>
+    <thead>
+      <tr><th>Comando</th><th>Dónde</th><th>Qué hace</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="mono">npm ci</td><td>server\ y web\</td><td>Instala las dependencias exactas del proyecto.</td></tr>
+      <tr><td class="mono">npm run db:schema</td><td>server\</td><td>Crea o actualiza las tablas.</td></tr>
+      <tr><td class="mono">npm run db:seed -- --confirm-seed</td><td>server\</td><td>Carga usuarios, grupos y datos de ejemplo.</td></tr>
+      <tr><td class="mono">npm run dev</td><td>server\ y web\</td><td>Arranca la API o la web en modo desarrollo.</td></tr>
+      <tr><td class="mono">npm run build</td><td>server\ y web\</td><td>Compila para producción (no es necesario para esta demostración).</td></tr>
+      <tr><td class="mono">npm test</td><td>server\</td><td>Ejecuta las pruebas automáticas; requiere <code>app_iunav_test</code>.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Documentación complementaria</h3>
+  <ul>
+    <li><strong>Guía de usuario:</strong> qué puede hacer cada rol, paso a paso.</li>
+    <li><strong>Flujo de uso:</strong> el ciclo completo del programa por etapas.</li>
+    <li><strong>README del proyecto:</strong> resumen técnico y enlaces a los manuales.</li>
+  </ul>
+
+  <h3>Ficha técnica</h3>
+  <table>
+    <tbody>
+      <tr><th>Interfaz</th><td>Next.js 16, React 19, Tailwind CSS 4</td></tr>
+      <tr><th>API</th><td>Node.js 24 LTS, Express 4, TypeScript, Zod</td></tr>
+      <tr><th>Base de datos</th><td>PostgreSQL 17, 9 tablas</td></tr>
+      <tr><th>Seguridad</th><td>JWT, permisos por rol, rate limit en el login</td></tr>
+      <tr><th>Endpoints</th><td>48 endpoints para 4 roles</td></tr>
+      <tr><th>Pruebas</th><td>449 pruebas automatizadas (Vitest + Supertest)</td></tr>
+      <tr><th>Documentación</th><td><span class="ruta">docs\</span> (HTML y PDF)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="aviso">
+    <strong>No use estas cuentas ni esta configuración en producción</strong>
+    Las contraseñas del seed son públicas y el sistema está pensado para demostración local.
+    Para un servidor real hay que cambiar las cuentas, rotar el <code>JWT_SECRET</code> y
+    seguir el manual de despliegue correspondiente.
+  </div>
+
+  <div class="pie">
+    Sistema de Servicio Comunitario IUNAV · Manual de instalación local sin kit · versión 1.0 · octubre de 2026.
+  </div>
+</section>
+
+</body>
+</html>
