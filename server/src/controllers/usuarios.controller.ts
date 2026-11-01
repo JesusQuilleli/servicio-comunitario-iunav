@@ -4,6 +4,9 @@ import { pool } from '../db/pool.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { ApiError } from '../lib/errors.js';
 import { borrarArchivo, guardarArchivo } from '../lib/archivos.js';
+import { registrarAccion } from '../lib/historial.js';
+import { encolarYEnviar } from '../lib/correo.js';
+import { plantillaBienvenida } from '../lib/plantillas-correo.js';
 import { leerPlantilla } from '../lib/importar.js';
 import { generarPasswordTemporal } from '../lib/password.js';
 import { plantillaEstudiantes } from '../lib/plantilla.js';
@@ -62,6 +65,12 @@ export async function toggleActivo(
       res.status(404).json({ message: 'Usuario no encontrado' });
       return;
     }
+    await registrarAccion(req, {
+      accion: 'usuario.activo',
+      entidad: 'usuario',
+      idEntidad: id,
+      descripcion: `${activo ? 'Activó' : 'Desactivó'} la cuenta de ${rows[0].nombre_completo}`,
+    });
     res.json({ usuario: mapUsuarioPublico(rows[0]) });
   } catch (err) {
     next(err);
@@ -128,6 +137,12 @@ async function subirImagenDeUsuario(
       'select * from usuarios where id_usuario = $1',
       [id]
     );
+    await registrarAccion(req, {
+      accion: opciones.categoria === 'sellos' ? 'usuario.sello' : 'usuario.firma',
+      entidad: 'usuario',
+      idEntidad: id,
+      descripcion: `Actualizó ${opciones.categoria === 'sellos' ? 'el sello' : 'la firma'} de ${rows[0].nombre_completo}`,
+    });
     res.status(201).json({ usuario: mapUsuarioPublico(rows[0]) });
   } catch (err) {
     if (rutaNueva) {
@@ -178,6 +193,14 @@ export async function restablecerPassword(
     const passwordHash = await bcrypt.hash(temporal, 10);
     const actualizado = await actualizarPassword(id, passwordHash, true);
 
+    await registrarAccion(req, {
+      accion: 'usuario.password',
+      entidad: 'usuario',
+      idEntidad: id,
+      // La clave temporal NO se guarda aqui: el historial lo lee la coordinacion.
+      descripcion: `Restableció la contraseña de ${usuario.nombre_completo}`,
+    });
+
     res.status(201).json({
       // Solo se devuelve ahora: en la base solo queda el hash.
       passwordTemporal: temporal,
@@ -219,6 +242,36 @@ export async function importarEstudiantes(
 
     const filas = await leerPlantilla(archivo.buffer);
     const resultado = await importarEstudiantesEnLote(filas);
+
+    // Una bienvenida por cuenta creada, con la clave inicial que le toco. El
+    // nombre sale de la fila de la plantilla, no de la base: es el mismo dato y
+    // ahorra una consulta por estudiante.
+    const nombrePorEmail = new Map(
+      filas.map((f) => [String(f.email ?? '').trim().toLowerCase(), String(f.nombreCompleto ?? '')])
+    );
+    for (const clave of resultado.claves) {
+      const plantilla = plantillaBienvenida({
+        nombre: nombrePorEmail.get(clave.email.toLowerCase()) ?? clave.email,
+        email: clave.email,
+        claveTemporal: clave.claveInicial,
+      });
+      await encolarYEnviar({
+        idDestinatario: null,
+        destinatarioEmail: clave.email,
+        destinatarioNombre: nombrePorEmail.get(clave.email.toLowerCase()) ?? clave.email,
+        tipo: 'bienvenida',
+        asunto: plantilla.asunto,
+        cuerpo: plantilla.cuerpo,
+      });
+    }
+    await registrarAccion(req, {
+      accion: 'usuario.importar',
+      entidad: 'usuario',
+      descripcion:
+        `Importó estudiantes en lote: ${resultado.creados} creados, ` +
+        `${resultado.asignados} asignados a un grupo, ${resultado.errores.length} con error`,
+      datos: { creados: resultado.creados, asignados: resultado.asignados, errores: resultado.errores.length },
+    });
     res.status(201).json(resultado);
   } catch (err) {
     next(err);

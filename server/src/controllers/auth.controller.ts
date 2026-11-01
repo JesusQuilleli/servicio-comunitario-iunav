@@ -5,6 +5,10 @@ import { z } from 'zod';
 import { env } from '../config/env.js';
 import { pool } from '../db/pool.js';
 import { ApiError } from '../lib/errors.js';
+import { registrarAccion } from '../lib/historial.js';
+import { encolarYEnviar } from '../lib/correo.js';
+import { plantillaBienvenida } from '../lib/plantillas-correo.js';
+import { ETIQUETA_TIPO_TUTOR, TIPOS_TUTOR } from '../lib/tutores.js';
 import { passwordSchema } from '../lib/password.js';
 import {
   actualizarPerfil,
@@ -29,13 +33,26 @@ const loginSchema = z.object({
   password: z.string().min(1, 'La contraseña es obligatoria'),
 });
 
-const registerSchema = z.object({
-  nombreCompleto: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
-  cedula: z.string().min(5, 'Cédula inválida'),
-  email: z.string().email('Correo electrónico inválido'),
-  password: passwordSchema,
-  rol: z.enum(['admin', 'coordinador', 'tutor', 'estudiante']),
-});
+const registerSchema = z
+  .object({
+    nombreCompleto: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
+    cedula: z.string().min(5, 'Cédula inválida'),
+    email: z.string().email('Correo electrónico inválido'),
+    password: passwordSchema,
+    rol: z.enum(['admin', 'coordinador', 'tutor', 'estudiante']),
+    tipoTutor: z.enum(TIPOS_TUTOR).optional(),
+  })
+  // Un tutor sin tipo no se puede asignar a ninguno de los dos puestos de un
+  // proyecto, asi que seria una cuenta inservible; y un tipo en una cuenta que
+  // no es tutor no significa nada. La base impone lo mismo con un `check`.
+  .refine((v) => v.rol !== 'tutor' || v.tipoTutor !== undefined, {
+    message: 'Indica si el tutor es académico o comunitario',
+    path: ['tipoTutor'],
+  })
+  .refine((v) => v.rol === 'tutor' || v.tipoTutor === undefined, {
+    message: 'El tipo de tutor solo aplica al rol tutor',
+    path: ['tipoTutor'],
+  });
 
 const cambiarPasswordSchema = z
   .object({
@@ -145,6 +162,42 @@ export async function register(
       email: body.email.trim().toLowerCase(),
       passwordHash,
       rol: body.rol,
+      tipoTutor: body.tipoTutor ?? null,
+      // La clave la escribio quien da de alta, no el dueno de la cuenta: queda
+      // marcada como temporal y el sistema obliga a cambiarla al entrar.
+      passwordTemporal: true,
+    });
+
+    // El correo de bienvenida lleva la clave temporal. Si el envio falla, el
+    // alta NO se deshace: el aviso queda en la cola y se puede reintentar desde
+    // Configuraciones > Notificaciones.
+    const bienvenida = plantillaBienvenida({
+      nombre: creado.nombre_completo,
+      email: creado.email,
+      claveTemporal: body.password,
+    });
+    await encolarYEnviar({
+      idDestinatario: creado.id_usuario,
+      destinatarioEmail: creado.email,
+      destinatarioNombre: creado.nombre_completo,
+      tipo: 'bienvenida',
+      asunto: bienvenida.asunto,
+      cuerpo: bienvenida.cuerpo,
+    });
+
+    await registrarAccion(req, {
+      accion: 'usuario.crear',
+      entidad: 'usuario',
+      idEntidad: creado.id_usuario,
+      descripcion:
+        `Creó la cuenta de ${creado.nombre_completo} ` +
+        `(${creado.tipo_tutor ? ETIQUETA_TIPO_TUTOR[creado.tipo_tutor] : creado.rol})`,
+      datos: {
+        email: creado.email,
+        cedula: creado.cedula,
+        rol: creado.rol,
+        tipoTutor: creado.tipo_tutor,
+      },
     });
 
     res.status(201).json({ usuario: mapUsuarioPublico(creado) });

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Award,
   CheckCircle2,
   FileSpreadsheet,
   FileText,
+  CalendarRange,
   Loader2,
   TriangleAlert,
 } from "lucide-react";
@@ -19,9 +20,12 @@ import {
   descargarActa,
   descargarCertificado,
   descargarReporte,
+  descargarReporteSemanal,
   mensajeDeError,
+  type SemanaConActividad,
 } from "@/lib/reportes";
 import { useAuthStore } from "@/stores/authStore";
+import { esTutorDe } from "@/lib/types";
 import type { DetalleGrupo, Grupo, PeriodoAcademico } from "@/lib/types";
 
 /**
@@ -34,6 +38,10 @@ import type { DetalleGrupo, Grupo, PeriodoAcademico } from "@/lib/types";
 export function ReportesView() {
   const usuario = useAuthStore((s) => s.usuario);
   const esTutor = usuario?.rol === "tutor";
+  // El estudiante entra aqui solo por su reporte semanal: el consolidado, las
+  // actas y los certificados siguen siendo de gestion y el servidor se los
+  // negaria igual.
+  const esEstudiante = usuario?.rol === "estudiante";
 
   const { data: datosPeriodos } = useApiData<{ periodos: PeriodoAcademico[] }>("/periodos");
   const { data: datosGrupos } = useApiData<{ grupos: Grupo[] }>(
@@ -49,9 +57,22 @@ export function ReportesView() {
 
   // El tutor solo puede sacar el acta de sus grupos; el filtro se queda en los
   // suyos para no ofrecer una opcion que el servidor va a rechazar.
-  const gruposVisibles = esTutor
-    ? grupos.filter((g) => g.tutorId === usuario?.idUsuario)
-    : grupos;
+  const gruposVisibles =
+    esTutor && usuario ? grupos.filter((g) => esTutorDe(g, usuario.idUsuario)) : grupos;
+
+  if (esEstudiante) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Mi reporte semanal</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            El registro de tus actividades, semana por semana, listo para descargar en PDF.
+          </p>
+        </div>
+        <ReporteSemanal periodos={periodos} grupos={[]} soloPropio />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -61,6 +82,8 @@ export function ReportesView() {
           Documentos generados con las horas ya validadas. Los pendientes no cuentan para las metas.
         </p>
       </div>
+
+      <ReporteSemanal periodos={periodos} grupos={gruposVisibles} />
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
@@ -127,6 +150,202 @@ export function ReportesView() {
 
       <Certificados grupos={gruposVisibles} periodos={periodos} />
     </div>
+  );
+}
+
+/**
+ * Reporte semanal de actividades.
+ *
+ * `soloPropio` es el modo del estudiante: sin selectores de grupo ni de
+ * estudiante, porque el servidor fuerza el alcance al suyo de todos modos.
+ *
+ * Las semanas no se listan del 1 al 52: se piden al servidor, que devuelve solo
+ * las que tienen actividad y con cuanta. Un desplegable con cincuenta semanas
+ * vacias no ayuda a nadie a encontrar la que busca.
+ */
+function ReporteSemanal({
+  periodos,
+  grupos,
+  soloPropio = false,
+}: {
+  periodos: PeriodoAcademico[];
+  grupos: Grupo[];
+  soloPropio?: boolean;
+}) {
+  const [periodoId, setPeriodoId] = useState<number | "">("");
+  const [grupoId, setGrupoId] = useState("");
+  const [estudianteId, setEstudianteId] = useState("");
+  const [semana, setSemana] = useState<number | "">("");
+  const [ocupado, setOcupado] = useState(false);
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // `useApiData` recarga cuando cambia la cadena, asi que los filtros se
+  // memorizan juntos: una cadena nueva en cada render pediria en bucle.
+  const urlSemanas = useMemo(() => {
+    const params = new URLSearchParams();
+    if (periodoId !== "") params.set("periodoId", String(periodoId));
+    if (grupoId) params.set("grupoId", grupoId);
+    if (estudianteId) params.set("estudianteId", estudianteId);
+    const query = params.toString();
+    return `/reportes/semanas${query ? `?${query}` : ""}`;
+  }, [periodoId, grupoId, estudianteId]);
+
+  const { data } = useApiData<{ semanas: SemanaConActividad[] }>(urlSemanas);
+  const semanas = data?.semanas ?? [];
+
+  // El detalle del grupo da la lista de integrantes para poder pedir el reporte
+  // de un estudiante concreto.
+  const { data: detalle } = useApiData<{ grupo: DetalleGrupo }>(
+    grupoId ? `/grupos/${grupoId}` : "",
+    Boolean(grupoId) && !soloPropio
+  );
+  const integrantes = detalle?.grupo.listaIntegrantes ?? [];
+
+  const descargar = async () => {
+    setOcupado(true);
+    setMensaje(null);
+    setError(null);
+    try {
+      const nombre = await descargarReporteSemanal({
+        periodoId: periodoId === "" ? null : periodoId,
+        semana: semana === "" ? null : semana,
+        grupoId: soloPropio ? null : grupoId || null,
+        estudianteId: soloPropio ? null : estudianteId || null,
+      });
+      setMensaje(`Listo: ${nombre}`);
+    } catch (err: unknown) {
+      setError(await mensajeDeError(err, "No se pudo generar el reporte semanal."));
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <CalendarRange className="h-4 w-4 text-muted-foreground" />
+          Reporte semanal de actividades
+        </CardTitle>
+        <CardDescription>
+          {soloPropio
+            ? "Tus actividades con su fecha, horas y estado de validación, agrupadas por semana."
+            : "Una fila por actividad, con su semana, horas y estado. Se puede acotar a un grupo o a un estudiante."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-sm">
+            <span className="mb-1 block text-muted-foreground">Periodo</span>
+            <select
+              value={periodoId}
+              onChange={(e) => {
+                setPeriodoId(e.target.value === "" ? "" : Number(e.target.value));
+                setSemana("");
+              }}
+              className="h-9 rounded-lg border bg-white px-3 text-sm"
+            >
+              <option value="">Periodo activo</option>
+              {periodos.map((p) => (
+                <option key={p.idPeriodo} value={p.idPeriodo}>
+                  {p.nombrePeriodo}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {!soloPropio && (
+            <label className="text-sm">
+              <span className="mb-1 block text-muted-foreground">Grupo</span>
+              <select
+                value={grupoId}
+                onChange={(e) => {
+                  setGrupoId(e.target.value);
+                  setEstudianteId("");
+                  setSemana("");
+                }}
+                className="h-9 rounded-lg border bg-white px-3 text-sm"
+              >
+                <option value="">Todos los grupos</option>
+                {grupos.map((g) => (
+                  <option key={g.idGrupo} value={g.idGrupo}>
+                    {g.nombreProyecto}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {!soloPropio && grupoId !== "" && (
+            <label className="text-sm">
+              <span className="mb-1 block text-muted-foreground">Estudiante</span>
+              <select
+                value={estudianteId}
+                onChange={(e) => {
+                  setEstudianteId(e.target.value);
+                  setSemana("");
+                }}
+                className="h-9 rounded-lg border bg-white px-3 text-sm"
+              >
+                <option value="">Todo el grupo</option>
+                {integrantes.map((i) => (
+                  <option key={i.idUsuario} value={i.idUsuario}>
+                    {i.nombreCompleto}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <label className="text-sm">
+            <span className="mb-1 block text-muted-foreground">Semana</span>
+            <select
+              value={semana}
+              onChange={(e) => setSemana(e.target.value === "" ? "" : Number(e.target.value))}
+              className="h-9 rounded-lg border bg-white px-3 text-sm"
+              disabled={semanas.length === 0}
+            >
+              <option value="">Todas las semanas</option>
+              {semanas.map((s) => (
+                <option key={s.semana} value={s.semana}>
+                  Semana {s.semana} ({s.desde} a {s.hasta}) · {s.actividades} act.
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {semanas.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            Todavía no hay actividades registradas con estos filtros.
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="button" variant="outline" disabled={ocupado} onClick={() => void descargar()}>
+            {ocupado ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileText className="h-4 w-4" />
+            )}
+            Descargar PDF
+          </Button>
+          {mensaje && (
+            <p className="flex items-center gap-1 text-sm text-emerald-700">
+              <CheckCircle2 className="h-4 w-4" />
+              {mensaje}
+            </p>
+          )}
+          {error && (
+            <p className="flex items-center gap-1 text-sm text-red-600">
+              <TriangleAlert className="h-4 w-4" />
+              {error}
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

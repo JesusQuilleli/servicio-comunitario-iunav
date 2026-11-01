@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FolderKanban,
   Loader2,
@@ -68,6 +68,23 @@ function mensajeError(err: unknown, porDefecto: string): string {
   return (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? porDefecto;
 }
 
+/** Lo que le falta a un integrante para que se le pueda acreditar el servicio. */
+interface FaltanteIntegrante {
+  idUsuario: string;
+  nombreCompleto: string;
+  horasDirectas: number;
+  horasImpacto: number;
+  faltanDirectas: number;
+  faltanImpacto: number;
+}
+
+/** El 409 por horas incompletas trae `faltantes`; cualquier otro error, no. */
+function faltantesDe(err: unknown): FaltanteIntegrante[] {
+  const datos = (err as { response?: { data?: { faltantes?: FaltanteIntegrante[] } } })?.response
+    ?.data?.faltantes;
+  return Array.isArray(datos) ? datos : [];
+}
+
 function iniciales(nombre: string): string {
   return nombre
     .split(" ")
@@ -80,7 +97,8 @@ function iniciales(nombre: string): string {
 interface FormGrupo {
   nombreProyecto: string;
   periodoId: string;
-  tutorId: string;
+  tutorAcademicoId: string;
+  tutorComunitarioId: string;
   coordinadorId: string;
   estado: EstadoGrupo;
   integrantesIds: string[];
@@ -89,7 +107,8 @@ interface FormGrupo {
 const FORMULARIO_VACIO: FormGrupo = {
   nombreProyecto: "",
   periodoId: "",
-  tutorId: "",
+  tutorAcademicoId: "",
+  tutorComunitarioId: "",
   coordinadorId: "",
   estado: "en_curso",
   integrantesIds: [],
@@ -97,7 +116,8 @@ const FORMULARIO_VACIO: FormGrupo = {
 
 export function ProyectosView() {
   const usuario = useAuthStore((s) => s.usuario);
-  const puedeGestionar = usuario?.rol === "admin" || usuario?.rol === "coordinador";
+  const esAdmin = usuario?.rol === "admin";
+  const puedeGestionar = esAdmin || usuario?.rol === "coordinador";
   const esTutor = usuario?.rol === "tutor";
   // Los documentos del proyecto los sube quien lo gestiona, y tambien el tutor
   // del grupo (el servidor lo comprueba; esto solo evita mostrar el formulario).
@@ -136,13 +156,27 @@ export function ProyectosView() {
   const { data: datosUsuarios } = useApiData<{ usuarios: Usuario[] }>("/usuarios", puedeGestionar);
 
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  // Cuando el servidor rechaza una aprobacion por horas incompletas manda,
+  // ademas del mensaje, a quien le falta y cuanto. Se guarda aparte para
+  // poder listarlo nombre por nombre.
+  const [faltantes, setFaltantes] = useState<FaltanteIntegrante[]>([]);
+  // `setFaltantes` no se refleja en esta misma pasada, y la decision de
+  // ofrecer el forzado hay que tomarla justo despues del 409: el ref si se
+  // lee al instante.
+  const ultimosFaltantes = useRef<FaltanteIntegrante[]>([]);
   const [exito, setExito] = useState<string | null>(null);
   const grupos = useMemo(() => data?.grupos ?? [], [data]);
   const periodos = useMemo(() => datosPeriodos?.periodos ?? [], [datosPeriodos]);
   const usuarios = useMemo(() => datosUsuarios?.usuarios ?? [], [datosUsuarios]);
 
-  const tutores = useMemo(
-    () => usuarios.filter((u) => u.rol === "tutor" && u.activo),
+  // Un tutor solo puede ocupar el puesto que le corresponde por su tipo: no
+  // tiene sentido ofrecer a un tutor comunitario como tutor academico.
+  const tutoresAcademicos = useMemo(
+    () => usuarios.filter((u) => u.rol === "tutor" && u.activo && u.tipoTutor === "academico"),
+    [usuarios]
+  );
+  const tutoresComunitarios = useMemo(
+    () => usuarios.filter((u) => u.rol === "tutor" && u.activo && u.tipoTutor === "comunitario"),
     [usuarios]
   );
   const coordinadores = useMemo(
@@ -160,7 +194,8 @@ export function ProyectosView() {
     return grupos.filter(
       (g) =>
         g.nombreProyecto.toLowerCase().includes(q) ||
-        (g.tutorNombre ?? "").toLowerCase().includes(q) ||
+        (g.tutorAcademicoNombre ?? "").toLowerCase().includes(q) ||
+        (g.tutorComunitarioNombre ?? "").toLowerCase().includes(q) ||
         (g.periodo ?? "").toLowerCase().includes(q)
     );
   }, [grupos, busqueda]);
@@ -200,6 +235,8 @@ export function ProyectosView() {
   ): Promise<boolean> => {
     setOcupado(clave);
     setErrorAccion(null);
+    setFaltantes([]);
+    ultimosFaltantes.current = [];
     try {
       await accion();
       setExito(mensaje);
@@ -208,28 +245,70 @@ export function ProyectosView() {
       return true;
     } catch (err: unknown) {
       setErrorAccion(mensajeError(err, "No se pudo completar la operación."));
+      ultimosFaltantes.current = faltantesDe(err);
+      setFaltantes(ultimosFaltantes.current);
       return false;
     } finally {
       setOcupado(null);
     }
   };
 
-  const cambiarEstadoProyecto = async (estado: EstadoGrupo) => {
-    if (!detalle) return;
-    await ejecutarDetalle(
-      "estado",
-      () => api.patch(`/grupos/${detalle.idGrupo}/estado`, { estado }),
-      `Estado del proyecto actualizado a "${estadoGrupoLabels[estado]}".`
+  /**
+   * Pide el motivo con el que el administrador fuerza una aprobación con las
+   * horas incompletas. Devuelve `undefined` si se cancela.
+   *
+   * Se usa `window.prompt` porque es lo que ya hace el resto del panel para
+   * confirmar (ver `UsuariosView`); no hay componente de diálogo de entrada.
+   */
+  const pedirMotivo = (que: string): string | undefined => {
+    const motivo = window.prompt(
+      `Las horas de ${que} están incompletas.\n\n` +
+        "Como administrador puedes aprobar igualmente, pero el motivo quedará " +
+        "registrado en el historial de acciones.\n\nMotivo:"
     );
+    if (motivo === null) return undefined;
+    if (motivo.trim() === "") {
+      setErrorAccion("Hay que indicar un motivo para aprobar sin las horas completas.");
+      return undefined;
+    }
+    return motivo.trim();
   };
 
-  const cambiarEstadoFinal = async (integrante: string, estadoFinal: EstadoFinal) => {
+  const cambiarEstadoProyecto = async (estado: EstadoGrupo, motivo?: string) => {
     if (!detalle) return;
-    await ejecutarDetalle(
+    const ok = await ejecutarDetalle(
+      "estado",
+      () => api.patch(`/grupos/${detalle.idGrupo}/estado`, { estado, motivo }),
+      `Estado del proyecto actualizado a "${estadoGrupoLabels[estado]}".`
+    );
+
+    // El 409 por horas incompletas no es un error del que no se pueda salir: el
+    // administrador puede seguir adelante dejando constancia del porqué.
+    if (!ok && esAdmin && motivo === undefined && ultimosFaltantes.current.length > 0) {
+      const razon = pedirMotivo("los integrantes");
+      if (razon) await cambiarEstadoProyecto(estado, razon);
+    }
+  };
+
+  const cambiarEstadoFinal = async (
+    integrante: string,
+    estadoFinal: EstadoFinal,
+    motivo?: string
+  ) => {
+    if (!detalle) return;
+    const ok = await ejecutarDetalle(
       `final-${integrante}`,
-      () => api.patch(`/grupos/${detalle.idGrupo}/integrantes/${integrante}`, { estadoFinal }),
+      () =>
+        api.patch(`/grupos/${detalle.idGrupo}/integrantes/${integrante}`, { estadoFinal, motivo }),
       "Estado final del integrante actualizado."
     );
+
+    // Igual que al cerrar el proyecto: el administrador puede acreditar a quien
+    // no llega a las metas, pero dejando por escrito el motivo.
+    if (!ok && esAdmin && motivo === undefined && ultimosFaltantes.current.length > 0) {
+      const razon = pedirMotivo("este estudiante");
+      if (razon) await cambiarEstadoFinal(integrante, estadoFinal, razon);
+    }
   };
 
   const quitarIntegrante = async (integrante: { idUsuario: string; nombreCompleto: string }) => {
@@ -289,7 +368,8 @@ export function ProyectosView() {
       setForm({
         nombreProyecto: g.nombreProyecto,
         periodoId: g.periodoId ? String(g.periodoId) : "",
-        tutorId: g.tutorId ?? "",
+        tutorAcademicoId: g.tutorAcademicoId ?? "",
+        tutorComunitarioId: g.tutorComunitarioId ?? "",
         coordinadorId: g.coordinadorId ?? "",
         estado: g.estado,
         integrantesIds: g.listaIntegrantes.map((i) => i.idUsuario),
@@ -333,7 +413,8 @@ export function ProyectosView() {
       const payload = {
         nombreProyecto: form.nombreProyecto.trim(),
         periodoId: form.periodoId ? Number(form.periodoId) : null,
-        tutorId: form.tutorId || null,
+        tutorAcademicoId: form.tutorAcademicoId || null,
+        tutorComunitarioId: form.tutorComunitarioId || null,
         coordinadorId: form.coordinadorId || null,
         estado: form.estado,
         integrantesIds: form.integrantesIds,
@@ -458,7 +539,7 @@ export function ProyectosView() {
                   <tr className="border-b bg-muted/50">
                     <th className="text-left font-medium text-muted-foreground px-4 py-3">Proyecto</th>
                     <th className="text-left font-medium text-muted-foreground px-4 py-3">Período</th>
-                    <th className="text-left font-medium text-muted-foreground px-4 py-3">Tutor</th>
+                    <th className="text-left font-medium text-muted-foreground px-4 py-3">Tutores</th>
                     <th className="text-center font-medium text-muted-foreground px-4 py-3">
                       Integrantes
                     </th>
@@ -489,7 +570,16 @@ export function ProyectosView() {
                         </span>
                       </td>
                       <td className="px-4 py-3">{g.periodo ?? "—"}</td>
-                      <td className="px-4 py-3">{g.tutorNombre ?? "Sin tutor"}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col leading-tight">
+                          <span>{g.tutorAcademicoNombre ?? "Sin tutor académico"}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {g.tutorComunitarioNombre
+                              ? `Comunitario: ${g.tutorComunitarioNombre}`
+                              : "Sin tutor comunitario"}
+                          </span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-center">{g.integrantes}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col leading-tight">
@@ -572,16 +662,38 @@ export function ProyectosView() {
           ) : detalle ? (
             <div className="space-y-5">
               {errorAccion && (
-                <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                  {errorAccion}
+                <div className="space-y-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    {errorAccion}
+                  </div>
+                  {faltantes.length > 0 && (
+                    <ul className="ml-6 list-disc space-y-0.5 text-xs">
+                      {faltantes.map((f) => (
+                        <li key={f.idUsuario}>
+                          <span className="font-medium">{f.nombreCompleto}</span>:{" "}
+                          {f.faltanDirectas > 0 && `faltan ${f.faltanDirectas}h de trabajo directo`}
+                          {f.faltanDirectas > 0 && f.faltanImpacto > 0 && " y "}
+                          {f.faltanImpacto > 0 && `faltan ${f.faltanImpacto}h de impacto`}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
 
               <div className="grid sm:grid-cols-2 gap-3 text-sm">
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Tutor</p>
-                  <p className="font-medium">{detalle.tutorNombre ?? "Sin tutor asignado"}</p>
+                  <p className="text-xs text-muted-foreground">Tutor académico</p>
+                  <p className="font-medium">
+                    {detalle.tutorAcademicoNombre ?? "Sin asignar"}
+                  </p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Tutor comunitario</p>
+                  <p className="font-medium">
+                    {detalle.tutorComunitarioNombre ?? "Sin asignar"}
+                  </p>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">Coordinador</p>
@@ -709,6 +821,12 @@ export function ProyectosView() {
                                   + {formatearHoras(i.horasPendientes)} pend.
                                 </span>
                               )}
+                              {/* El desglose importa: para acreditar el servicio hay que
+                                  cumplir las dos metas por separado, no la suma. */}
+                              <div className="text-xs text-muted-foreground">
+                                {formatearHoras(i.horasDirectas)} directas ·{" "}
+                                {formatearHoras(i.horasImpacto)} impacto
+                              </div>
                             </td>
                             <td className="px-3 py-2">
                               {puedeGestionar ? (
@@ -875,17 +993,35 @@ export function ProyectosView() {
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label htmlFor="tutor" className="text-sm font-medium text-foreground">
-                  Tutor responsable
+                <label htmlFor="tutorAcademico" className="text-sm font-medium text-foreground">
+                  Tutor académico
                 </label>
                 <select
-                  id="tutor"
+                  id="tutorAcademico"
                   className={selectClass}
-                  value={form.tutorId}
-                  onChange={(e) => setForm({ ...form, tutorId: e.target.value })}
+                  value={form.tutorAcademicoId}
+                  onChange={(e) => setForm({ ...form, tutorAcademicoId: e.target.value })}
                 >
-                  <option value="">Sin tutor</option>
-                  {tutores.map((t) => (
+                  <option value="">Sin asignar</option>
+                  {tutoresAcademicos.map((t) => (
+                    <option key={t.idUsuario} value={t.idUsuario}>
+                      {t.nombreCompleto}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="tutorComunitario" className="text-sm font-medium text-foreground">
+                  Tutor comunitario
+                </label>
+                <select
+                  id="tutorComunitario"
+                  className={selectClass}
+                  value={form.tutorComunitarioId}
+                  onChange={(e) => setForm({ ...form, tutorComunitarioId: e.target.value })}
+                >
+                  <option value="">Sin asignar</option>
+                  {tutoresComunitarios.map((t) => (
                     <option key={t.idUsuario} value={t.idUsuario}>
                       {t.nombreCompleto}
                     </option>

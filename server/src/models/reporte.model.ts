@@ -1,4 +1,5 @@
 import { pool } from '../db/pool.js';
+import { esTutorDelGrupo } from '../lib/tutores.js';
 import { obtenerConfiguracion } from './configuracion.model.js';
 import { obtenerGrupo, type DetalleGrupo } from './grupo.model.js';
 import type { EstadoFinal } from './grupo.model.js';
@@ -114,7 +115,7 @@ export async function obtenerConsolidado(filtro: FiltroConsolidado): Promise<Fil
                                         where ig.id_estudiante = u.id_usuario and ig.id_grupo = $1))
        and ($3::uuid is null or exists (select 1 from integrantes_grupo ig
                                         join grupos_proyectos gp on gp.id_grupo = ig.id_grupo
-                                        where ig.id_estudiante = u.id_usuario and gp.id_tutor = $3))
+                                        where ig.id_estudiante = u.id_usuario and ${esTutorDelGrupo('gp', 3)}))
      order by u.nombre_completo asc`,
     [filtro.idGrupo, filtro.periodoId, filtro.idTutor]
   );
@@ -222,7 +223,7 @@ export async function esIntegranteDeTutor(idEstudiante: string, idTutor: string)
     `select 1
      from integrantes_grupo ig
      join grupos_proyectos gp on gp.id_grupo = ig.id_grupo
-     where ig.id_estudiante = $1 and gp.id_tutor = $2
+     where ig.id_estudiante = $1 and ${esTutorDelGrupo('gp', 2)}
      limit 1`,
     [idEstudiante, idTutor]
   );
@@ -298,4 +299,216 @@ export async function obtenerDatosCertificado(
       horasDirectas >= config.horasDirectas && horasImpacto >= config.horasImpacto,
     pendientes: Number(r.pendientes),
   };
+}
+
+// ====================================================================
+// Reporte semanal de actividades
+// ====================================================================
+//
+// A diferencia del consolidado, que da UNA fila por estudiante, este devuelve
+// una fila por ACTIVIDAD: es lo que pedia la revision para poder ver "las
+// actividades especificas realizadas por cada grupo o por cada estudiante".
+//
+// La semana se calcula desde el inicio del periodo academico y no desde el
+// calendario. Hay dos motivos:
+//
+//  1. `control_servicios_institucionales` no tiene columna de semana, solo
+//     fecha. Calcularla es la unica forma de comparar las dos tablas.
+//  2. `bitacoras_comunitario.numero_semana` lo escribe el estudiante a mano y
+//     puede no coincidir. Se devuelve aparte (`semanaDeclarada`) para poder
+//     senalar la discrepancia en vez de taparla.
+
+export interface FilaSemanal {
+  id: string;
+  /** Semana calculada desde `periodos_academicos.fecha_inicio`. */
+  semana: number;
+  /** Lo que escribio el estudiante. `null` en los servicios institucionales. */
+  semanaDeclarada: number | null;
+  fecha: string;
+  tipo: 'comunitario' | 'social' | 'ambiental';
+  idEstudiante: string;
+  estudiante: string;
+  cedula: string;
+  idGrupo: string | null;
+  proyecto: string | null;
+  descripcion: string;
+  horas: number;
+  estado: string;
+  tieneEvidencia: boolean;
+}
+
+export interface FiltroSemanal {
+  periodoId: number | null;
+  /** `null` = todas las semanas del periodo. */
+  semana: number | null;
+  idGrupo: string | null;
+  idEstudiante: string | null;
+  /** Acota a los grupos de un tutor. */
+  idTutor: string | null;
+}
+
+/**
+ * Las dos tablas, con la semana calculada contra el periodo.
+ *
+ * `floor((fecha - inicio) / 7) + 1`: la semana 1 son los siete primeros dias
+ * del periodo. Una actividad anterior al inicio daria 0 o negativo, asi que se
+ * recorta a 1 con `greatest`.
+ */
+const SELECT_SEMANAL = `
+     select b.id_bitacora::text as id,
+            greatest(1, floor((b.fecha_actividad - p.fecha_inicio) / 7) + 1)::int as semana,
+            b.numero_semana as semana_declarada,
+            b.fecha_actividad::text as fecha,
+            'comunitario' as tipo,
+            u.id_usuario as id_estudiante,
+            u.nombre_completo as estudiante,
+            u.cedula,
+            b.id_grupo,
+            g.nombre_proyecto as proyecto,
+            b.descripcion,
+            b.horas_invertidas::text as horas,
+            b.estado,
+            (b.evidencia_foto_url is not null) as tiene_evidencia
+     from bitacoras_comunitario b
+     join usuarios u on u.id_usuario = b.id_estudiante
+     left join grupos_proyectos g on g.id_grupo = b.id_grupo
+     join periodos_academicos p on p.id_periodo = $1
+     where ($2::int is null
+            or greatest(1, floor((b.fecha_actividad - p.fecha_inicio) / 7) + 1) = $2)
+       and ($3::uuid is null or b.id_grupo = $3)
+       and ($4::uuid is null or b.id_estudiante = $4)
+       and ($5::uuid is null or exists (
+             select 1 from grupos_proyectos gt
+             where gt.id_grupo = b.id_grupo
+               and (gt.id_tutor_academico = $5 or gt.id_tutor_comunitario = $5)))
+       and b.fecha_actividad between p.fecha_inicio and p.fecha_fin
+     union all
+     select c.id_registro::text as id,
+            greatest(1, floor((c.fecha_actividad - p.fecha_inicio) / 7) + 1)::int as semana,
+            null::int as semana_declarada,
+            c.fecha_actividad::text as fecha,
+            c.tipo,
+            u.id_usuario as id_estudiante,
+            u.nombre_completo as estudiante,
+            u.cedula,
+            null::uuid as id_grupo,
+            null as proyecto,
+            c.descripcion,
+            c.horas_invertidas::text as horas,
+            c.estado,
+            (c.evidencia_foto_url is not null) as tiene_evidencia
+     from control_servicios_institucionales c
+     join usuarios u on u.id_usuario = c.id_estudiante
+     join periodos_academicos p on p.id_periodo = $1
+     where ($2::int is null
+            or greatest(1, floor((c.fecha_actividad - p.fecha_inicio) / 7) + 1) = $2)
+       -- El servicio social/ambiental no se registra contra un grupo. Filtrar
+       -- por grupo significa "los estudiantes de ese grupo".
+       and ($3::uuid is null or exists (
+             select 1 from integrantes_grupo ig
+             where ig.id_estudiante = c.id_estudiante and ig.id_grupo = $3))
+       and ($4::uuid is null or c.id_estudiante = $4)
+       and ($5::uuid is null or exists (
+             select 1 from integrantes_grupo ig
+             join grupos_proyectos gt on gt.id_grupo = ig.id_grupo
+             where ig.id_estudiante = c.id_estudiante
+               and (gt.id_tutor_academico = $5 or gt.id_tutor_comunitario = $5)))
+       and c.fecha_actividad between p.fecha_inicio and p.fecha_fin`;
+
+interface SemanalRow {
+  id: string;
+  semana: number;
+  semana_declarada: number | null;
+  fecha: string;
+  tipo: 'comunitario' | 'social' | 'ambiental';
+  id_estudiante: string;
+  estudiante: string;
+  cedula: string;
+  id_grupo: string | null;
+  proyecto: string | null;
+  descripcion: string;
+  horas: string;
+  estado: string;
+  tiene_evidencia: boolean;
+}
+
+function mapSemanal(r: SemanalRow): FilaSemanal {
+  return {
+    id: r.id,
+    semana: r.semana,
+    semanaDeclarada: r.semana_declarada,
+    fecha: r.fecha,
+    tipo: r.tipo,
+    idEstudiante: r.id_estudiante,
+    estudiante: r.estudiante,
+    cedula: r.cedula,
+    idGrupo: r.id_grupo,
+    proyecto: r.proyecto,
+    descripcion: r.descripcion,
+    horas: Number(r.horas),
+    estado: r.estado,
+    tieneEvidencia: r.tiene_evidencia,
+  };
+}
+
+export async function obtenerDetalleSemanal(
+  periodoId: number,
+  filtro: FiltroSemanal
+): Promise<FilaSemanal[]> {
+  const { rows } = await pool.query<SemanalRow>(
+    `select * from (${SELECT_SEMANAL}) as actividades
+     order by semana asc, estudiante asc, fecha asc, id asc`,
+    [periodoId, filtro.semana, filtro.idGrupo, filtro.idEstudiante, filtro.idTutor]
+  );
+  return rows.map(mapSemanal);
+}
+
+export interface SemanaConActividad {
+  semana: number;
+  /** Primer dia de esa semana dentro del periodo. */
+  desde: string;
+  hasta: string;
+  actividades: number;
+  horas: number;
+}
+
+/** Semanas que tienen al menos una actividad, para poblar el selector. */
+export async function obtenerSemanasConActividad(
+  periodoId: number,
+  filtro: FiltroSemanal
+): Promise<SemanaConActividad[]> {
+  const { rows } = await pool.query<{
+    semana: number;
+    desde: string;
+    hasta: string;
+    actividades: string;
+    horas: string;
+  }>(
+    `select a.semana,
+            (p.fecha_inicio + ((a.semana - 1) * 7))::text as desde,
+            least(p.fecha_fin, p.fecha_inicio + ((a.semana - 1) * 7) + 6)::text as hasta,
+            count(*)::text as actividades,
+            coalesce(sum(a.horas::numeric), 0)::text as horas
+     from (${SELECT_SEMANAL}) as a
+     join periodos_academicos p on p.id_periodo = $1
+     group by a.semana, p.fecha_inicio, p.fecha_fin
+     order by a.semana asc`,
+    [periodoId, null, filtro.idGrupo, filtro.idEstudiante, filtro.idTutor]
+  );
+  return rows.map((r) => ({
+    semana: r.semana,
+    desde: r.desde,
+    hasta: r.hasta,
+    actividades: Number(r.actividades),
+    horas: Number(r.horas),
+  }));
+}
+
+/** Nombre del estudiante, para titular su propio reporte. */
+export async function nombreDeEstudiante(idUsuario: string): Promise<string | null> {
+  const { rows } = await pool.query<{ nombre_completo: string }>(
+    `select nombre_completo from usuarios where id_usuario = $1 and rol = 'estudiante'`,
+    [idUsuario]
+  );
+  return rows[0]?.nombre_completo ?? null;
 }

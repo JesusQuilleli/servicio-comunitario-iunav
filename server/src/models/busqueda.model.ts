@@ -1,4 +1,5 @@
 import { pool } from '../db/pool.js';
+import { esTutorDelGrupo } from '../lib/tutores.js';
 import type { UserRole } from '../types.js';
 
 export interface ResultadoUsuario {
@@ -37,7 +38,7 @@ const ESTUDIANTES_DEL_TUTOR = `
     select ig.id_estudiante
     from integrantes_grupo ig
     join grupos_proyectos g on g.id_grupo = ig.id_grupo
-    where g.id_tutor = $1
+    where ${esTutorDelGrupo('g', 1)}
   )
 `;
 
@@ -87,12 +88,17 @@ async function buscarProyectos(
   if (rol === 'tutor') {
     const { rows } = await pool.query<ResultadoProyecto>(
       `select g.id_grupo as "idGrupo", g.nombre_proyecto as nombre, g.estado,
-              u.nombre_completo as "tutorNombre", p.nombre_periodo as periodo
+              coalesce(ta.nombre_completo, tc.nombre_completo) as "tutorNombre",
+              p.nombre_periodo as periodo
          from grupos_proyectos g
-         left join usuarios u on u.id_usuario = g.id_tutor
+         left join usuarios ta on ta.id_usuario = g.id_tutor_academico
+         left join usuarios tc on tc.id_usuario = g.id_tutor_comunitario
          left join periodos_academicos p on p.id_periodo = g.id_periodo
-        where (g.nombre_proyecto ilike $2 or u.nombre_completo ilike $2 or p.nombre_periodo ilike $2)
-          and g.id_tutor = $1
+        where (g.nombre_proyecto ilike $2
+               or ta.nombre_completo ilike $2
+               or tc.nombre_completo ilike $2
+               or p.nombre_periodo ilike $2)
+          and ${esTutorDelGrupo('g', 1)}
         order by g.creado_en desc
         limit $3`,
       [idUsuario, patron, limite]
@@ -102,11 +108,16 @@ async function buscarProyectos(
 
   const { rows } = await pool.query<ResultadoProyecto>(
     `select g.id_grupo as "idGrupo", g.nombre_proyecto as nombre, g.estado,
-            u.nombre_completo as "tutorNombre", p.nombre_periodo as periodo
+            coalesce(ta.nombre_completo, tc.nombre_completo) as "tutorNombre",
+            p.nombre_periodo as periodo
        from grupos_proyectos g
-       left join usuarios u on u.id_usuario = g.id_tutor
+       left join usuarios ta on ta.id_usuario = g.id_tutor_academico
+       left join usuarios tc on tc.id_usuario = g.id_tutor_comunitario
        left join periodos_academicos p on p.id_periodo = g.id_periodo
-      where (g.nombre_proyecto ilike $1 or u.nombre_completo ilike $1 or p.nombre_periodo ilike $1)
+      where (g.nombre_proyecto ilike $1
+             or ta.nombre_completo ilike $1
+             or tc.nombre_completo ilike $1
+             or p.nombre_periodo ilike $1)
       order by g.creado_en desc
       limit $2`,
     [patron, limite]
@@ -152,7 +163,7 @@ async function buscarBitacoras(
            select ig.id_estudiante
            from integrantes_grupo ig
            join grupos_proyectos g on g.id_grupo = ig.id_grupo
-           where g.id_tutor = $1
+           where ${esTutorDelGrupo('g', 1)}
          )`
       : '';
   const whereIdEstudianteServicio =
@@ -161,7 +172,7 @@ async function buscarBitacoras(
            select ig.id_estudiante
            from integrantes_grupo ig
            join grupos_proyectos g on g.id_grupo = ig.id_grupo
-           where g.id_tutor = $1
+           where ${esTutorDelGrupo('g', 1)}
          )`
       : '';
   const params = rol === 'tutor' ? [idUsuario, patron, limite] : [patron, limite];

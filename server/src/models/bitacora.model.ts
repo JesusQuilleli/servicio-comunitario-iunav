@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 import { pool } from '../db/pool.js';
+import { esTutorDelGrupo } from '../lib/tutores.js';
 import { ApiError } from '../lib/errors.js';
 import type { Paginacion } from '../lib/paginacion.js';
 
@@ -401,6 +402,13 @@ export async function actualizarRegistroEstudiante(
     const yaRegistradas = await horasDelDia(client, datos.idEstudiante, datos.fecha, datos.idRegistro);
     comprobarLimiteDiario(yaRegistradas, datos.horas, metas.limiteDiario);
 
+    // La meta tambien se revisa al editar, no solo al crear. Sin esto se podia
+    // registrar dentro del tope y luego subir las horas editando, que era la
+    // via libre para pasar de 90/30. No hace falta excluir este registro de la
+    // suma: `exigirEditable` solo deja editar los que estan en 'pendiente' o
+    // 'corregir', y esos nunca cuentan como aprobados.
+    await comprobarMeta(client, datos.idEstudiante, actual.tipo, datos.horas, metas);
+
     // `undefined` conserva la evidencia actual; `null` la quita; un string la reemplaza.
     const quitarEvidencia = datos.evidenciaUrl === null;
     const nuevaEvidencia = datos.evidenciaUrl ?? null;
@@ -530,7 +538,7 @@ const SELECT_PENDIENTES_TUTOR = `
      from bitacoras_comunitario b
      join grupos_proyectos g on g.id_grupo = b.id_grupo
      join usuarios u on u.id_usuario = b.id_estudiante
-     where g.id_tutor = $1 and b.estado in ('pendiente', 'corregir')
+     where ${esTutorDelGrupo('g', 1)} and b.estado in ('pendiente', 'corregir')
      union all
      select c.id_registro as id, c.id_estudiante, u.nombre_completo as estudiante_nombre,
             null::uuid as id_grupo, null as proyecto_nombre, c.tipo as tipo,
@@ -540,7 +548,7 @@ const SELECT_PENDIENTES_TUTOR = `
      join integrantes_grupo ig on ig.id_estudiante = c.id_estudiante
      join grupos_proyectos g on g.id_grupo = ig.id_grupo
      join usuarios u on u.id_usuario = c.id_estudiante
-     where g.id_tutor = $1 and c.estado in ('pendiente', 'corregir')`;
+     where ${esTutorDelGrupo('g', 1)} and c.estado in ('pendiente', 'corregir')`;
 
 interface PendienteTutorRow {
   id: string;
@@ -593,6 +601,21 @@ export async function obtenerPendientesTutor(
   return { items: datos.rows.map(mapPendienteTutor), total: cuenta.rows[0].total };
 }
 
+export interface ResultadoValidacion {
+  estado: string;
+  /**
+   * En que estado estaba el registro ANTES de esta validacion.
+   *
+   * Hace falta para saber si la validacion cambio algo de verdad: volver a
+   * aprobar lo ya aprobado no suma horas, asi que tampoco debe disparar el
+   * aviso de "meta completada" una segunda vez.
+   */
+  estadoAnterior: string;
+  idEstudiante: string;
+  descripcion: string;
+  horas: number;
+}
+
 export async function cambiarEstadoRegistro(
   datos: {
     id: string;
@@ -601,39 +624,77 @@ export async function cambiarEstadoRegistro(
     estado: 'aprobado' | 'rechazado' | 'corregir';
     comentario: string | null;
   }
-): Promise<{ estado: string }> {
+): Promise<ResultadoValidacion> {
   const { id, tipo, idTutor, estado, comentario } = datos;
 
-  let filas: number;
+  // El `returning` trae de quien era el registro y de cuantas horas: con eso se
+  // arma el aviso al estudiante sin una segunda consulta.
+  interface FilaActualizada {
+    id_estudiante: string;
+    descripcion: string;
+    horas: string;
+    estado_anterior: string;
+  }
+
+  let actualizada: FilaActualizada | undefined;
   if (tipo === 'comunitario') {
-    const { rows } = await pool.query<{ id_bitacora: string }>(
+    const { rows } = await pool.query<FilaActualizada>(
       `update bitacoras_comunitario b
        set estado = $2, comentario_tutor = $3
-       where b.id_bitacora = $1
+       from (select id_bitacora, estado from bitacoras_comunitario where id_bitacora = $1) previo
+       where b.id_bitacora = previo.id_bitacora
          and exists (select 1 from grupos_proyectos g
-                     where g.id_grupo = b.id_grupo and g.id_tutor = $4)
-       returning id_bitacora`,
+                     where g.id_grupo = b.id_grupo and ${esTutorDelGrupo('g', 4)})
+       returning b.id_estudiante, b.descripcion, b.horas_invertidas::text as horas,
+                 previo.estado as estado_anterior`,
       [id, estado, comentario, idTutor]
     );
-    filas = rows.length;
+    actualizada = rows[0];
   } else {
-    const { rows } = await pool.query<{ id_registro: string }>(
+    const { rows } = await pool.query<FilaActualizada>(
       `update control_servicios_institucionales c
        set estado = $2, comentario_tutor = $3
-       where c.id_registro = $1
+       from (select id_registro, estado from control_servicios_institucionales
+             where id_registro = $1) previo
+       where c.id_registro = previo.id_registro
          and exists (select 1
                      from integrantes_grupo ig
                      join grupos_proyectos g on g.id_grupo = ig.id_grupo
-                     where ig.id_estudiante = c.id_estudiante and g.id_tutor = $4)
-       returning id_registro`,
+                     where ig.id_estudiante = c.id_estudiante and ${esTutorDelGrupo('g', 4)})
+       returning c.id_estudiante, c.descripcion, c.horas_invertidas::text as horas,
+                 previo.estado as estado_anterior`,
       [id, estado, comentario, idTutor]
     );
-    filas = rows.length;
+    actualizada = rows[0];
   }
 
-  if (filas === 0) {
+  if (!actualizada) {
     throw new ApiError(404, 'Registro no encontrado o sin autorización para validarlo');
   }
 
-  return { estado };
+  return {
+    estado,
+    estadoAnterior: actualizada.estado_anterior,
+    idEstudiante: actualizada.id_estudiante,
+    descripcion: actualizada.descripcion,
+    horas: Number(actualizada.horas),
+  };
+}
+
+/**
+ * Horas APROBADAS del estudiante en cada meta. Sirve para saber si la
+ * validacion que acaba de ocurrir cerro una de las dos.
+ */
+export async function horasAprobadasPorMeta(
+  idEstudiante: string
+): Promise<{ directas: number; impacto: number }> {
+  const { rows } = await pool.query<{ directas: string; impacto: string }>(
+    `select
+       coalesce((select sum(horas_invertidas) from bitacoras_comunitario
+                 where id_estudiante = $1 and estado = 'aprobado'), 0)::text as directas,
+       coalesce((select sum(horas_invertidas) from control_servicios_institucionales
+                 where id_estudiante = $1 and estado = 'aprobado'), 0)::text as impacto`,
+    [idEstudiante]
+  );
+  return { directas: Number(rows[0].directas), impacto: Number(rows[0].impacto) };
 }

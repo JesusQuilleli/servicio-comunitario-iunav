@@ -15,6 +15,7 @@ export interface UsuarioRow {
   password_temporal: boolean;
   password_cambiado_en: Date | null;
   rol: UserRole;
+  tipo_tutor: 'academico' | 'comunitario' | null;
   firma_url: string | null;
   sello_url: string | null;
   activo: boolean;
@@ -28,6 +29,7 @@ export function mapUsuarioPublico(row: UsuarioRow): UsuarioPublico {
     cedula: row.cedula,
     email: row.email,
     rol: row.rol,
+    tipoTutor: row.tipo_tutor,
     firmaUrl: row.firma_url,
     selloUrl: row.sello_url,
     activo: row.activo,
@@ -86,14 +88,30 @@ export interface CrearUsuarioData {
   email: string;
   passwordHash: string;
   rol: UserRole;
+  /** Obligatorio cuando `rol` es `tutor`, prohibido en el resto (lo exige la base). */
+  tipoTutor?: 'academico' | 'comunitario' | null;
+  /**
+   * La clave la eligio otra persona, asi que el dueno tiene que cambiarla al
+   * entrar. Es el caso normal: las cuentas las crea la coordinacion.
+   */
+  passwordTemporal?: boolean;
 }
 
 export async function crearUsuario(data: CrearUsuarioData): Promise<UsuarioRow> {
   const { rows } = await pool.query<UsuarioRow>(
-    `insert into usuarios (nombre_completo, cedula, email, password_hash, rol)
-     values ($1, $2, $3, $4, $5)
+    `insert into usuarios
+       (nombre_completo, cedula, email, password_hash, rol, tipo_tutor, password_temporal)
+     values ($1, $2, $3, $4, $5, $6, $7)
      returning *`,
-    [data.nombreCompleto, data.cedula, data.email, data.passwordHash, data.rol]
+    [
+      data.nombreCompleto,
+      data.cedula,
+      data.email,
+      data.passwordHash,
+      data.rol,
+      data.rol === 'tutor' ? (data.tipoTutor ?? null) : null,
+      data.passwordTemporal ?? false,
+    ]
   );
   return rows[0];
 }
