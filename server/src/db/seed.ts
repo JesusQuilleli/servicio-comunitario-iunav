@@ -1,6 +1,47 @@
 import bcrypt from 'bcryptjs';
 import { pool } from './pool.js';
+import { guardarArchivo } from '../lib/archivos.js';
+import type { CategoriaArchivo } from '../config/almacenamiento.js';
 import type { UserRole } from '../types.js';
+
+// ------------------------------------------------------------------
+// Archivos de muestra
+// ------------------------------------------------------------------
+// Antes estas columnas guardaban una URL externa inventada
+// (`https://iunav.edu.ve/...`). La API solo sirve rutas internas con la forma
+// `<carpeta>/<uuid>.<ext>` (ver `lib/archivos.ts`), asi que aquella URL siempre
+// terminaba en 404 y la interfaz mostraba la evidencia como inaccesible. Ahora
+// el seed escribe un archivo de verdad: los datos de ejemplo quedan completos y
+// la descarga autenticada se puede probar de punta a punta.
+
+/** PNG de 1x1 px, gris claro. */
+const PNG_MUESTRA = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64'
+);
+
+/** PDF minimo de una pagina en blanco. */
+const PDF_MUESTRA = Buffer.from(
+  `%PDF-1.4
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]>>endobj
+trailer<</Root 1 0 R>>
+%%EOF
+`,
+  'utf-8'
+);
+
+async function archivoDeMuestra(categoria: CategoriaArchivo, mime: string): Promise<string> {
+  const buffer = mime === 'application/pdf' ? PDF_MUESTRA : PNG_MUESTRA;
+  const guardado = await guardarArchivo(categoria, {
+    originalname: `muestra-${categoria}`,
+    mimetype: mime,
+    size: buffer.length,
+    buffer,
+  });
+  return guardado.ruta;
+}
 
 interface SeedUsuario {
   email: string;
@@ -8,13 +49,19 @@ interface SeedUsuario {
   cedula: string;
   password: string;
   rol: UserRole;
+  /** Obligatorio para el rol `tutor`: academico o comunitario. */
+  tipoTutor?: 'academico' | 'comunitario';
 }
 
 const usuariosSeed: SeedUsuario[] = [
   { email: 'cmendoza@iunav.edu.ve', nombre: 'Carlos Mendoza', cedula: 'V-28.456.123', password: 'admin123', rol: 'admin' },
   { email: 'mlopez@iunav.edu.ve', nombre: 'María Fernanda López', cedula: 'V-18.234.567', password: 'coord123', rol: 'coordinador' },
-  { email: 'jperez@iunav.edu.ve', nombre: 'José Rafael Pérez', cedula: 'V-22.890.345', password: 'tutor123', rol: 'tutor' },
-  { email: 'ltorres@iunav.edu.ve', nombre: 'Luis Miguel Torres', cedula: 'V-20.123.456', password: 'tutor123', rol: 'tutor' },
+  // Cada proyecto lleva un Tutor Academico (el profesor que guia el trabajo) y
+  // un Tutor Comunitario (el de la institucion donde se presta el servicio).
+  { email: 'jperez@iunav.edu.ve', nombre: 'José Rafael Pérez', cedula: 'V-22.890.345', password: 'tutor123', rol: 'tutor', tipoTutor: 'academico' },
+  { email: 'ltorres@iunav.edu.ve', nombre: 'Luis Miguel Torres', cedula: 'V-20.123.456', password: 'tutor123', rol: 'tutor', tipoTutor: 'academico' },
+  { email: 'rbermudez@iunav.edu.ve', nombre: 'Rosa Elena Bermúdez', cedula: 'V-15.678.901', password: 'tutor123', rol: 'tutor', tipoTutor: 'comunitario' },
+  { email: 'acastillo@iunav.edu.ve', nombre: 'Ángel David Castillo', cedula: 'V-17.234.890', password: 'tutor123', rol: 'tutor', tipoTutor: 'comunitario' },
   { email: 'gmartinez@iunav.edu.ve', nombre: 'Gabriela Martínez', cedula: 'V-26.567.890', password: 'est123', rol: 'estudiante' },
   { email: 'dhernandez@iunav.edu.ve', nombre: 'Diego Hernández', cedula: 'V-24.345.678', password: 'est123', rol: 'estudiante' },
   { email: 'vgarcia@iunav.edu.ve', nombre: 'Valentina García', cedula: 'V-27.890.123', password: 'est123', rol: 'estudiante' },
@@ -23,7 +70,8 @@ const usuariosSeed: SeedUsuario[] = [
 
 interface SeedProyecto {
   nombre: string;
-  tutorEmail: string;
+  tutorAcademicoEmail: string;
+  tutorComunitarioEmail: string;
   estado: 'en_curso' | 'pendiente_aprobacion' | 'finalizado' | 'suspendido';
   proyectoEscrito: boolean;
   diapositivas: boolean;
@@ -33,7 +81,8 @@ interface SeedProyecto {
 const proyectosSeed: SeedProyecto[] = [
   {
     nombre: 'Mantenimiento de Red Comunitaria - Escuela Bolivariana La Esperanza',
-    tutorEmail: 'jperez@iunav.edu.ve',
+    tutorAcademicoEmail: 'jperez@iunav.edu.ve',
+    tutorComunitarioEmail: 'rbermudez@iunav.edu.ve',
     estado: 'en_curso',
     proyectoEscrito: true,
     diapositivas: false,
@@ -41,7 +90,8 @@ const proyectosSeed: SeedProyecto[] = [
   },
   {
     nombre: 'Desarrollo Web para la Fundación Niños del Mañana',
-    tutorEmail: 'ltorres@iunav.edu.ve',
+    tutorAcademicoEmail: 'ltorres@iunav.edu.ve',
+    tutorComunitarioEmail: 'acastillo@iunav.edu.ve',
     estado: 'en_curso',
     proyectoEscrito: true,
     diapositivas: false,
@@ -49,7 +99,8 @@ const proyectosSeed: SeedProyecto[] = [
   },
   {
     nombre: 'Sistema de Inventario para la Casa de Alimentación Municipal',
-    tutorEmail: 'ltorres@iunav.edu.ve',
+    tutorAcademicoEmail: 'ltorres@iunav.edu.ve',
+    tutorComunitarioEmail: 'rbermudez@iunav.edu.ve',
     estado: 'pendiente_aprobacion',
     proyectoEscrito: true,
     diapositivas: true,
@@ -57,7 +108,8 @@ const proyectosSeed: SeedProyecto[] = [
   },
   {
     nombre: 'Soporte Técnico y Capacitación Digital - Centro de Formación Popular',
-    tutorEmail: 'jperez@iunav.edu.ve',
+    tutorAcademicoEmail: 'jperez@iunav.edu.ve',
+    tutorComunitarioEmail: 'acastillo@iunav.edu.ve',
     estado: 'finalizado',
     proyectoEscrito: true,
     diapositivas: true,
@@ -141,13 +193,13 @@ async function seedUsuarios(): Promise<Map<string, string>> {
     if (rows.length === 0) {
       const hash = await bcrypt.hash(u.password, 10);
       const creado = await pool.query<{ id_usuario: string }>(
-        `insert into usuarios (nombre_completo, cedula, email, password_hash, rol)
-         values ($1, $2, $3, $4, $5)
+        `insert into usuarios (nombre_completo, cedula, email, password_hash, rol, tipo_tutor)
+         values ($1, $2, $3, $4, $5, $6)
          returning id_usuario`,
-        [u.nombre, u.cedula, u.email, hash, u.rol]
+        [u.nombre, u.cedula, u.email, hash, u.rol, u.tipoTutor ?? null]
       );
       ids.set(u.email, creado.rows[0].id_usuario);
-      console.log(`  + creado ${u.email} (${u.rol})`);
+      console.log(`  + creado ${u.email} (${u.tipoTutor ? `tutor ${u.tipoTutor}` : u.rol})`);
     } else {
       ids.set(u.email, rows[0].id_usuario);
       console.log(`  = ya existe ${u.email}`);
@@ -183,19 +235,21 @@ async function seedProyectos(
 
   const gruposPorNombre = new Map<string, string>();
   for (const p of proyectosSeed) {
-    const tutorId = ids.get(p.tutorEmail);
-    if (!tutorId) continue;
+    const tutorAcademicoId = ids.get(p.tutorAcademicoEmail);
+    const tutorComunitarioId = ids.get(p.tutorComunitarioEmail);
+    if (!tutorAcademicoId || !tutorComunitarioId) continue;
     const creado = await pool.query<{ id_grupo: string }>(
-      `insert into grupos_proyectos (nombre_proyecto, id_periodo, id_tutor, id_coordinador, proyecto_escrito_url, diapositivas_url, estado)
-       values ($1, $2, $3, $4, $5, $6, $7)
+      `insert into grupos_proyectos (nombre_proyecto, id_periodo, id_tutor_academico, id_tutor_comunitario, id_coordinador, proyecto_escrito_url, diapositivas_url, estado)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
        returning id_grupo`,
       [
         p.nombre,
         idPeriodo,
-        tutorId,
+        tutorAcademicoId,
+        tutorComunitarioId,
         coordinadorId,
-        p.proyectoEscrito ? 'https://iunav.edu.ve/proyectos/escrito.pdf' : null,
-        p.diapositivas ? 'https://iunav.edu.ve/proyectos/diapositivas.pdf' : null,
+        p.proyectoEscrito ? await archivoDeMuestra('proyectos', 'application/pdf') : null,
+        p.diapositivas ? await archivoDeMuestra('proyectos', 'application/pdf') : null,
         p.estado,
       ]
     );
@@ -232,7 +286,7 @@ async function seedProyectos(
         b.fecha,
         b.descripcion,
         b.horas,
-        b.evidencia ? 'https://iunav.edu.ve/evidencias/foto-' + b.estudianteEmail.split('@')[0] + '-' + b.semana + '.jpg' : null,
+        b.evidencia ? await archivoDeMuestra('evidencias', 'image/png') : null,
         b.estado,
         b.comentario ?? null,
       ]
@@ -252,7 +306,7 @@ async function seedProyectos(
         s.fecha,
         s.descripcion,
         s.horas,
-        s.evidencia ? 'https://iunav.edu.ve/evidencias/' + s.tipo + '-' + s.estudianteEmail.split('@')[0] + '.jpg' : null,
+        s.evidencia ? await archivoDeMuestra('evidencias', 'image/png') : null,
         s.estado,
         s.comentario ?? null,
       ]

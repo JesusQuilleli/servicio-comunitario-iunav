@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Download, Eye, EyeOff, FileText, Loader2, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { esImagen, nombreArchivo, useArchivoUrl } from "@/lib/archivos";
+import { esImagen, mensajeEstadoArchivo, nombreArchivo, useArchivoUrl } from "@/lib/archivos";
 
 /**
  * Muestra la evidencia de un registro.
@@ -20,7 +20,7 @@ export function Evidencia({
   compacta?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
-  const { url, cargando } = useArchivoUrl(abierto ? ruta : null);
+  const { url, cargando, estado } = useArchivoUrl(abierto ? ruta : null);
 
   if (!ruta) return null;
 
@@ -86,8 +86,7 @@ export function Evidencia({
           )}
           {!cargando && !url && (
             <p className="text-xs text-muted-foreground">
-              No se pudo cargar la evidencia: el archivo ya no está en el servidor o no tienes
-              permiso para verlo.
+              No se pudo mostrar la evidencia. {mensajeEstadoArchivo(estado)}
             </p>
           )}
         </div>
