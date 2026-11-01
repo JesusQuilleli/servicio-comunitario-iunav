@@ -19,6 +19,7 @@ export const RUTAS = {
   servicio: "/servicio",
   validacion: "/validacion",
   configuracion: "/configuracion",
+  historial: "/historial",
   reportes: "/reportes",
   password: "/password",
   perfil: "/perfil",
@@ -38,7 +39,13 @@ export const ROLES_POR_RUTA: Record<ViewKey, UserRole[]> = {
   servicio: ["estudiante"],
   validacion: ["tutor"],
   configuracion: ["admin", "coordinador"],
-  reportes: ["admin", "coordinador", "tutor"],
+  // El historial de acciones es para quien supervisa: administración y
+  // coordinación. Un tutor no audita a nadie.
+  historial: ["admin", "coordinador"],
+  // El estudiante entra a Reportes solo por el reporte semanal: la revisión
+  // pidió que cada uno pudiera acceder a su propio registro. La vista le
+  // muestra únicamente esa tarjeta y el servidor acota el alcance al suyo.
+  reportes: ["admin", "coordinador", "tutor", "estudiante"],
   password: ["admin", "coordinador", "tutor", "estudiante"],
   perfil: ["admin", "coordinador", "tutor", "estudiante"],
 };
@@ -52,6 +59,7 @@ export const TITULOS: Record<ViewKey, string> = {
   servicio: "Servicio Social y Ambiental",
   validacion: "Validación",
   configuracion: "Configuraciones y Plantillas",
+  historial: "Historial de acciones",
   reportes: "Reportes y certificados",
   password: "Mi contraseña",
   perfil: "Mi perfil",

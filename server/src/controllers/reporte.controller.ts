@@ -8,6 +8,7 @@ import { findUsuarioPorId } from '../models/usuario.model.js';
 import { generarConsolidadoExcel, generarConsolidadoPdf } from '../lib/reportes/consolidado.js';
 import { generarActaPdf } from '../lib/reportes/acta.js';
 import { generarCertificadoPdf } from '../lib/reportes/certificado.js';
+import { generarReporteSemanalPdf } from '../lib/reportes/semanal.js';
 import type { UserRole } from '../types.js';
 
 /**
@@ -189,6 +190,166 @@ export async function certificadoPdf(req: AuthRequest, res: Response, next: Next
       'application/pdf',
       await generarCertificadoPdf(datos, await emisorDe(usuario))
     );
+  } catch (err) {
+    next(err);
+  }
+}
+
+// --------------------------------------------------------------------
+// Reporte semanal de actividades
+// --------------------------------------------------------------------
+//
+// Es el unico reporte que tambien baja el estudiante, y por eso el alcance NO
+// se resuelve con `requireRole` sino aqui dentro, como ya hacen `/busqueda` y
+// `/archivos`: un rol no basta, hay que acotar POR QUIEN pregunta.
+
+const semanalQuery = z.object({
+  periodoId: periodoQuery,
+  semana: z.preprocess(
+    (v) => (v === '' || v === undefined ? null : v),
+    z.union([z.coerce.number().int().positive().max(60), z.null()])
+  ),
+  grupoId: z.preprocess(
+    (v) => (v === '' || v === undefined ? null : v),
+    z.union([idGrupoSchema, z.null()])
+  ),
+  estudianteId: z.preprocess(
+    (v) => (v === '' || v === undefined ? null : v),
+    z.union([idUsuarioSchema, z.null()])
+  ),
+});
+
+type FiltroPedido = z.infer<typeof semanalQuery>;
+
+/**
+ * Convierte lo que pide el cliente en lo que de verdad puede ver.
+ *
+ * El estudiante es el caso que importa: su `estudianteId` se FUERZA al suyo, se
+ * mande lo que se mande. Si se respetara el parametro, bastaria con cambiar un
+ * uuid en la URL para leer las actividades de un companero.
+ */
+async function alcanceSemanal(
+  usuario: NonNullable<AuthRequest['usuario']>,
+  pedido: FiltroPedido
+): Promise<model.FiltroSemanal> {
+  if (usuario.rol === 'estudiante') {
+    return {
+      periodoId: pedido.periodoId,
+      semana: pedido.semana,
+      idGrupo: null,
+      idEstudiante: usuario.idUsuario,
+      idTutor: null,
+    };
+  }
+
+  if (usuario.rol === 'tutor') {
+    // `obtenerGrupoConAcceso` ya responde 403 si el grupo no es suyo; y sin
+    // grupo concreto, `idTutor` acota a todos los suyos.
+    if (pedido.grupoId) {
+      await obtenerGrupoConAcceso(pedido.grupoId, usuario);
+    }
+    if (pedido.estudianteId && !(await model.esIntegranteDeTutor(pedido.estudianteId, usuario.idUsuario))) {
+      throw new ApiError(403, 'Solo puedes consultar estudiantes de tus grupos');
+    }
+    return {
+      periodoId: pedido.periodoId,
+      semana: pedido.semana,
+      idGrupo: pedido.grupoId,
+      idEstudiante: pedido.estudianteId,
+      idTutor: usuario.idUsuario,
+    };
+  }
+
+  return {
+    periodoId: pedido.periodoId,
+    semana: pedido.semana,
+    idGrupo: pedido.grupoId,
+    idEstudiante: pedido.estudianteId,
+    idTutor: null,
+  };
+}
+
+/** Frase del membrete que dice exactamente que se esta mirando. */
+async function describirAlcance(
+  usuario: NonNullable<AuthRequest['usuario']>,
+  filtro: model.FiltroSemanal
+): Promise<string> {
+  if (filtro.idEstudiante) {
+    const nombre = await model.nombreDeEstudiante(filtro.idEstudiante);
+    if (!nombre) throw new ApiError(404, 'Estudiante no encontrado');
+    return usuario.rol === 'estudiante' ? `Mis actividades - ${nombre}` : nombre;
+  }
+  if (filtro.idGrupo) {
+    const grupo = await obtenerGrupoConAcceso(filtro.idGrupo, usuario);
+    return grupo.nombreProyecto;
+  }
+  if (filtro.idTutor) return 'Mis grupos';
+  return 'Todos los estudiantes';
+}
+
+/** `GET /api/reportes/semanas?periodoId=&grupoId=&estudianteId=` */
+export async function semanasDisponibles(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const usuario = requiereUsuario(req);
+    const pedido = semanalQuery.parse(req.query);
+    const filtro = await alcanceSemanal(usuario, pedido);
+
+    const periodo = await model.obtenerPeriodo(filtro.periodoId);
+    if (!periodo) {
+      res.json({ semanas: [], periodo: null });
+      return;
+    }
+
+    const semanas = await model.obtenerSemanasConActividad(periodo.id, filtro);
+    res.json({ semanas, periodo });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** `GET /api/reportes/semanal.pdf?periodoId=&semana=&grupoId=&estudianteId=` */
+export async function reporteSemanalPdf(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const usuario = requiereUsuario(req);
+    const pedido = semanalQuery.parse(req.query);
+    const filtro = await alcanceSemanal(usuario, pedido);
+
+    const periodo = await model.obtenerPeriodo(filtro.periodoId);
+    if (!periodo) {
+      throw new ApiError(400, 'No hay un periodo academico activo. Selecciona uno.');
+    }
+
+    const descripcion = await describirAlcance(usuario, filtro);
+    const filas = await model.obtenerDetalleSemanal(periodo.id, filtro);
+
+    const quien = await findUsuarioPorId(usuario.idUsuario);
+    const pdf = await generarReporteSemanalPdf(
+      filas,
+      periodo,
+      {
+        descripcion,
+        semana: filtro.semana,
+        // Con una sola persona no hay nada que agrupar por persona: se agrupa
+        // por semana, que es como se lee su propio avance.
+        agruparPor: filtro.idEstudiante ? 'semana' : 'estudiante',
+      },
+      quien?.nombre_completo ?? 'Sistema'
+    );
+
+    const nombre = nombreArchivo([
+      'reporte',
+      filtro.semana === null ? 'actividades' : `semana-${filtro.semana}`,
+      descripcion,
+    ]);
+    descargar(res, `${nombre}.pdf`, 'application/pdf', pdf);
   } catch (err) {
     next(err);
   }

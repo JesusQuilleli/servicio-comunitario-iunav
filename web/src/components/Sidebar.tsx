@@ -13,6 +13,7 @@ import {
   LogOut,
   User,
   FileBarChart,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ const navItems: NavItem[] = [
   { key: "servicio", label: "Servicio Social y Ambiental", icon: Leaf },
   { key: "validacion", label: "Validación", icon: CheckCircle },
   { key: "configuracion", label: "Configuraciones", icon: Settings },
+  { key: "historial", label: "Historial", icon: History },
   { key: "reportes", label: "Reportes", icon: FileBarChart },
   { key: "perfil", label: "Mi perfil", icon: User },
 ];
