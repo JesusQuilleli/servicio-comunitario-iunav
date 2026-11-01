@@ -10,6 +10,8 @@ import { archivoRouter } from './archivo.routes.js';
 import { reporteRouter } from './reporte.routes.js';
 import { busquedaRouter } from './busqueda.routes.js';
 import { solicitudesRouter } from './solicitud.routes.js';
+import { historialRouter } from './historial.routes.js';
+import { notificacionesRouter } from './notificacion.routes.js';
 
 const router = Router();
 
@@ -24,5 +26,7 @@ router.use('/archivos', archivoRouter);
 router.use('/reportes', reporteRouter);
 router.use('/busqueda', busquedaRouter);
 router.use('/solicitudes', solicitudesRouter);
+router.use('/historial', historialRouter);
+router.use('/notificaciones', notificacionesRouter);
 
 export { router as apiRouter };

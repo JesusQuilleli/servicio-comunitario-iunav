@@ -2,6 +2,7 @@ import type { NextFunction, Response } from 'express';
 import { z } from 'zod';
 import type { AuthRequest } from '../middleware/auth.js';
 import { ApiError } from '../lib/errors.js';
+import { registrarAccion } from '../lib/historial.js';
 import * as model from '../models/periodo.model.js';
 
 const isoDate = z
@@ -50,6 +51,12 @@ export async function crearPeriodo(req: AuthRequest, res: Response, next: NextFu
     requiereUsuario(req);
     const body = periodoSchema.parse(req.body);
     const periodo = await model.crearPeriodo(body);
+    await registrarAccion(req, {
+      accion: 'periodo.crear',
+      entidad: 'periodo',
+      idEntidad: periodo.idPeriodo,
+      descripcion: `Creó el período "${periodo.nombrePeriodo}" (${periodo.fechaInicio} a ${periodo.fechaFin})`,
+    });
     res.status(201).json({ periodo });
   } catch (err) {
     next(err);
@@ -63,6 +70,12 @@ export async function actualizarPeriodo(req: AuthRequest, res: Response, next: N
     const idPeriodo = idPeriodoSchema.parse(id);
     const body = periodoSchema.parse(req.body);
     const periodo = await model.actualizarPeriodo(idPeriodo, body);
+    await registrarAccion(req, {
+      accion: 'periodo.actualizar',
+      entidad: 'periodo',
+      idEntidad: idPeriodo,
+      descripcion: `Editó el período "${periodo.nombrePeriodo}" (${periodo.fechaInicio} a ${periodo.fechaFin})`,
+    });
     res.json({ periodo });
   } catch (err) {
     next(err);
@@ -76,6 +89,12 @@ export async function cambiarActivoPeriodo(req: AuthRequest, res: Response, next
     const idPeriodo = idPeriodoSchema.parse(id);
     const { activo } = activoSchema.parse(req.body);
     const periodo = await model.cambiarActivoPeriodo(idPeriodo, activo);
+    await registrarAccion(req, {
+      accion: 'periodo.activo',
+      entidad: 'periodo',
+      idEntidad: idPeriodo,
+      descripcion: `${activo ? 'Activó' : 'Desactivó'} el período "${periodo.nombrePeriodo}"`,
+    });
     res.json({ periodo });
   } catch (err) {
     next(err);

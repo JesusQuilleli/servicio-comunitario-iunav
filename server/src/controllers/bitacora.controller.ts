@@ -6,6 +6,10 @@ import { guardarArchivo, borrarArchivo } from '../lib/archivos.js';
 import { leerPaginacion, respuestaPaginada } from '../lib/paginacion.js';
 import { archivoDe } from '../middleware/subida.js';
 import * as model from '../models/bitacora.model.js';
+import type { ResultadoValidacion } from '../models/bitacora.model.js';
+import { findUsuarioPorId } from '../models/usuario.model.js';
+import { encolarYEnviar } from '../lib/correo.js';
+import { plantillaHorasValidadas, plantillaMetaAlcanzada } from '../lib/plantillas-correo.js';
 
 /**
  * Acepta JSON y `multipart/form-data` en la misma ruta. Cuando llega un archivo,
@@ -278,8 +282,83 @@ export async function validarRegistro(
       comentario: body.comentario ?? null,
     });
 
-    res.json({ actualizado: resultado });
+    // Despues de guardar, y sin poder hacer fallar lo ya guardado.
+    await avisarAlEstudiante(resultado, body.estado, body.comentario ?? null);
+
+    res.json({ actualizado: { estado: resultado.estado } });
   } catch (err) {
     next(err);
+  }
+}
+
+/**
+ * Avisa al estudiante de lo que decidio su tutor y, si con esto cerro una de
+ * las dos metas del programa, lo felicita.
+ *
+ * **No lanza nunca.** La validacion que hizo el tutor ya esta guardada; que el
+ * correo no salga no puede convertir esa operacion en un error. Lo que falle
+ * queda en la cola de notificaciones con su motivo.
+ */
+async function avisarAlEstudiante(
+  resultado: ResultadoValidacion,
+  estado: 'aprobado' | 'rechazado' | 'corregir',
+  comentario: string | null
+): Promise<void> {
+  try {
+    const estudiante = await findUsuarioPorId(resultado.idEstudiante);
+    if (!estudiante) return;
+
+    const aviso = plantillaHorasValidadas({
+      nombre: estudiante.nombre_completo,
+      estado,
+      horas: resultado.horas,
+      descripcion: resultado.descripcion,
+      comentario,
+    });
+    await encolarYEnviar({
+      idDestinatario: estudiante.id_usuario,
+      destinatarioEmail: estudiante.email,
+      destinatarioNombre: estudiante.nombre_completo,
+      tipo: 'horas_validadas',
+      asunto: aviso.asunto,
+      cuerpo: aviso.cuerpo,
+    });
+
+    // Solo aprobar puede cerrar una meta: rechazar o pedir correcciones nunca
+    // suma horas. Y volver a aprobar lo que ya estaba aprobado tampoco suma
+    // nada, asi que no vuelve a felicitar.
+    if (estado !== 'aprobado' || resultado.estadoAnterior === 'aprobado') return;
+
+    const metas = await model.obtenerMetas();
+    const horas = await model.horasAprobadasPorMeta(resultado.idEstudiante);
+
+    // La meta se acaba de cerrar si, quitando las horas que se acaban de
+    // aprobar, todavia no llegaba. Asi se felicita una vez y no en cada
+    // validacion posterior.
+    const cerroDirectas =
+      horas.directas >= metas.horasDirectas &&
+      horas.directas - resultado.horas < metas.horasDirectas;
+    const cerroImpacto =
+      horas.impacto >= metas.horasImpacto &&
+      horas.impacto - resultado.horas < metas.horasImpacto;
+
+    const meta = cerroDirectas ? 'directas' : cerroImpacto ? 'impacto' : null;
+    if (!meta) return;
+
+    const felicitacion = plantillaMetaAlcanzada({
+      nombre: estudiante.nombre_completo,
+      meta,
+      horas: meta === 'directas' ? metas.horasDirectas : metas.horasImpacto,
+    });
+    await encolarYEnviar({
+      idDestinatario: estudiante.id_usuario,
+      destinatarioEmail: estudiante.email,
+      destinatarioNombre: estudiante.nombre_completo,
+      tipo: 'meta_alcanzada',
+      asunto: felicitacion.asunto,
+      cuerpo: felicitacion.cuerpo,
+    });
+  } catch (err) {
+    console.error('No se pudo avisar al estudiante de la validación:', err);
   }
 }

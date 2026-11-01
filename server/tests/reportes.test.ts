@@ -168,7 +168,7 @@ describe('permisos de los reportes', () => {
     // El token de prueba es el de tutoralfa, y el grupo del seed es suyo; con un
     // grupo ajeno el mismo endpoint tiene que negarse.
     const { rows } = await pool.query<{ id_grupo: string }>(
-      `insert into grupos_proyectos (nombre_proyecto, id_periodo, id_tutor)
+      `insert into grupos_proyectos (nombre_proyecto, id_periodo, id_tutor_academico)
        values ('Grupo de tut_beta', $1, $2) returning id_grupo`,
       [datos.periodo, datos.tutorB]
     );
@@ -224,7 +224,7 @@ describe('cifras del consolidado', () => {
 
   it('el filtro por grupo aprieta las horas directas a ese grupo', async () => {
     const { rows: otro } = await pool.query<{ id_grupo: string }>(
-      `insert into grupos_proyectos (nombre_proyecto, id_periodo, id_tutor)
+      `insert into grupos_proyectos (nombre_proyecto, id_periodo, id_tutor_academico)
        values ('Grupo paralelo', $1, $2) returning id_grupo`,
       [datos.periodo, datos.tutorA]
     );
@@ -254,7 +254,7 @@ describe('cifras del consolidado', () => {
        values ('2026-II', '2026-07-01', '2026-12-15', false) returning id_periodo`
     );
     const { rows: g2 } = await pool.query<{ id_grupo: string }>(
-      `insert into grupos_proyectos (nombre_proyecto, id_periodo, id_tutor)
+      `insert into grupos_proyectos (nombre_proyecto, id_periodo, id_tutor_academico)
        values ('Grupo del segundo periodo', $1, $2) returning id_grupo`,
       [p2[0].id_periodo, datos.tutorA]
     );
@@ -340,7 +340,8 @@ describe('acta de culminacion', () => {
     expect(acta!.totales.directas).toBe(20);
     expect(acta!.totales.impacto).toBe(5);
     expect(acta!.periodo?.nombre).toBe('2026-I');
-    expect(acta!.grupo.tutorNombre).toBe('Tutor Alfa');
+    expect(acta!.grupo.tutorAcademicoNombre).toBe('Tutor Alfa');
+    expect(acta!.grupo.tutorComunitarioNombre).toBe('Tutor Comunitario');
   });
 
   it('el nombre del archivo del acta sale del proyecto, no del id', async () => {

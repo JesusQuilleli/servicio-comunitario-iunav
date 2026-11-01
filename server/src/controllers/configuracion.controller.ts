@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AuthRequest } from '../middleware/auth.js';
 import { ApiError } from '../lib/errors.js';
 import { borrarArchivo, guardarArchivo } from '../lib/archivos.js';
+import { diferencias, registrarAccion } from '../lib/historial.js';
 import { archivoDe } from '../middleware/subida.js';
 import { escribirRuta, leerRuta } from '../models/archivo.model.js';
 import * as model from '../models/configuracion.model.js';
@@ -63,6 +64,24 @@ const activoSchema = z.object({ activo: z.boolean() });
 
 const idPlantillaSchema = z.coerce.number().int().positive('Identificador inválido');
 
+/** Convierte el diff en una frase que se entiende sin abrir el JSON. */
+const ETIQUETA_CONFIG: Record<string, string> = {
+  horasDirectas: 'la meta de horas de trabajo directo',
+  horasImpacto: 'la meta de horas de impacto',
+  limiteHorasDiarias: 'el límite de horas diarias',
+  periodoActivoId: 'el período activo',
+};
+
+function describirCambiosDeConfiguracion(
+  cambios: Record<string, { antes: unknown; despues: unknown }>
+): string {
+  const frases = Object.entries(cambios).map(([campo, { antes, despues }]) => {
+    const etiqueta = ETIQUETA_CONFIG[campo] ?? campo;
+    return `${etiqueta} de ${antes ?? 'sin definir'} a ${despues ?? 'sin definir'}`;
+  });
+  return `Cambió ${frases.join(', ')}`;
+}
+
 function requiereUsuario(req: AuthRequest): void {
   if (!req.usuario) {
     throw new ApiError(401, 'No autenticado');
@@ -83,12 +102,40 @@ export async function actualizarConfiguracion(req: AuthRequest, res: Response, n
   try {
     requiereUsuario(req);
     const body = configuracionSchema.parse(req.body);
+    // El `update` de abajo no deja rastro de los valores viejos y cambiar las
+    // metas reescribe de forma retroactiva quien cumple el programa: hay que
+    // leer el estado anterior ANTES de pisarlo.
+    const anterior = await model.obtenerConfiguracion();
     const configuracion = await model.actualizarConfiguracion({
       horasDirectas: body.horasDirectas,
       horasImpacto: body.horasImpacto,
       limiteHorasDiarias: body.limiteHorasDiarias,
       periodoActivoId: body.periodoActivoId,
     });
+
+    const cambios = diferencias(
+      {
+        horasDirectas: anterior.horasDirectas,
+        horasImpacto: anterior.horasImpacto,
+        limiteHorasDiarias: anterior.limiteHorasDiarias,
+        periodoActivoId: anterior.periodoActivoId,
+      },
+      {
+        horasDirectas: configuracion.horasDirectas,
+        horasImpacto: configuracion.horasImpacto,
+        limiteHorasDiarias: configuracion.limiteHorasDiarias,
+        periodoActivoId: configuracion.periodoActivoId,
+      }
+    );
+    if (Object.keys(cambios).length > 0) {
+      await registrarAccion(req, {
+        accion: 'configuracion.actualizar',
+        entidad: 'configuracion',
+        descripcion: describirCambiosDeConfiguracion(cambios),
+        datos: { cambios },
+      });
+    }
+
     res.json({ configuracion });
   } catch (err) {
     next(err);
@@ -116,6 +163,12 @@ export async function crearPlantilla(req: AuthRequest, res: Response, next: Next
       descripcion: body.descripcion,
       tipo: body.tipo as TipoPlantilla,
     });
+    await registrarAccion(req, {
+      accion: 'plantilla.crear',
+      entidad: 'plantilla',
+      idEntidad: plantilla.idPlantilla,
+      descripcion: `Creó la plantilla "${plantilla.nombre}" (${plantilla.tipo})`,
+    });
     res.status(201).json({ plantilla });
   } catch (err) {
     next(err);
@@ -132,6 +185,12 @@ export async function actualizarPlantilla(req: AuthRequest, res: Response, next:
       nombre: body.nombre,
       descripcion: body.descripcion,
       tipo: body.tipo as TipoPlantilla,
+    });
+    await registrarAccion(req, {
+      accion: 'plantilla.actualizar',
+      entidad: 'plantilla',
+      idEntidad: idPlantilla,
+      descripcion: `Editó la plantilla "${plantilla.nombre}"`,
     });
     res.json({ plantilla });
   } catch (err) {
@@ -150,6 +209,12 @@ export async function cambiarActivoPlantilla(
     const idPlantilla = idPlantillaSchema.parse(id);
     const { activo } = activoSchema.parse(req.body);
     const plantilla = await model.cambiarActivoPlantilla(idPlantilla, activo);
+    await registrarAccion(req, {
+      accion: 'plantilla.activo',
+      entidad: 'plantilla',
+      idEntidad: idPlantilla,
+      descripcion: `${activo ? 'Activó' : 'Desactivó'} la plantilla "${plantilla.nombre}"`,
+    });
     res.json({ plantilla });
   } catch (err) {
     next(err);
@@ -193,6 +258,12 @@ export async function subirDocumentoPlantilla(
     }
 
     const plantilla = await model.obtenerPlantilla(idPlantilla);
+    await registrarAccion(req, {
+      accion: 'plantilla.documento',
+      entidad: 'plantilla',
+      idEntidad: idPlantilla,
+      descripcion: `Subió el documento de la plantilla "${plantilla.nombre}"`,
+    });
     res.status(201).json({ plantilla });
   } catch (err) {
     if (rutaNueva) {

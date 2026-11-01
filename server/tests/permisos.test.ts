@@ -104,6 +104,38 @@ const CASOS: Caso[] = [
     permitido: GESTION,
   },
   {
+    // La bandeja de salida del correo es SOLO del administrador: guarda el
+    // cuerpo de cada mensaje, y el de bienvenida lleva la clave temporal.
+    nombre: 'GET /api/notificaciones',
+    metodo: 'get',
+    ruta: () => '/api/notificaciones',
+    permitido: SOLO_ADMIN,
+  },
+  {
+    nombre: 'POST /api/notificaciones/reintentar-todas',
+    metodo: 'post',
+    ruta: () => '/api/notificaciones/reintentar-todas',
+    permitido: SOLO_ADMIN,
+  },
+  {
+    nombre: 'POST /api/notificaciones/:id/reintentar',
+    metodo: 'post',
+    ruta: (d) => `/api/notificaciones/${d.notificacion}/reintentar`,
+    permitido: SOLO_ADMIN,
+  },
+  {
+    nombre: 'GET /api/historial',
+    metodo: 'get',
+    ruta: () => '/api/historial',
+    permitido: GESTION,
+  },
+  {
+    nombre: 'GET /api/historial/acciones',
+    metodo: 'get',
+    ruta: () => '/api/historial/acciones',
+    permitido: GESTION,
+  },
+  {
     nombre: 'GET /api/solicitudes/mias',
     metodo: 'get',
     ruta: () => '/api/solicitudes/mias',
@@ -125,6 +157,21 @@ const CASOS: Caso[] = [
     permitido: SOLO_ADMIN,
   },
   { nombre: 'GET /api/dashboard', metodo: 'get', ruta: () => '/api/dashboard', permitido: TODOS },
+  {
+    // El reporte semanal lo baja tambien el estudiante: la revision pidio que
+    // cada uno pudiera ver su propio registro. El alcance lo acota el
+    // controlador, no el rol (ver semanal.test.ts).
+    nombre: 'GET /api/reportes/semanas',
+    metodo: 'get',
+    ruta: () => '/api/reportes/semanas',
+    permitido: TODOS,
+  },
+  {
+    nombre: 'GET /api/reportes/semanal.pdf',
+    metodo: 'get',
+    ruta: () => '/api/reportes/semanal.pdf',
+    permitido: TODOS,
+  },
   {
     // Los reportes van a `gestion`: el tutor los pide para sus estudiantes y
     // el propio estudiante no puede bajar ninguno.
@@ -276,7 +323,8 @@ const CASOS: Caso[] = [
     cuerpo: (d) => ({
       nombreProyecto: 'Grupo creado desde pruebas',
       periodoId: d.periodo,
-      tutorId: d.tutorA,
+      tutorAcademicoId: d.tutorA,
+      tutorComunitarioId: d.tutorComunitario,
       coordinadorId: d.coordinador,
       estado: 'en_curso',
       integrantesIds: [],
@@ -290,7 +338,8 @@ const CASOS: Caso[] = [
     cuerpo: (d) => ({
       nombreProyecto: 'Grupo editado desde pruebas',
       periodoId: d.periodo,
-      tutorId: d.tutorA,
+      tutorAcademicoId: d.tutorA,
+      tutorComunitarioId: d.tutorComunitario,
       coordinadorId: d.coordinador,
       estado: 'en_curso',
       // La lista de integrantes se reemplaza completa: hay que reenviar a los
@@ -303,7 +352,11 @@ const CASOS: Caso[] = [
     nombre: 'PATCH /api/grupos/:id/estado',
     metodo: 'patch',
     ruta: (d) => `/api/grupos/${d.grupo}/estado`,
-    cuerpo: () => ({ estado: 'finalizado' }),
+    // 'suspendido' y no 'finalizado': esta matriz comprueba PERMISOS, y cerrar
+    // un proyecto exige ademas que los integrantes cumplan sus horas (regla de
+    // negocio, probada en aprobacion.test.ts). Con 'finalizado' el 409 de esa
+    // regla taparia lo unico que se quiere medir aqui.
+    cuerpo: () => ({ estado: 'suspendido' }),
     permitido: GESTION,
   },
   {
@@ -317,7 +370,8 @@ const CASOS: Caso[] = [
     nombre: 'PATCH /api/grupos/:id/integrantes/:idEstudiante',
     metodo: 'patch',
     ruta: (d) => `/api/grupos/${d.grupo}/integrantes/${d.estudianteA}`,
-    cuerpo: () => ({ estadoFinal: 'aprobado' }),
+    // Mismo motivo: 'aprobado' exige horas completas.
+    cuerpo: () => ({ estadoFinal: 'reprobado' }),
     permitido: GESTION,
   },
   {
@@ -521,8 +575,8 @@ describe('el rol no se puede falsear dentro del token', () => {
 });
 
 describe('cobertura de la matriz', () => {
-  it('cubre los 48 endpoints de la API', () => {
-    expect(CASOS).toHaveLength(48);
+  it('cubre los 55 endpoints de la API', () => {
+    expect(CASOS).toHaveLength(55);
   });
 
   it('todo caso declara al menos un rol autorizado', () => {

@@ -46,6 +46,8 @@ const TABLAS = [
   'plantillas_documento',
   'periodos_academicos',
   'solicitudes_cambio',
+  'historial_acciones',
+  'notificaciones',
   'usuarios',
 ];
 
@@ -54,6 +56,8 @@ export interface DatosSemilla {
   coordinador: string;
   tutorA: string;
   tutorB: string;
+  /** Segundo tutor del mismo grupo de prueba, de tipo comunitario. */
+  tutorComunitario: string;
   estudianteA: string;
   estudianteB: string;
   outsider: string;
@@ -64,6 +68,8 @@ export interface DatosSemilla {
   grupo: string;
   bitacoraPendiente: string;
   solicitud: string;
+  /** Aviso ya encolado, para poder probar el reintento de envio. */
+  notificacion: string;
 }
 
 export const PASSWORD_SEMILLA = 'pruebas123';
@@ -81,13 +87,14 @@ export async function sembrar(): Promise<DatosSemilla> {
     nombre: string,
     cedula: string,
     rol: string,
-    activo = true
+    activo = true,
+    tipoTutor: 'academico' | 'comunitario' | null = null
   ): Promise<string> {
     const { rows } = await pool.query<{ id_usuario: string }>(
-      `insert into usuarios (nombre_completo, cedula, email, password_hash, rol, activo)
-       values ($1, $2, $3, $4, $5, $6)
+      `insert into usuarios (nombre_completo, cedula, email, password_hash, rol, activo, tipo_tutor)
+       values ($1, $2, $3, $4, $5, $6, $7)
        returning id_usuario`,
-      [nombre, cedula, email, hash, rol, activo]
+      [nombre, cedula, email, hash, rol, activo, rol === 'tutor' ? (tipoTutor ?? 'academico') : null]
     );
     return rows[0].id_usuario;
   }
@@ -96,8 +103,14 @@ export async function sembrar(): Promise<DatosSemilla> {
   // toLowerCase(), asi que un correo con mayusculas seria inalcanzable.
   const admin = await crearUsuario('admin@test.local', 'Admin Prueba', 'V-00000001', 'admin');
   const coordinador = await crearUsuario('coordinador@test.local', 'Coordinador Prueba', 'V-00000002', 'coordinador');
-  const tutorA = await crearUsuario('tutoralfa@test.local', 'Tutor Alfa', 'V-00000003', 'tutor');
-  const tutorB = await crearUsuario('tutorbeta@test.local', 'Tutor Beta', 'V-00000004', 'tutor');
+  // tutorA es el ACADEMICO del grupo de prueba y tutorB es un tutor ajeno, que
+  // es como se comprueban los 403. tutorComunitario es el segundo tutor del
+  // mismo grupo: tiene que poder validar exactamente igual que tutorA.
+  const tutorA = await crearUsuario('tutoralfa@test.local', 'Tutor Alfa', 'V-00000003', 'tutor', true, 'academico');
+  const tutorB = await crearUsuario('tutorbeta@test.local', 'Tutor Beta', 'V-00000004', 'tutor', true, 'academico');
+  const tutorComunitario = await crearUsuario(
+    'tutorcomunitario@test.local', 'Tutor Comunitario', 'V-00000010', 'tutor', true, 'comunitario'
+  );
   const estudianteA = await crearUsuario('estudianteana@test.local', 'Estudiante Ana', 'V-00000005', 'estudiante');
   const estudianteB = await crearUsuario('estudiantebeto@test.local', 'Estudiante Beto', 'V-00000006', 'estudiante');
   const outsider = await crearUsuario('estudiantecarla@test.local', 'Estudiante Carla', 'V-00000007', 'estudiante');
@@ -127,10 +140,11 @@ export async function sembrar(): Promise<DatosSemilla> {
   const plantilla = pl[0].id_plantilla;
 
   const { rows: g } = await pool.query<{ id_grupo: string }>(
-    `insert into grupos_proyectos (nombre_proyecto, id_periodo, id_tutor, id_coordinador)
-     values ('Grupo de prueba', $1, $2, $3)
+    `insert into grupos_proyectos
+       (nombre_proyecto, id_periodo, id_tutor_academico, id_tutor_comunitario, id_coordinador)
+     values ('Grupo de prueba', $1, $2, $3, $4)
      returning id_grupo`,
-    [periodo, tutorA, coordinador]
+    [periodo, tutorA, tutorComunitario, coordinador]
   );
   const grupo = g[0].id_grupo;
 
@@ -148,6 +162,18 @@ export async function sembrar(): Promise<DatosSemilla> {
     [estudianteA, grupo]
   );
 
+  // Aviso de correo ya encolado: lo necesita la matriz de permisos para
+  // POST /api/notificaciones/:id/reintentar, que sin una fila responderia 404.
+  const { rows: n } = await pool.query<{ id_notificacion: string }>(
+    `insert into notificaciones
+       (id_destinatario, destinatario_email, destinatario_nombre, tipo, asunto, cuerpo)
+     values ($1, 'estudianteana@test.local', 'Estudiante Ana', 'bienvenida',
+             'Tu cuenta del Servicio Comunitario IUNAV', '<p>Bienvenida</p>')
+     returning id_notificacion`,
+    [estudianteA]
+  );
+  const notificacion = n[0].id_notificacion;
+
   // Solicitud de cambio pendiente del estudiante A: la resuelve la matriz de
   // permisos (PATCH /api/solicitudes/:id) y la listan GET /solicitudes(/mias).
   const { rows: s } = await pool.query<{ id_solicitud: string }>(
@@ -162,6 +188,7 @@ export async function sembrar(): Promise<DatosSemilla> {
     coordinador,
     tutorA,
     tutorB,
+    tutorComunitario,
     estudianteA,
     estudianteB,
     outsider,
@@ -171,6 +198,7 @@ export async function sembrar(): Promise<DatosSemilla> {
     plantilla,
     grupo,
     bitacoraPendiente: b[0].id_bitacora,
+    notificacion,
     solicitud: s[0].id_solicitud,
   };
 }
