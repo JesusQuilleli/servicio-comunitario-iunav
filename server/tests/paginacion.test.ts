@@ -18,7 +18,9 @@ import {
  */
 let datos: DatosSemilla;
 
-const USUARIOS_SEMILLA = 9;
+// 10 desde que el grupo de prueba tiene dos tutores: el academico y el
+// comunitario. Si cambia `sembrar()`, este numero cambia con el.
+const USUARIOS_SEMILLA = 10;
 
 beforeAll(async () => {
   await asegurarBaseDePruebas();
@@ -56,7 +58,7 @@ describe('GET /api/usuarios paginado', () => {
     expect([primera.status, segunda.status, tercera.status]).toEqual([200, 200, 200]);
     expect(primera.body.items).toHaveLength(4);
     expect(segunda.body.items).toHaveLength(4);
-    expect(tercera.body.items).toHaveLength(1);
+    expect(tercera.body.items).toHaveLength(USUARIOS_SEMILLA - 8);
     expect(segunda.body.pagina).toBe(2);
     expect(segunda.body.porPagina).toBe(4);
     for (const pagina of [primera, segunda, tercera]) {

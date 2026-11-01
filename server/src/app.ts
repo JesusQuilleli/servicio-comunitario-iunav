@@ -5,6 +5,7 @@ import { rateLimit } from 'express-rate-limit';
 import { ZodError } from 'zod';
 import { env } from './config/env.js';
 import { ApiError } from './lib/errors.js';
+import { HorasInsuficientesError } from './models/grupo.model.js';
 import { saludDb } from './db/pool.js';
 import { apiRouter } from './routes/index.js';
 
@@ -64,6 +65,14 @@ app.get('/api/health', async (_req: Request, res: Response) => {
         message: 'Datos inválidos',
         errores: err.issues.map((i) => ({ campo: i.path.join('.'), mensaje: i.message })),
       });
+      return;
+    }
+
+    if (err instanceof HorasInsuficientesError) {
+      // Ademas del mensaje, la lista de quien no llega y cuanto le falta: la
+      // pantalla de Proyectos la necesita para decirlo nombre por nombre en vez
+      // de dejar al coordinador adivinando.
+      res.status(err.status).json({ message: err.message, faltantes: err.faltantes });
       return;
     }
 

@@ -2,6 +2,9 @@ import type { NextFunction, Response } from 'express';
 import { z } from 'zod';
 import type { AuthRequest } from '../middleware/auth.js';
 import { ApiError } from '../lib/errors.js';
+import { registrarAccion } from '../lib/historial.js';
+import { encolarYEnviar } from '../lib/correo.js';
+import { plantillaProyectoFinalizado } from '../lib/plantillas-correo.js';
 import { borrarArchivo, guardarArchivo } from '../lib/archivos.js';
 import { leerPaginacion, respuestaPaginada } from '../lib/paginacion.js';
 import { archivoDeCampo } from '../middleware/subida.js';
@@ -32,20 +35,50 @@ const grupoSchema = z.object({
     .min(3, 'El nombre del proyecto debe tener al menos 3 caracteres')
     .max(120, 'El nombre del proyecto es demasiado largo'),
   periodoId: numeroOpcional,
-  tutorId: idOpcional,
+  // Dos tutores por proyecto. Siguen siendo opcionales: un proyecto puede
+  // crearse antes de tener asignada la tutoria, como ocurria con `tutorId`.
+  tutorAcademicoId: idOpcional,
+  tutorComunitarioId: idOpcional,
   coordinadorId: idOpcional,
   // Sin campos de URL: los documentos entran por `POST /:id/documentos`.
   estado: z.enum(estadosGrupo),
   integrantesIds: z.array(z.string().uuid('Estudiante inválido')).max(80).default([]),
 });
 
-const estadoSchema = z.object({ estado: z.enum(estadosGrupo) });
+// El motivo solo lo usa el administrador cuando fuerza una aprobacion con las
+// horas incompletas. Queda en el historial de acciones, no en la fila del grupo.
+const motivoOpcional = z
+  .union([z.string(), z.null()])
+  .optional()
+  .transform((v) => (v == null ? null : v.trim()))
+  .transform((v) => (v === '' ? null : v));
+
+const ESTADO_EN_ESPANOL: Record<string, string> = {
+  en_curso: 'en curso',
+  pendiente_aprobacion: 'pendiente de aprobación',
+  finalizado: 'finalizado',
+  suspendido: 'suspendido',
+};
+
+const ESTADO_FINAL_EN_ESPANOL: Record<string, string> = {
+  en_curso: 'en curso',
+  aprobado: 'aprobado',
+  reprobado: 'reprobado',
+};
+
+const estadoSchema = z.object({
+  estado: z.enum(estadosGrupo),
+  motivo: motivoOpcional,
+});
 
 const agregarSchema = z.object({
   estudiantesIds: z.array(z.string().uuid('Estudiante inválido')).min(1, 'Selecciona al menos un estudiante'),
 });
 
-const estadoFinalSchema = z.object({ estadoFinal: z.enum(estadosFinal) });
+const estadoFinalSchema = z.object({
+  estadoFinal: z.enum(estadosFinal),
+  motivo: motivoOpcional,
+});
 
 const filtrosSchema = z.object({
   periodo: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().int().positive().optional()),
@@ -101,6 +134,12 @@ export async function crearGrupo(req: AuthRequest, res: Response, next: NextFunc
     const body = grupoSchema.parse(req.body);
     const idGrupo = await model.crearGrupo(body);
     const grupo = await model.obtenerGrupo(idGrupo);
+    await registrarAccion(req, {
+      accion: 'grupo.crear',
+      entidad: 'grupo',
+      idEntidad: idGrupo,
+      descripcion: `Creó el proyecto "${body.nombreProyecto}"`,
+    });
     res.status(201).json({ grupo });
   } catch (err) {
     next(err);
@@ -113,6 +152,12 @@ export async function actualizarGrupo(req: AuthRequest, res: Response, next: Nex
     const { id } = req.params as { id: string };
     const body = grupoSchema.parse(req.body);
     const grupo = await model.actualizarGrupo(id, body);
+    await registrarAccion(req, {
+      accion: 'grupo.actualizar',
+      entidad: 'grupo',
+      idEntidad: id,
+      descripcion: `Editó el proyecto "${grupo.nombreProyecto}"`,
+    });
     res.json({ grupo });
   } catch (err) {
     next(err);
@@ -123,11 +168,70 @@ export async function cambiarEstado(req: AuthRequest, res: Response, next: NextF
   try {
     requiereUsuario(req);
     const { id } = req.params as { id: string };
-    const { estado } = estadoSchema.parse(req.body);
-    const grupo = await model.cambiarEstadoGrupo(id, estado as EstadoGrupo);
+    const usuario = requiereUsuario(req);
+    const { estado, motivo } = estadoSchema.parse(req.body);
+    const { grupo, forzado } = await model.cambiarEstadoGrupo(id, estado as EstadoGrupo, {
+      rol: usuario.rol,
+      motivo,
+    });
+
+    await registrarAccion(req, {
+      accion: forzado.length > 0 ? 'grupo.estado.forzado' : 'grupo.estado',
+      entidad: 'grupo',
+      idEntidad: id,
+      descripcion:
+        `Cambió el estado del proyecto "${grupo.nombreProyecto}" a ${ESTADO_EN_ESPANOL[estado]}` +
+        (forzado.length > 0
+          ? `, forzando la aprobación con ${forzado.length} integrante(s) sin completar sus horas`
+          : ''),
+      datos:
+        forzado.length > 0
+          ? {
+              motivo,
+              incompletos: forzado.map((f) => ({
+                nombre: f.nombreCompleto,
+                faltanDirectas: f.faltanDirectas,
+                faltanImpacto: f.faltanImpacto,
+              })),
+            }
+          : null,
+    });
+
+    if (estado === 'finalizado') {
+      await avisarProyectoFinalizado(grupo);
+    }
+
     res.json({ grupo });
   } catch (err) {
     next(err);
+  }
+}
+
+/**
+ * Avisa a los integrantes de que su proyecto se cerro.
+ *
+ * **No lanza.** El cambio de estado ya esta guardado; un fallo de correo no
+ * puede convertirlo en un error. Lo que no salga queda en la cola.
+ */
+async function avisarProyectoFinalizado(grupo: model.DetalleGrupo): Promise<void> {
+  try {
+    for (const integrante of grupo.listaIntegrantes) {
+      if (!integrante.activo) continue;
+      const aviso = plantillaProyectoFinalizado({
+        nombre: integrante.nombreCompleto,
+        proyecto: grupo.nombreProyecto,
+      });
+      await encolarYEnviar({
+        idDestinatario: integrante.idUsuario,
+        destinatarioEmail: integrante.email,
+        destinatarioNombre: integrante.nombreCompleto,
+        tipo: 'proyecto_finalizado',
+        asunto: aviso.asunto,
+        cuerpo: aviso.cuerpo,
+      });
+    }
+  } catch (err) {
+    console.error('No se pudo avisar del cierre del proyecto:', err);
   }
 }
 
@@ -138,6 +242,12 @@ export async function agregarIntegrantes(req: AuthRequest, res: Response, next: 
     const { estudiantesIds } = agregarSchema.parse(req.body);
     const resultado = await model.agregarIntegrantes(id, estudiantesIds);
     const grupo = await model.obtenerGrupo(id);
+    await registrarAccion(req, {
+      accion: 'grupo.integrantes.agregar',
+      entidad: 'grupo',
+      idEntidad: id,
+      descripcion: `Agregó ${resultado.agregados} estudiante(s) al proyecto "${grupo?.nombreProyecto ?? id}"`,
+    });
     res.json({ agregados: resultado.agregados, grupo });
   } catch (err) {
     next(err);
@@ -150,6 +260,13 @@ export async function quitarIntegrante(req: AuthRequest, res: Response, next: Ne
     const { id, idEstudiante } = req.params as { id: string; idEstudiante: string };
     await model.quitarIntegrante(id, idEstudiante);
     const grupo = await model.obtenerGrupo(id);
+    await registrarAccion(req, {
+      accion: 'grupo.integrantes.quitar',
+      entidad: 'grupo',
+      idEntidad: id,
+      descripcion: `Quitó un estudiante del proyecto "${grupo?.nombreProyecto ?? id}"`,
+      datos: { idEstudiante },
+    });
     res.json({ grupo });
   } catch (err) {
     next(err);
@@ -164,9 +281,29 @@ export async function cambiarEstadoFinalIntegrante(
   try {
     requiereUsuario(req);
     const { id, idEstudiante } = req.params as { id: string; idEstudiante: string };
-    const { estadoFinal } = estadoFinalSchema.parse(req.body);
-    await model.cambiarEstadoFinalIntegrante(id, idEstudiante, estadoFinal);
+    const usuario = requiereUsuario(req);
+    const { estadoFinal, motivo } = estadoFinalSchema.parse(req.body);
+    const { forzado } = await model.cambiarEstadoFinalIntegrante(id, idEstudiante, estadoFinal, {
+      rol: usuario.rol,
+      motivo,
+    });
     const grupo = await model.obtenerGrupo(id);
+
+    await registrarAccion(req, {
+      accion: forzado.length > 0 ? 'grupo.integrante.estado.forzado' : 'grupo.integrante.estado',
+      entidad: 'grupo',
+      idEntidad: id,
+      descripcion:
+        `Marcó a un integrante de "${grupo?.nombreProyecto ?? id}" como ` +
+        `${ESTADO_FINAL_EN_ESPANOL[estadoFinal]}` +
+        (forzado.length > 0 ? ', sin que completara sus horas' : ''),
+      datos: {
+        idEstudiante,
+        estadoFinal,
+        ...(forzado.length > 0 ? { motivo, faltaban: forzado[0] } : {}),
+      },
+    });
+
     res.json({ grupo });
   } catch (err) {
     next(err);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -31,6 +31,7 @@ import {
   type DashboardPayload,
   type GrupoEstudiante,
   type Metas,
+  type PeriodoAcademico,
   type RegistroHoras,
   type TipoRegistro,
 } from "@/lib/types";
@@ -86,15 +87,51 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
   const { data: datosGrupos } = useApiData<{ grupos: GrupoEstudiante[] }>("/bitacoras/grupos");
   const { data: datosMetas } = useApiData<{ metas: Metas }>("/bitacoras/metas");
   const { data: dash } = useApiData<DashboardPayload>("/dashboard", esEstudiante);
+  // Los periodos hacen falta para deducir la semana a partir de la fecha: es la
+  // misma cuenta que hace el reporte semanal en el servidor.
+  const { data: datosPeriodos } = useApiData<{ periodos: PeriodoAcademico[] }>("/periodos");
   const grupos = datosGrupos?.grupos ?? [];
+
+  const metas = datosMetas?.metas ?? null;
+  const periodos = useMemo(() => datosPeriodos?.periodos ?? [], [datosPeriodos]);
+
+  /**
+   * Periodo contra el que se cuenta la semana: el que la configuración marca
+   * como activo y, si no hay, el primero que venga marcado `activo`.
+   */
+  const periodoActivo = useMemo(
+    () =>
+      periodos.find((p) => p.idPeriodo === metas?.periodoActivo) ??
+      periodos.find((p) => p.activo) ??
+      null,
+    [periodos, metas]
+  );
 
   const [borrador, setBorrador] = useState<Borrador>({
     ...BORRADOR_VACIO,
     tipo: esComunitario ? "comunitario" : "social",
     fecha: new Date().toISOString().slice(0, 10),
   });
+  /**
+   * Semana del período a la que pertenece la fecha elegida:
+   * `floor((fecha - inicio) / 7) + 1`, la misma fórmula que usa el servidor en
+   * el reporte semanal. `null` cuando no hay período activo o la fecha cae
+   * fuera, y entonces el campo vuelve a ser editable.
+   */
+  const semanaCalculada = useMemo(
+    () => calcularSemana(borrador.fecha, periodoActivo),
+    [borrador.fecha, periodoActivo]
+  );
+
   const [archivo, setArchivo] = useState<File | null>(null);
   const [quitarEvidencia, setQuitarEvidencia] = useState(false);
+
+  // Se sincroniza durante el render y no desde un efecto, igual que
+  // `ConfiguracionesView` con los datos del servidor: un efecto pintaría primero
+  // la semana vieja y la corregiría después, con un parpadeo visible.
+  if (semanaCalculada !== null && borrador.semana !== String(semanaCalculada)) {
+    setBorrador((b) => ({ ...b, semana: String(semanaCalculada) }));
+  }
 
   const [editando, setEditando] = useState<string | null>(null);
   const [borrando, setBorrando] = useState<string | null>(null);
@@ -426,8 +463,18 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
                     placeholder="1-52"
                     value={borrador.semana}
                     onChange={(e) => setBorrador((b) => ({ ...b, semana: e.target.value }))}
+                    // Con un período activo la semana sale de la fecha y no se
+                    // escribe a mano: al teclearla, el número dejaba de coincidir
+                    // con el que calculan los reportes y el mismo registro
+                    // aparecía en dos semanas distintas según dónde se mirara.
+                    readOnly={semanaCalculada !== null}
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    {semanaCalculada !== null
+                      ? `Calculada a partir de la fecha y del inicio del período ${periodoActivo?.nombrePeriodo ?? ""}.`
+                      : "Sin período activo: indica la semana a mano."}
+                  </p>
                 </div>
               )}
 
@@ -684,4 +731,25 @@ export function RegistroHorasView({ tipo }: { tipo: "comunitario" | "servicio" }
       </Card>
     </div>
   );
+}
+
+
+/**
+ * Semana del período académico a la que pertenece una fecha.
+ *
+ * Es la misma cuenta que hace el servidor para el reporte semanal
+ * (`floor((fecha - inicio) / 7) + 1`), para que el número que ve el estudiante
+ * y el que sale en el PDF sean el mismo. Devuelve `null` si no hay período o si
+ * la fecha queda fuera de él.
+ */
+function calcularSemana(fecha: string, periodo: PeriodoAcademico | null): number | null {
+  if (!periodo || !fecha) return null;
+  const dia = Date.parse(`${fecha}T00:00:00Z`);
+  const inicio = Date.parse(`${periodo.fechaInicio.slice(0, 10)}T00:00:00Z`);
+  const fin = Date.parse(`${periodo.fechaFin.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(dia) || Number.isNaN(inicio) || Number.isNaN(fin)) return null;
+  if (dia < inicio || dia > fin) return null;
+
+  const dias = Math.floor((dia - inicio) / 86_400_000);
+  return Math.floor(dias / 7) + 1;
 }

@@ -1,11 +1,26 @@
 export type UserRole = "admin" | "coordinador" | "tutor" | "estudiante";
 
+/**
+ * Subtipo del rol `tutor`. No es un rol aparte: ambos entran igual al sistema y
+ * ambos validan las horas de su grupo. Es `null` para cualquier otro rol.
+ */
+export type TipoTutor = "academico" | "comunitario";
+
+export const TIPOS_TUTOR: TipoTutor[] = ["academico", "comunitario"];
+
+export const tipoTutorLabels: Record<TipoTutor, string> = {
+  academico: "Tutor académico",
+  comunitario: "Tutor comunitario",
+};
+
 export interface Usuario {
   idUsuario: string;
   nombreCompleto: string;
   cedula: string;
   email: string;
   rol: UserRole;
+  /** Solo cuando `rol` es `tutor`. */
+  tipoTutor: TipoTutor | null;
   firmaUrl: string | null;
   selloUrl: string | null;
   activo: boolean;
@@ -189,6 +204,17 @@ export const roleLabels: Record<UserRole, string> = {
   estudiante: "Estudiante",
 };
 
+/** Etiqueta del rol que distingue los dos tipos de tutor. */
+export function etiquetaDeRol(rol: UserRole, tipoTutor: TipoTutor | null): string {
+  if (rol === "tutor" && tipoTutor) return tipoTutorLabels[tipoTutor];
+  return roleLabels[rol];
+}
+
+/** Un usuario es tutor de un proyecto si ocupa cualquiera de los dos puestos. */
+export function esTutorDe(grupo: Grupo, idUsuario: string): boolean {
+  return grupo.tutorAcademicoId === idUsuario || grupo.tutorComunitarioId === idUsuario;
+}
+
 export type EstadoGrupo = "en_curso" | "pendiente_aprobacion" | "finalizado" | "suspendido";
 
 export type EstadoFinal = "en_curso" | "aprobado" | "reprobado";
@@ -200,6 +226,10 @@ export interface Integrante {
   email: string;
   activo: boolean;
   estadoFinal: EstadoFinal | null;
+  /** Horas aprobadas de trabajo directo (bitácora comunitaria) en este grupo. */
+  horasDirectas: number;
+  /** Horas aprobadas de impacto social/ambiental del estudiante. */
+  horasImpacto: number;
   horasAprobadas: number;
   horasPendientes: number;
 }
@@ -210,8 +240,10 @@ export interface Grupo {
   estado: EstadoGrupo;
   periodoId: number | null;
   periodo: string | null;
-  tutorId: string | null;
-  tutorNombre: string | null;
+  tutorAcademicoId: string | null;
+  tutorAcademicoNombre: string | null;
+  tutorComunitarioId: string | null;
+  tutorComunitarioNombre: string | null;
   coordinadorId: string | null;
   coordinadorNombre: string | null;
   proyectoEscritoUrl: string | null;
@@ -305,4 +337,104 @@ export interface ResultadoImportacion {
   asignados: number;
   errores: ErrorImportacion[];
   claves: ClaveImportacion[];
+}
+// ------------------------------------------------------------------
+// Historial de acciones administrativas y de configuración
+// ------------------------------------------------------------------
+
+export const ENTIDADES_HISTORIAL = [
+  "configuracion",
+  "usuario",
+  "grupo",
+  "periodo",
+  "plantilla",
+  "solicitud",
+] as const;
+
+export type EntidadHistorial = (typeof ENTIDADES_HISTORIAL)[number];
+
+export const entidadHistorialLabels: Record<EntidadHistorial, string> = {
+  configuracion: "Configuración",
+  usuario: "Usuarios",
+  grupo: "Proyectos",
+  periodo: "Períodos",
+  plantilla: "Plantillas",
+  solicitud: "Solicitudes",
+};
+
+/** Una fila del historial. `datos` lleva el antes/después cuando aplica. */
+export interface EventoHistorial {
+  idEvento: string;
+  idActor: string | null;
+  actorNombre: string;
+  actorRol: string;
+  accion: string;
+  entidad: EntidadHistorial;
+  idEntidad: string | null;
+  descripcion: string;
+  datos: Record<string, unknown> | null;
+  creadoEn: string;
+}
+
+export interface RespuestaHistorial {
+  eventos: EventoHistorial[];
+  items: EventoHistorial[];
+  total: number;
+  pagina: number;
+  porPagina: number;
+}
+
+// ------------------------------------------------------------------
+// Notificaciones por correo (bandeja de salida)
+// ------------------------------------------------------------------
+
+export const TIPOS_NOTIFICACION = [
+  "bienvenida",
+  "horas_validadas",
+  "meta_alcanzada",
+  "proyecto_finalizado",
+] as const;
+
+export type TipoNotificacion = (typeof TIPOS_NOTIFICACION)[number];
+
+export const tipoNotificacionLabels: Record<TipoNotificacion, string> = {
+  bienvenida: "Bienvenida",
+  horas_validadas: "Horas validadas",
+  meta_alcanzada: "Meta completada",
+  proyecto_finalizado: "Proyecto finalizado",
+};
+
+export const ESTADOS_NOTIFICACION = ["pendiente", "enviada", "fallida"] as const;
+
+export type EstadoNotificacion = (typeof ESTADOS_NOTIFICACION)[number];
+
+export const estadoNotificacionLabels: Record<EstadoNotificacion, string> = {
+  pendiente: "Pendiente",
+  enviada: "Enviada",
+  fallida: "Fallida",
+};
+
+export interface Notificacion {
+  idNotificacion: string;
+  idDestinatario: string | null;
+  destinatarioEmail: string;
+  destinatarioNombre: string;
+  tipo: TipoNotificacion;
+  asunto: string;
+  cuerpo: string;
+  estado: EstadoNotificacion;
+  intentos: number;
+  error: string | null;
+  creadoEn: string;
+  enviadoEn: string | null;
+}
+
+export interface RespuestaNotificaciones {
+  notificaciones: Notificacion[];
+  resumen: Record<EstadoNotificacion, number>;
+  /** `false` cuando no hay SMTP: la pantalla lo explica en vez de mostrar fallos sin contexto. */
+  correoConfigurado: boolean;
+  total: number;
+  pagina: number;
+  porPagina: number;
 }

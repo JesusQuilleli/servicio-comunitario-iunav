@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
-import type { UserRole, Usuario } from "@/lib/types";
+import { TIPOS_TUTOR, tipoTutorLabels } from "@/lib/types";
+import type { TipoTutor, UserRole, Usuario } from "@/lib/types";
 
 const ROLES: { value: UserRole; label: string }[] = [
   { value: "estudiante", label: "Estudiante" },
@@ -27,6 +28,9 @@ export function RegistroUsuariosView() {
   const [cedula, setCedula] = useState("");
   const [email, setEmail] = useState("");
   const [rol, setRol] = useState<UserRole>("estudiante");
+  // El servidor exige el tipo cuando el rol es tutor: un tutor sin tipo no se
+  // puede asignar a ninguno de los dos puestos de un proyecto.
+  const [tipoTutor, setTipoTutor] = useState<TipoTutor>("academico");
   const [password, setPassword] = useState("");
   const [confirmar, setConfirmar] = useState("");
 
@@ -60,14 +64,19 @@ export function RegistroUsuariosView() {
         email: email.trim(),
         password,
         rol,
+        ...(rol === "tutor" ? { tipoTutor } : {}),
       });
-      setExito(`Usuario "${data.usuario.nombreCompleto}" (${rol}) registrado correctamente.`);
+      setExito(
+        `Usuario "${data.usuario.nombreCompleto}" ` +
+          `(${rol === "tutor" ? tipoTutorLabels[tipoTutor] : rol}) registrado correctamente.`
+      );
       setNombreCompleto("");
       setCedula("");
       setEmail("");
       setPassword("");
       setConfirmar("");
       setRol("estudiante");
+      setTipoTutor("academico");
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string }; status?: number } };
       const status = axiosError?.response?.status;
@@ -159,6 +168,33 @@ export function RegistroUsuariosView() {
                   </select>
                 </div>
               </div>
+
+              {rol === "tutor" && (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="tipoTutor" className="text-sm font-medium text-foreground">
+                      Tipo de tutor
+                    </label>
+                    <select
+                      id="tipoTutor"
+                      value={tipoTutor}
+                      onChange={(e) => setTipoTutor(e.target.value as TipoTutor)}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      {TIPOS_TUTOR.map((t) => (
+                        <option key={t} value={t}>
+                          {tipoTutorLabels[t]}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      El académico guía el proyecto; el comunitario representa a la
+                      institución donde se presta el servicio. Cada proyecto lleva uno de
+                      cada tipo y ambos validan horas.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">

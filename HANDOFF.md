@@ -18,7 +18,7 @@
 | Commit `fff9d5b` / `9a1ed13` | Vitest + Supertest: matriz de permisos codificada como dato |
 | **Sin commitear** | Fases 1 a 7 completas: archivos, corrección de bitácoras, metas, contraseñas temporales, reportes, rutas por módulo y limpieza de Supabase. **Son 42 archivos modificados, 39 borrados y 40 nuevos sin rastrear: nada de eso está en un commit todavía.** |
 
-**Módulos del menú (9), todos contra la API real:** Registro de Usuarios, Gestión de Usuarios, Grupos y Proyectos, Bitácora Comunitario, Servicio Social y Ambiental, Validación, Configuraciones, **Reportes** y **Mi contraseña** (este último es voluntario, no obligatorio).
+**Módulos del menú (10), todos contra la API real:** Registro de Usuarios, Gestión de Usuarios, Grupos y Proyectos, Bitácora Comunitario, Servicio Social y Ambiental, Validación, Configuraciones, **Historial**, **Reportes** y **Mi contraseña** (este último es voluntario, no obligatorio).
 
 > **Cada módulo tiene su URL.** La navegación ya no es un `switch` sobre `useState`: son rutas reales de App Router bajo `src/app/(panel)/`, el menú usa `Link` y el módulo activo se deduce de `usePathname()`. Se puede enlazar a "la vista de Reportes", usar el botón atrás y recargar sin perder el estado.
 
@@ -32,7 +32,8 @@
 | `/servicio` | Servicio social y ambiental | los 4 |
 | `/validacion` | Validación de horas | tutor |
 | `/configuracion` | Configuración y plantillas | admin, coordinador |
-| `/reportes` | Reportes y certificados | admin, coordinador, tutor |
+| `/historial` | Historial de acciones | admin, coordinador |
+| `/reportes` | Reportes y certificados | los 4 — el estudiante solo ve su reporte semanal |
 | `/password` | Mi contraseña | los 4 |
 
 > **Validación es solo del tutor** (decisión de producto, ya aplicada en las tres piezas):
@@ -67,9 +68,9 @@ HANDOFF.md              este archivo
 - **Reportes:** consolidado de horas en **PDF y Excel**, acta de culminación y certificado por estudiante, generados en memoria y servidos con `Content-Disposition`. Solo cuentan las horas **aprobadas**; las pendientes van aparte y el certificado sale marcado "no acreditado" si el estudiante no llega a las metas.
 - **Dashboards** por rol, con datos reales.
 
-**Cómo se verificó:** `typecheck` y `build` de ambos proyectos, ESLint y `tsc` de Next limpios, **402 pruebas automatizadas en verde** (`cd server; npm test`) y las rutas del panel probadas contra el server de producción (307 correctos para sesión ausente y rol insuficiente).
+**Cómo se verificó:** `typecheck` y `build` de ambos proyectos, ESLint y `tsc` de Next limpios, **573 pruebas automatizadas en verde** (`cd server; npm test`) y las rutas del panel probadas contra el server de producción (307 correctos para sesión ausente y rol insuficiente).
 
-> Ese trabajo ya no depende del historial del chat: la matriz de permisos de la sección 4 está **codificada como dato** en `server/tests/permisos.test.ts`, no reescrita a mano, y un test verifica que la matriz siga cubriendo los 43 endpoints.
+> Ese trabajo ya no depende del historial del chat: la matriz de permisos de la sección 4 está **codificada como dato** en `server/tests/permisos.test.ts`, no reescrita a mano, y un test verifica que la matriz siga cubriendo los 55 endpoints.
 >
 > **Carga masiva:** plantilla .xlsx con cabecera `nombreCompleto, cedula, email, grupo`
 > (el parser acepta `correo` como alias y normaliza mayúsculas/tildes; `grupo` es
@@ -153,7 +154,7 @@ Además, por la misma jerarquía: `POST /api/auth/register` ahora es **admin + c
 
 ## 4. Matriz de permisos actual
 
-**48 endpoints**, extraída de `server/tests/permisos.test.ts` (constante `CASOS`), que es la misma fuente que ejecuta las pruebas.
+**55 endpoints**, extraída de `server/tests/permisos.test.ts` (constante `CASOS`), que es la misma fuente que ejecuta las pruebas.
 
 | Endpoint | admin | coordinador | tutor | estudiante |
 |---|:-:|:-:|:-:|:-:|
@@ -163,10 +164,17 @@ Además, por la misma jerarquía: `POST /api/auth/register` ahora es **admin + c
 | `PATCH /api/auth/perfil` | ✅ | ✅ | ✅ | ✅ |
 | `GET /api/busqueda` | ✅ | ✅ | ✅ | ✅ |
 | `GET /api/solicitudes` | ✅ | ✅ | ❌ | ❌ |
+| `GET /api/historial` | ✅ | ✅ | ❌ | ❌ |
+| `GET /api/historial/acciones` | ✅ | ✅ | ❌ | ❌ |
+| `GET /api/notificaciones` | ✅ | ❌ | ❌ | ❌ |
+| `POST /api/notificaciones/reintentar-todas` | ✅ | ❌ | ❌ | ❌ |
+| `POST /api/notificaciones/:id/reintentar` | ✅ | ❌ | ❌ | ❌ |
 | `GET /api/solicitudes/mias` | ✅ | ✅ | ✅ | ✅ |
 | `PATCH /api/solicitudes/:id` | ✅ | ✅ | ❌ | ❌ |
 | `POST /api/usuarios/:id/password` | ✅ | ❌ | ❌ | ❌ |
 | `GET /api/dashboard` | ✅ | ✅ | ✅ | ✅ |
+| `GET /api/reportes/semanas` | ✅ | ✅ | ✅ | ✅ |
+| `GET /api/reportes/semanal.pdf` | ✅ | ✅ | ✅ | ✅ |
 | `GET /api/reportes/consolidado-horas.pdf` | ✅ | ✅ | ✅ | ❌ |
 | `GET /api/reportes/consolidado-horas.xlsx` | ✅ | ✅ | ✅ | ❌ |
 | `GET /api/reportes/acta/:idGrupo.pdf` | ✅ | ✅ | ✅ | ❌ |
@@ -210,7 +218,8 @@ Notas sobre las filas que no son obvias:
 
 - `POST /api/auth/login` es público y por eso **no está en la matriz**: se prueba aparte en `auth.test.ts`.
 - `GET /api/auth/me`, `GET /api/dashboard` y `GET /api/periodos` solo exigen autenticación: los tres hacen falta para el perfil del estudiante, que no gestiona nada.
-- **Los reportes son `gestion` + tutor.** El estudiante no baja ninguno. Y `requireRole` no basta: el tutor además tiene que ser dueño del grupo o tener al estudiante, comprobado en `reporte.model.ts` (`esIntegranteDeTutor`), no solo en la ruta.
+- **El reporte semanal lo baja TODO el mundo, el estudiante incluido** (`GET /api/reportes/semanas` y `GET /api/reportes/semanal.pdf`). Esos dos no llevan `requireRole`: el alcance lo resuelve el controlador según quién pregunta, como ya hacen `/busqueda` y `/archivos`. Al estudiante se le **fuerza** su propio `estudianteId`, se mande lo que se mande en la query string.
+- **Los demás reportes son `gestion` + tutor.** El estudiante no baja ninguno. Y `requireRole` no basta: el tutor además tiene que ser dueño del grupo o tener al estudiante, comprobado en `reporte.model.ts` (`esIntegranteDeTutor`), no solo en la ruta.
 - `POST /api/usuarios/:id/firma (ajena)` aparece con ❌ para los no admin **aunque la ruta permita el caso legítimo**: firmar la propia firma lo hace cualquiera, y el `403` llega desde la lógica de negocio del controlador, no desde `requireRole`. Por eso la matriz prueba explícitamente el caso "ajena".
 - **`POST /api/auth/register` con coordinador**: ✅* = el coordinador crea solo **estudiantes y tutores**; la creación de administradores y coordinadores devuelve `403` (controlador, no `requireRole`). La matriz prueba ambos caminos.
 - **`PATCH /api/auth/perfil`**: cualquiera edita **su propio** perfil. El estudiante genera una solicitud de cambio (201, la resuelve coordinación); los demás roles aplican el cambio en el acto (200).
@@ -225,7 +234,7 @@ Notas sobre las filas que no son obvias:
 
 ```powershell
 cd server
-npm test              # 402 pruebas en 10 archivos, ~2 min
+npm test              # 573 pruebas en 16 archivos, ~3 min
 npm run test:watch    # durante el desarrollo
 npm run typecheck:tests
 npm run db:test       # recrea app_iunav_test desde cero (aborta si el nombre no termina en _test)
@@ -235,7 +244,7 @@ npm run db:test       # recrea app_iunav_test desde cero (aborta si el nombre no
 |---|---:|---|
 | `tests/humo.test.ts` | 3 | La app arranca, `/api/health` responde, la resolución `.js` → `.ts` funciona |
 | `tests/auth.test.ts` | 20 | Login, `/auth/me`, `/auth/register` (incluida la jerarquía coordinador → solo estudiante/tutor y el 409 de cédula duplicada) |
-| `tests/permisos.test.ts` | 262 | Matriz de 43 endpoints × 4 roles, token ausente e inválido, y cobertura de la matriz |
+| `tests/permisos.test.ts` | 334 | Matriz de 55 endpoints × 4 roles, token ausente e inválido, y cobertura de la matriz |
 | `tests/archivos.test.ts` | 31 | Subida y descarga autenticada, tipos y tamaños inválidos |
 | `tests/documentos.test.ts` | 22 | Proyecto escrito, diapositivas, firma y sello |
 | `tests/passwords.test.ts` | 19 | Cambio propio, reset del admin, claim `tmp`, bloqueo de rutas |
@@ -243,6 +252,11 @@ npm run db:test       # recrea app_iunav_test desde cero (aborta si el nombre no
 | `tests/pdf.test.ts` | 9 | Maquetación del PDF: membrete, coordenadas de texto, truncado de celdas largas, 1 página sin páginas extra por el pie |
 | `tests/importar.test.ts` | 9 | Plantilla .xlsx descargable, alta en lote con la cédula como clave inicial, errores por fila, clave generada si la cédula no cumple la política, archivos inválidos |
 | `tests/subida-parcial.test.ts` | 2 | Archivos que llegan a medias |
+| `tests/historial.test.ts` | 13 | Que cada acción administrativa deje rastro, con el valor anterior; filtros y paginación |
+| `tests/tutores.test.ts` | 17 | Los dos tutores validan horas del mismo grupo; el acta nombra a ambos; el alta exige el tipo |
+| `tests/aprobacion.test.ts` | 17 | 409 al aprobar sin las horas, forzado del admin con motivo, y que editar no deje pasarse de la meta |
+| `tests/semanal.test.ts` | 18 | Cálculo de la semana desde el período y que un estudiante no pueda leer las actividades de otro |
+| `tests/notificaciones.test.ts` | 17 | Que un SMTP caído no deshaga el alta; avisos de avance y reintentos |
 
 ### Decisiones ya tomadas (no volver a abrir)
 
@@ -267,9 +281,9 @@ npm run db:test       # recrea app_iunav_test desde cero (aborta si el nombre no
 
 Login correcto (y sin filtrar el hash), contraseña incorrecta, correo inexistente con el **mismo mensaje**, email malformado, cuenta desactivada, insensibilidad a mayúsculas, `/auth/me` con token válido / ausente / con firma manipulada / con rol alterado, y `/auth/register` (alta, duplicado, contraseña corta, rol inválido, sin token). Sumados los 4 casos nuevos de la jerarquía: el coordinador crea estudiante y tutor (201), no puede crear coordinador ni admin (403), el administrador crea un coordinador (201), y la cédula duplicada responde 409.
 
-### 5.3 Matriz de permisos — 262 casos
+### 5.3 Matriz de permisos — 334 casos
 
-172 de la matriz (43 endpoints × 4 roles), 86 de token ausente e inválido (43 × 2), 2 de intento de falsear el rol dentro del token y 2 que vigilan la propia matriz: uno que **falla si aparece un endpoint nuevo sin declarar su permiso**, y otro que falla si un caso no autoriza a ningún rol.
+220 de la matriz (55 endpoints × 4 roles), 110 de token ausente e inválido (55 × 2), 2 de intento de falsear el rol dentro del token y 2 que vigilan la propia matriz: uno que **falla si aparece un endpoint nuevo sin declarar su permiso**, y otro que falla si un caso no autoriza a ningún rol.
 
 ### 5.4 Pruebas manuales con los 4 roles
 
@@ -396,6 +410,6 @@ Lo que queda, en el orden en que más bloquea a un usuario real:
 - Si se toca el esquema, siempre `npm run db:schema` (usa `create table if not exists`, es idempotente) y luego `npm run db:seed -- --confirm-seed`.
 - **En una VPS, los secretos no están en el repo.** Viven en `/etc/iunav/server.env` (modo 640, grupo `iunav`), que genera `deploy/instalar.sh`. Ese archivo nunca se versiona.
 - El remoto de git para desplegar tiene que ser **privado**: en el historial están los commits viejos con la contraseña de Supabase que se borró del árbol de trabajo. Antes de publicar en cualquier sitio, rotar esa contraseña.
-- **Las pruebas nunca tocan `app_iunav`.** `tests/setup.ts` reemplaza la base antes de que se importe el pool, y `npm run db:test` se niega a dropear cualquier nombre que no termine en `_test`. Verificado tras 402 pruebas: `app_iunav` seguía en 8 usuarios / 4 grupos / 8 integrantes / 12 bitácoras / 10 servicios / 5 plantillas / 1 periodo.
+- **Las pruebas nunca tocan `app_iunav`.** `tests/setup.ts` reemplaza la base antes de que se importe el pool, y `npm run db:test` se niega a dropear cualquier nombre que no termine en `_test`. Verificado tras 573 pruebas: `app_iunav` seguía en 8 usuarios / 4 grupos / 8 integrantes / 12 bitácoras / 10 servicios / 5 plantillas / 1 periodo.
 - Para cambiar la matriz de permisos, edita la constante `CASOS` en `server/tests/permisos.test.ts` y la tabla de la sección 4. Los dos deben seguir diciendo lo mismo, y el test de cobertura falla si se te olvida uno de los dos.
 - `Servicio-Comunitario-IUNAV-Estado.pdf` está en la raíz, sin rastrear por git. Es documentación, no código: no lo borres sin leerlo.

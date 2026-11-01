@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Informe de Correcciones — Sistema de Servicio Comunitario IUNAV</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+
+  :root {
+    --verde: #0f5132;
+    --verde-claro: #e8f2ec;
+    --gris: #5b6670;
+    --borde: #d8dee3;
+    --ambar: #8a5a00;
+    --ambar-claro: #fdf3e0;
+    --rojo: #8f1d1d;
+    --rojo-claro: #fbeaea;
+    --azul: #14304a;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.4pt;
+    line-height: 1.5;
+    color: #1c2328;
+    margin: 0;
+  }
+
+  /* ---------- Portada ---------- */
+  .portada {
+    height: 240mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-top: 14px solid var(--verde);
+    padding-top: 8mm;
+    page-break-after: always;
+  }
+  .portada .kicker {
+    font-size: 9pt; letter-spacing: 2.4px; text-transform: uppercase;
+    color: var(--verde); font-weight: 700; margin-bottom: 6mm;
+  }
+  .portada h1 {
+    font-size: 30pt; line-height: 1.15; margin: 0 0 5mm; color: var(--verde);
+    font-weight: 700; letter-spacing: -0.4px;
+  }
+  .portada .sub { font-size: 13pt; color: var(--gris); margin-bottom: 14mm; max-width: 145mm; }
+  .portada .meta {
+    border-top: 1px solid var(--borde); padding-top: 5mm;
+    font-size: 9.5pt; color: var(--gris);
+  }
+  .portada .meta div { margin-bottom: 2mm; }
+  .portada .sello {
+    margin-top: 10mm; background: var(--verde-claro); border-left: 4px solid var(--verde);
+    padding: 5mm 6mm; max-width: 135mm; font-size: 9.5pt;
+  }
+
+  /* ---------- Estructura ---------- */
+  h2 {
+    font-size: 15pt; color: var(--verde); margin: 0 0 4mm;
+    padding-bottom: 2mm; border-bottom: 2px solid var(--verde);
+    page-break-after: avoid;
+  }
+  h3 { font-size: 11.5pt; color: var(--azul); margin: 6mm 0 2.5mm; page-break-after: avoid; }
+  h4 { font-size: 10.4pt; margin: 4mm 0 1.5mm; page-break-after: avoid; }
+
+  section { page-break-before: always; }
+  section:first-of-type { page-break-before: auto; }
+
+  p { margin: 0 0 2.5mm; text-align: justify; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.2mm; }
+
+  /* ---------- Tablas ---------- */
+  table {
+    width: 100%; border-collapse: collapse; margin: 2mm 0 4mm;
+    font-size: 9.4pt; page-break-inside: avoid;
+  }
+  th {
+    background: var(--verde); color: #fff; text-align: left;
+    padding: 2.2mm 2.5mm; font-weight: 600; border: 1px solid var(--verde);
+  }
+  td { padding: 2mm 2.5mm; border: 1px solid var(--borde); vertical-align: top; }
+  tbody tr:nth-child(even) td { background: #f7f9fa; }
+  td.centro, th.centro { text-align: center; }
+  td.num, th.num { text-align: right; }
+
+  /* ---------- Cajas ---------- */
+  .nota, .aviso, .tip {
+    padding: 3.5mm 4.5mm; margin: 3mm 0 4mm;
+    page-break-inside: avoid; font-size: 9.8pt;
+  }
+  .nota { background: var(--verde-claro); border-left: 4px solid var(--verde); }
+  .aviso { background: var(--rojo-claro); border-left: 4px solid var(--rojo); }
+  .tip { background: var(--ambar-claro); border-left: 4px solid var(--ambar); }
+  /* Solo el PRIMER strong es el titulo de la caja. Sin el :first-child, un
+     strong dentro del texto se volvia bloque y partia la frase en dos. */
+  .nota > strong:first-child,
+  .aviso > strong:first-child,
+  .tip > strong:first-child { display: block; margin-bottom: 1.5mm; }
+
+  /* ---------- Fichas de corrección ---------- */
+  .correccion {
+    border: 1px solid var(--borde); border-left: 5px solid var(--verde);
+    padding: 3.5mm 4.5mm; margin: 0 0 4mm; page-break-inside: avoid;
+  }
+  .correccion .cabecera {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid var(--borde); padding-bottom: 1.8mm; margin-bottom: 2.5mm;
+  }
+  .correccion .titulo { font-size: 11.5pt; font-weight: 700; color: var(--azul); }
+  .correccion .num {
+    font-size: 8.4pt; font-weight: 700; color: #fff; background: var(--verde);
+    border-radius: 50%; width: 6mm; height: 6mm; display: inline-flex;
+    align-items: center; justify-content: center; margin-right: 2.5mm;
+  }
+  .correccion .pedido {
+    font-style: italic; color: var(--gris); margin-bottom: 2.5mm;
+    border-left: 2px solid var(--borde); padding-left: 3mm;
+  }
+  .correccion dl { margin: 0; }
+  .correccion dt {
+    font-weight: 700; font-size: 9.2pt; color: var(--verde);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2.5mm;
+  }
+  .correccion dd { margin: 0.8mm 0 0 0; }
+
+  /* ---------- Pasos numerados ---------- */
+  ol.pasos { counter-reset: paso; list-style: none; padding-left: 0; }
+  ol.pasos > li {
+    counter-increment: paso; position: relative;
+    padding-left: 9mm; margin-bottom: 2.5mm;
+  }
+  ol.pasos > li::before {
+    content: counter(paso); position: absolute; left: 0; top: 0.3mm;
+    width: 6mm; height: 6mm; border-radius: 50%;
+    background: var(--verde); color: #fff;
+    font-size: 8.4pt; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .chip {
+    display: inline-block; padding: 0.5mm 2mm; border-radius: 2mm;
+    font-size: 8.4pt; font-weight: 700; color: #fff; margin-right: 1mm;
+    white-space: nowrap;
+  }
+  .chip.si { background: #1a7f4b; }
+  .chip.no { background: #b0413e; }
+  .chip.parcial { background: #b8860b; }
+
+  code {
+    font-family: Consolas, "Courier New", monospace; font-size: 9pt;
+    background: #eef1f3; padding: 0.3mm 1.2mm; border-radius: 1mm;
+  }
+  pre {
+    font-family: Consolas, "Courier New", monospace; font-size: 8.8pt;
+    background: #f4f6f8; border: 1px solid var(--borde); border-radius: 1.5mm;
+    padding: 3mm 4mm; margin: 2mm 0 3.5mm; overflow-x: auto;
+    page-break-inside: avoid; line-height: 1.45;
+  }
+  pre code { background: none; padding: 0; }
+
+  .flujo { margin: 3mm 0 4mm; }
+  .fase {
+    border: 1px solid var(--borde); border-left: 5px solid var(--verde);
+    padding: 2.8mm 4mm; margin-bottom: 2.5mm; page-break-inside: avoid;
+  }
+  .fase .encabezado { font-weight: 700; color: var(--azul); margin-bottom: 1mm; }
+  .fase .porque { font-size: 9.4pt; color: var(--gris); }
+
+  .pie {
+    margin-top: 8mm; padding-top: 3mm; border-top: 1px solid var(--borde);
+    font-size: 8.6pt; color: var(--gris);
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= PORTADA ================= -->
+<div class="portada">
+  <div class="kicker">Instituto Universitario Adventista de Venezuela</div>
+  <h1>Informe de correcciones</h1>
+  <div class="sub">
+    Qué pedía la revisión del proyecto, cómo se resolvió cada punto y cómo
+    comprobarlo uno mismo en la aplicación.
+  </div>
+  <div class="sello">
+    <strong>Cómo leer este informe</strong>
+    La sección 4 explica qué se hizo con cada corrección. La sección 5 es la
+    práctica: un recorrido paso a paso para verificar, con sus propios ojos, que
+    cada punto quedó resuelto.
+  </div>
+  <div class="meta">
+    <div><strong>Documento de origen:</strong> «Correcciones y Sugerencias para el Sistema de Servicio Comunitario» — Ingeniería, Trayecto 3 2026</div>
+    <div><strong>Correcciones atendidas:</strong> 8 de 8</div>
+    <div><strong>Verificación:</strong> 573 pruebas automáticas en verde (eran 449)</div>
+    <div><strong>Fecha:</strong> 31 de octubre de 2026</div>
+  </div>
+</div>
+
+<!-- ================= 1. RESUMEN ================= -->
+<section>
+  <h2>1. Resumen</h2>
+
+  <p>
+    La revisión del proyecto señaló ocho puntos. Los ocho están resueltos. La
+    tabla siguiente es el resumen; el detalle de cada uno está en la sección 4 y
+    la forma de comprobarlo, en la sección 5.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:6%" class="centro">#</th>
+        <th style="width:40%">Lo que pedía la revisión</th>
+        <th style="width:36%">Cómo quedó</th>
+        <th style="width:18%" class="centro">Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="centro">1</td>
+        <td>Prueba de carga realista: 60 estudiantes y 20 tutores al mismo tiempo</td>
+        <td>Medido: 2&nbsp;006 peticiones sin un solo error. Informe aparte</td>
+        <td class="centro"><span class="chip si">Resuelto</span></td>
+      </tr>
+      <tr>
+        <td class="centro">2</td>
+        <td>Historial de acciones administrativas y de configuración, con autor, fecha y hora</td>
+        <td>Módulo «Historial» nuevo, visible para administración y coordinación</td>
+        <td class="centro"><span class="chip si">Resuelto</span></td>
+      </tr>
+      <tr>
+        <td class="centro">3</td>
+        <td>Reportes semanales en PDF, visibles para todos los perfiles, cada estudiante el suyo</td>
+        <td>Reporte semanal nuevo; el estudiante entra a «Reportes» y descarga el propio</td>
+        <td class="centro"><span class="chip si">Resuelto</span></td>
+      </tr>
+      <tr>
+        <td class="centro">4</td>
+        <td>Reportes filtrados por semana, con las actividades de cada grupo o estudiante</td>
+        <td>Selector de semana, grupo y estudiante; una fila por actividad</td>
+        <td class="centro"><span class="chip si">Resuelto</span></td>
+      </tr>
+      <tr>
+        <td class="centro">5</td>
+        <td>Agregar los tipos de tutor: Académico y Comunitario</td>
+        <td>Cada proyecto lleva uno de cada tipo y <strong>ambos validan horas</strong></td>
+        <td class="centro"><span class="chip si">Resuelto</span></td>
+      </tr>
+      <tr>
+        <td class="centro">6</td>
+        <td>Error «Sin acceso al archivo» al subir una imagen a firma o sello</td>
+        <td>Era un error de dirección en la web. Corregido</td>
+        <td class="centro"><span class="chip si">Resuelto</span></td>
+      </tr>
+      <tr>
+        <td class="centro">7</td>
+        <td>Notificaciones: correo de bienvenida con la clave temporal y avisos de avance</td>
+        <td>Cuatro tipos de aviso por correo, con bandeja de salida y reintentos</td>
+        <td class="centro"><span class="chip si">Resuelto</span></td>
+      </tr>
+      <tr>
+        <td class="centro">8</td>
+        <td>No poder aprobar proyectos sin horas o sin el tope de horas requerido</td>
+        <td>El sistema lo impide y dice quién no llega. El administrador puede forzarlo dejando el motivo</td>
+        <td class="centro"><span class="chip si">Resuelto</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="nota">
+    <strong>El punto 6 era más grave de lo que parecía</strong>
+    El mensaje «Sin acceso al archivo» no afectaba solo a la firma y al sello:
+    <strong>ninguna imagen protegida se veía en el sistema</strong>, incluidas
+    las evidencias que suben los estudiantes y los documentos de los proyectos.
+    La captura del documento de correcciones era la punta de un problema que
+    tocaba todo el manejo de archivos.
+  </div>
+</section>
+
+<!-- ================= 2. EL FLUJO DEL TRABAJO ================= -->
+<section>
+  <h2>2. El flujo del trabajo</h2>
+
+  <p>
+    Las correcciones no se atendieron en el orden en que venían numeradas, sino
+    en el orden en que unas dependen de otras. Esa fue la secuencia:
+  </p>
+
+  <div class="flujo">
+    <div class="fase">
+      <div class="encabezado">Fase 0 · El error de los archivos <span style="font-weight:400;color:#5b6670">(punto 6)</span></div>
+      <div class="porque">
+        Primero, porque mientras no se vieran las imágenes era imposible revisar
+        a ojo cualquier otra cosa: ni una firma en un acta, ni una evidencia
+        adjunta a unas horas.
+      </div>
+    </div>
+    <div class="fase">
+      <div class="encabezado">Fase 1 · Historial de acciones <span style="font-weight:400;color:#5b6670">(punto 2)</span></div>
+      <div class="porque">
+        Antes que las fases 3 y 5, porque las dos necesitan escribir en él: el
+        motivo con el que un administrador fuerza una aprobación, y el registro
+        de los correos reintentados.
+      </div>
+    </div>
+    <div class="fase">
+      <div class="encabezado">Fase 2 · Tipos de tutor <span style="font-weight:400;color:#5b6670">(punto 5)</span></div>
+      <div class="porque">
+        Antes que los reportes, porque cambia la base de datos y toca ocho
+        consultas distintas. Los reportes nuevos tenían que nacer sabiendo que un
+        proyecto tiene dos tutores, no uno.
+      </div>
+    </div>
+    <div class="fase">
+      <div class="encabezado">Fase 3 · Validación de horas al aprobar <span style="font-weight:400;color:#5b6670">(punto 8)</span></div>
+      <div class="porque">
+        Usa el historial de la fase 1 para dejar constancia de las aprobaciones
+        forzadas.
+      </div>
+    </div>
+    <div class="fase">
+      <div class="encabezado">Fase 4 · Reportes semanales <span style="font-weight:400;color:#5b6670">(puntos 3 y 4)</span></div>
+      <div class="porque">
+        Los dos puntos son el mismo trabajo: no tiene sentido un reporte semanal
+        que no se pueda filtrar por semana.
+      </div>
+    </div>
+    <div class="fase">
+      <div class="encabezado">Fase 5 · Notificaciones por correo <span style="font-weight:400;color:#5b6670">(punto 7)</span></div>
+      <div class="porque">
+        Depende de la fase 3: uno de los avisos es precisamente el cierre de un
+        proyecto.
+      </div>
+    </div>
+    <div class="fase">
+      <div class="encabezado">Fase 6 · Prueba de carga <span style="font-weight:400;color:#5b6670">(punto 1)</span></div>
+      <div class="porque">
+        Al final, para que midiera el sistema terminado y no una versión
+        intermedia.
+      </div>
+    </div>
+  </div>
+
+  <p>
+    Cada fase se cerró con sus propias pruebas automáticas antes de empezar la
+    siguiente. Eso es lo que permite afirmar que una corrección no rompió otra:
+    al terminar, las 573 pruebas corren juntas y pasan juntas.
+  </p>
+</section>
+
+<!-- ================= 3. QUÉ HAY DE NUEVO ================= -->
+<section>
+  <h2>3. Qué hay de nuevo en la aplicación</h2>
+
+  <h3>3.1 Un módulo nuevo en el menú</h3>
+  <table>
+    <thead><tr><th style="width:26%">Módulo</th><th style="width:30%">Quién lo ve</th><th>Para qué sirve</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Historial</strong></td>
+        <td>Administrador, Coordinador</td>
+        <td>Quién cambió qué y cuándo, en configuración, usuarios, proyectos, períodos y plantillas</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3.2 Módulos que cambiaron</h3>
+  <table>
+    <thead><tr><th style="width:26%">Módulo</th><th>Qué cambió</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Reportes</strong></td>
+        <td>
+          Tarjeta nueva de <strong>reporte semanal</strong>. Y ahora el
+          <strong>estudiante también entra</strong>: ve solo esa tarjeta, titulada
+          «Mi reporte semanal»
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Grupos y Proyectos</strong></td>
+        <td>
+          Dos tutores por proyecto en vez de uno. Las horas de cada integrante se
+          muestran desglosadas en directas e impacto. Al cerrar un proyecto sin
+          las horas completas, el sistema dice quién no llega
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Registro de Usuarios</strong></td>
+        <td>Al elegir el rol «Tutor» aparece el selector de tipo (académico o comunitario)</td>
+      </tr>
+      <tr>
+        <td><strong>Gestión de Usuarios</strong></td>
+        <td>La etiqueta del rol distingue «Tutor académico» de «Tutor comunitario». La firma y el sello ya se ven</td>
+      </tr>
+      <tr>
+        <td><strong>Configuraciones</strong></td>
+        <td>Pestaña nueva de <strong>Notificaciones</strong> (solo administrador): los correos enviados, los que fallaron y el botón para reintentarlos</td>
+      </tr>
+      <tr>
+        <td><strong>Bitácora Comunitario</strong></td>
+        <td>La semana ya no se escribe a mano: se calcula de la fecha de la actividad</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3.3 En números</h3>
+  <table>
+    <thead><tr><th style="width:52%">Concepto</th><th class="num" style="width:24%">Antes</th><th class="num" style="width:24%">Ahora</th></tr></thead>
+    <tbody>
+      <tr><td>Endpoints de la API</td><td class="num">48</td><td class="num">55</td></tr>
+      <tr><td>Tablas en la base de datos</td><td class="num">9</td><td class="num">11</td></tr>
+      <tr><td>Módulos del menú</td><td class="num">9</td><td class="num">10</td></tr>
+      <tr><td>Pruebas automáticas</td><td class="num">449</td><td class="num">573</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    Las dos tablas nuevas son <code>historial_acciones</code> (el punto 2) y
+    <code>notificaciones</code> (el punto 7).
+  </p>
+
+  <div class="nota">
+    <strong>Si ya tenía el sistema instalado, no pierde nada</strong>
+    La actualización de la base de datos conserva los datos existentes: el tutor
+    que cada proyecto ya tenía asignado pasa a ser su <strong>Tutor
+    Académico</strong>, y el puesto de Tutor Comunitario queda libre para que la
+    coordinación lo asigne. Esta conversión se probó sobre una base con datos
+    reales antes de darla por buena.
+  </div>
+</section>
+
+<!-- ================= 4. CORRECCIÓN POR CORRECCIÓN ================= -->
+<section>
+  <h2>4. Corrección por corrección</h2>
+
+  <div class="correccion">
+    <div class="cabecera"><div class="titulo"><span class="num">6</span>El error «Sin acceso al archivo»</div></div>
+    <div class="pedido">«Sale eso cuando subo una imagen a sello o firma»</div>
+    <dl>
+      <dt>Qué pasaba</dt>
+      <dd>
+        La imagen se subía bien y se guardaba bien. El problema estaba al
+        mostrarla: la página la pedía a una dirección equivocada, a la que el
+        servidor responde que no existe. Como la web no distinguía «no existe» de
+        «no tienes permiso», mostraba siempre el mensaje de permiso.
+      </dd>
+      <dt>Qué se hizo</dt>
+      <dd>
+        Se corrigió la dirección. Además, ahora el mensaje dice la verdad: «No
+        cargada», «El archivo ya no está en el servidor» o «No tienes permiso»,
+        según el caso. Se corrigió también el límite de tamaño, que la pantalla
+        anunciaba en 10&nbsp;MB cuando el servidor admite 25, y se arreglaron los
+        datos de ejemplo, que apuntaban a imágenes inexistentes.
+      </dd>
+      <dt>Alcance real</dt>
+      <dd>
+        El mismo error afectaba a <strong>todas</strong> las imágenes
+        protegidas: evidencias de bitácora, proyectos escritos y diapositivas.
+      </dd>
+    </dl>
+  </div>
+
+  <div class="correccion">
+    <div class="cabecera"><div class="titulo"><span class="num">2</span>Historial de acciones</div></div>
+    <div class="pedido">«Que las acciones de configuración y administrativas sean visibles para los administradores y para los coordinadores (con autor, fecha y hora)»</div>
+    <dl>
+      <dt>Por qué hacía falta</dt>
+      <dd>
+        El caso más delicado era la configuración de metas. Cambiar las 90 o las
+        30 horas <strong>reescribe hacia atrás</strong> quién cumplió el
+        programa: un estudiante que ayer estaba acreditado, hoy puede no estarlo.
+        Y no quedaba rastro de quién lo cambió ni desde qué valores.
+      </dd>
+      <dt>Qué se registra</dt>
+      <dd>
+        Configuración, períodos, plantillas, altas y bajas de usuarios,
+        restablecimientos de clave, firmas y sellos, solicitudes de cambio y
+        todo el ciclo de los proyectos. Cada entrada guarda <strong>autor, rol,
+        fecha, hora y el valor anterior</strong>.
+      </dd>
+      <dt>Detalle de diseño</dt>
+      <dd>
+        El nombre del autor se copia en la fila, no se enlaza. Así el historial
+        sigue siendo legible aunque esa cuenta se renombre o se dé de baja.
+      </dd>
+    </dl>
+  </div>
+
+  <div class="correccion">
+    <div class="cabecera"><div class="titulo"><span class="num">5</span>Tutor Académico y Tutor Comunitario</div></div>
+    <div class="pedido">«Agregar los tipos de Tutores: Académico y Comunitario»</div>
+    <dl>
+      <dt>Cómo quedó</dt>
+      <dd>
+        Cada proyecto tiene las dos casillas y <strong>los dos tutores pueden
+        validar las horas</strong> de sus estudiantes. Un tutor académico no se
+        puede poner en la casilla del comunitario, ni al revés, ni la misma
+        persona ocupar las dos.
+      </dd>
+      <dt>Dónde se nota</dt>
+      <dd>
+        En el formulario del proyecto, en el listado, en el detalle, en el alta
+        de usuarios y en el <strong>acta de culminación</strong>, que pasó de dos
+        espacios de firma a tres: Tutor Académico, Tutor Comunitario y
+        Coordinación.
+      </dd>
+    </dl>
+  </div>
+
+  <div class="correccion">
+    <div class="cabecera"><div class="titulo"><span class="num">8</span>No aprobar un proyecto sin las horas</div></div>
+    <div class="pedido">«No se deben poder aprobar proyectos sin horas o sin el tope de horas requeridas para dar aprobación»</div>
+    <dl>
+      <dt>Qué pasaba</dt>
+      <dd>
+        Nada lo impedía. Se podía dar por finalizado un proyecto con cero horas
+        validadas y marcar como aprobado a un estudiante que no había registrado
+        nada. Las dos cosas acreditan el servicio comunitario de una persona.
+      </dd>
+      <dt>Qué se hizo</dt>
+      <dd>
+        Ahora el sistema lo rechaza y <strong>dice nombre por nombre</strong> a
+        quién le falta y cuánto, separando las horas de trabajo directo de las de
+        impacto. El administrador —y solo él— puede aprobar igualmente, pero
+        tiene que escribir un motivo, que queda en el historial.
+      </dd>
+      <dt>Un hueco adyacente</dt>
+      <dd>
+        El tope de horas se comprobaba al crear un registro pero no al editarlo:
+        se podía registrar dentro del límite y luego subir las horas editando.
+        Quedó cerrado.
+      </dd>
+      <dt>Un dato que faltaba</dt>
+      <dd>
+        La pantalla de Proyectos solo sumaba las horas de bitácora comunitaria,
+        así que mostraba <strong>como mucho la mitad</strong> del avance. Quien
+        aprobaba decidía con la mitad de los datos. Ahora suma las dos metas.
+      </dd>
+    </dl>
+  </div>
+
+  <div class="correccion">
+    <div class="cabecera"><div class="titulo"><span class="num">3</span><span class="num">4</span>Reportes semanales</div></div>
+    <div class="pedido">«Visualización de reportes semanales de los estudiantes, como pdf, visible para todos los perfiles (incluyendo a los estudiantes)» · «Reportes seleccionados y filtrados por semana […] por cada grupo o por cada estudiante»</div>
+    <dl>
+      <dt>Qué hay ahora</dt>
+      <dd>
+        Un reporte en PDF con <strong>una fila por actividad</strong> —fecha,
+        semana, tipo, estudiante, descripción, horas y estado— agrupado por
+        estudiante o por semana, con subtotales. Se filtra por período, semana,
+        grupo y estudiante.
+      </dd>
+      <dt>Qué es «una semana»</dt>
+      <dd>
+        Se cuenta desde el inicio del período académico. Era la única forma de
+        comparar la bitácora comunitaria con el servicio social y ambiental, que
+        no guardaba ningún número de semana. Por coherencia, el formulario de
+        bitácora ahora <strong>calcula la semana de la fecha</strong> en vez de
+        pedirla a mano: antes el número que escribía el estudiante podía no
+        coincidir con el del reporte.
+      </dd>
+      <dt>Y el estudiante</dt>
+      <dd>
+        Entra a «Reportes» y descarga el suyo. El sistema le impone su propia
+        identidad: aunque alguien manipule la dirección para pedir el reporte de
+        un compañero, recibe el propio.
+      </dd>
+      <dt>Una decisión</dt>
+      <dd>
+        Este reporte sí muestra las horas pendientes y las rechazadas, a
+        diferencia del consolidado. Un registro de actividades que solo mostrara
+        lo aprobado no serviría para revisar la semana, que es justo cuando
+        todavía no está validada.
+      </dd>
+    </dl>
+  </div>
+
+  <div class="correccion">
+    <div class="cabecera"><div class="titulo"><span class="num">7</span>Notificaciones por correo</div></div>
+    <div class="pedido">«Al momento de el coordinador registrar estudiantes les llegue un correo de bienvenida y actualicen su clave temporal que les asigna el coordinador» · «Planificar módulo de notificaciones avances del servicio comunitario»</div>
+    <dl>
+      <dt>Cuatro avisos</dt>
+      <dd>
+        Bienvenida con la clave temporal (al alta individual y a la carga
+        masiva), horas validadas o devueltas para corregir, meta completada, y
+        proyecto finalizado.
+      </dd>
+      <dt>La clave ahora es temporal de verdad</dt>
+      <dd>
+        La clave que escribe el coordinador al dar de alta nace marcada como
+        temporal y el sistema obliga a cambiarla en el primer ingreso. Antes
+        quedaba como definitiva, con la coordinación conociendo la clave con la
+        que el estudiante se iba a quedar.
+      </dd>
+      <dt>Si el correo falla, no se pierde nada</dt>
+      <dd>
+        El aviso se guarda en una cola <em>antes</em> de intentar enviarlo. Que
+        el servidor de correo esté caído <strong>no deshace</strong> el alta del
+        usuario ni la validación de las horas: el aviso queda pendiente y se
+        reintenta desde Configuraciones → Notificaciones.
+      </dd>
+    </dl>
+  </div>
+
+  <div class="correccion">
+    <div class="cabecera"><div class="titulo"><span class="num">1</span>Prueba de carga</div></div>
+    <div class="pedido">«Se puede hacer una prueba con 1000 usuarios activos, pero una prueba realista serían 60 estudiantes y 20 tutores al mismo tiempo»</div>
+    <dl>
+      <dt>El escenario realista</dt>
+      <dd>
+        <strong>60 estudiantes y 20 tutores a la vez: 2&nbsp;006 peticiones, cero
+        errores</strong>, y la respuesta más lenta en 1,8 segundos. El uso
+        previsto del IUNAV cabe con holgura.
+      </dd>
+      <dt>El escenario de 1000</dt>
+      <dd>
+        Se degrada: entre un 7&nbsp;% y un 12&nbsp;% de peticiones fallidas. El
+        88&nbsp;% de esos fallos son los dos endpoints que generan documentos,
+        porque los reportes se construyen enteros en memoria. No es un problema
+        de la base de datos: las consultas normales siguen respondiendo en 1 o 2
+        segundos con 12&nbsp;000 registros.
+      </dd>
+      <dt>Dónde está el detalle</dt>
+      <dd>
+        En <code>docs/Prueba-de-Carga.md</code>: la tabla completa por endpoint,
+        cómo reproducir la medición y qué habría que cambiar para sostener esos
+        volúmenes.
+      </dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ================= 5. CÓMO PROBARLO ================= -->
+<section>
+  <h2>5. Cómo probar la aplicación</h2>
+
+  <h3>5.1 Poner el sistema en marcha</h3>
+
+  <p>
+    Si ya tenía el sistema instalado, basta con actualizar y volver a cargar los
+    datos de ejemplo. Si es la primera vez, el instalador hace todo.
+  </p>
+
+  <ol class="pasos">
+    <li>Abrir la carpeta <code>local\</code> del proyecto.</li>
+    <li>Doble clic en <code>instalar.cmd</code> y esperar (entre 5 y 15 minutos la primera vez).</li>
+    <li>Doble clic en <code>iniciar.cmd</code>. Se abre el navegador en <code>http://localhost:3000</code>.</li>
+    <li>Para apagarlo todo: <code>detener.cmd</code>.</li>
+  </ol>
+
+  <div class="tip">
+    <strong>Si ya lo tenía instalado</strong>
+    Después de actualizar el proyecto, ejecute <code>instalar.cmd</code> otra
+    vez. La base de datos se actualiza sola y <strong>conserva lo que ya
+    tenía</strong>. Eso sí: los proyectos que ya existían se quedan con su tutor
+    actual convertido en Académico y sin Tutor Comunitario, porque el sistema no
+    puede adivinar quién es. Se asigna desde Grupos y Proyectos → Editar.
+  </div>
+
+  <h3>5.2 Cuentas de prueba</h3>
+
+  <table>
+    <thead><tr><th style="width:30%">Perfil</th><th style="width:40%">Correo</th><th style="width:30%">Clave</th></tr></thead>
+    <tbody>
+      <tr><td>Administrador</td><td><code>cmendoza@iunav.edu.ve</code></td><td><code>admin123</code></td></tr>
+      <tr><td>Coordinador</td><td><code>mlopez@iunav.edu.ve</code></td><td><code>coord123</code></td></tr>
+      <tr><td><strong>Tutor académico</strong></td><td><code>jperez@iunav.edu.ve</code></td><td><code>tutor123</code></td></tr>
+      <tr><td><strong>Tutor comunitario</strong></td><td><code>rbermudez@iunav.edu.ve</code></td><td><code>tutor123</code></td></tr>
+      <tr><td>Estudiante</td><td><code>gmartinez@iunav.edu.ve</code></td><td><code>est123</code></td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    Hay dos tutores más de cada tipo (<code>ltorres@</code> académico y
+    <code>acastillo@</code> comunitario) y tres estudiantes más, por si quiere
+    probar con varios grupos.
+  </p>
+
+  <h3>5.3 Recorrido de verificación</h3>
+
+  <p>
+    Cada bloque comprueba una corrección. Se pueden hacer en cualquier orden,
+    salvo el del punto 8, que necesita el del punto 5 hecho antes.
+  </p>
+
+  <h4>Punto 6 — Firma, sello y evidencias</h4>
+  <ol class="pasos">
+    <li>Entre como <strong>administrador</strong> y vaya a <strong>Gestión de Usuarios</strong>.</li>
+    <li>En la columna «Firma y sello» de cualquier fila, elija una imagen (JPG, PNG o WebP) y pulse <strong>Subir</strong>.</li>
+    <li>
+      <strong>Debe verse la miniatura de la imagen.</strong> Ese era el error:
+      antes aparecía «Sin acceso al archivo».
+    </li>
+    <li>
+      De paso: entre como <strong>estudiante</strong>, vaya a <strong>Bitácora
+      Comunitario</strong>, registre una actividad con una foto adjunta y ábrala.
+      La imagen tiene que mostrarse.
+    </li>
+  </ol>
+
+  <h4>Punto 5 — Los dos tutores</h4>
+  <ol class="pasos">
+    <li>Entre como <strong>coordinador</strong> → <strong>Grupos y Proyectos</strong>. La columna de tutores muestra ahora dos nombres.</li>
+    <li>Pulse <strong>Editar</strong> en un proyecto: hay dos desplegables, «Tutor académico» y «Tutor comunitario», y cada uno solo ofrece tutores de su tipo.</li>
+    <li>Entre como <strong>tutor comunitario</strong> (<code>rbermudez@iunav.edu.ve</code>) y vaya a <strong>Validación</strong>: ve los registros pendientes de su grupo y <strong>puede aprobarlos</strong>, igual que el académico.</li>
+    <li>En <strong>Registro de Usuarios</strong>, elija el rol «Tutor»: aparece el selector de tipo y es obligatorio.</li>
+  </ol>
+
+  <h4>Punto 8 — No aprobar sin horas</h4>
+  <ol class="pasos">
+    <li>Como <strong>coordinador</strong>, abra un proyecto en <strong>Grupos y Proyectos</strong> → <strong>Ver</strong>.</li>
+    <li>Cambie el estado a <strong>Finalizado</strong>.</li>
+    <li>
+      El sistema lo rechaza y lista <strong>a quién le falta y cuántas horas</strong>,
+      separando trabajo directo de impacto.
+    </li>
+    <li>Repita como <strong>administrador</strong>: el sistema pide un motivo y, al escribirlo, deja cerrar el proyecto.</li>
+    <li>Compruebe el rastro en <strong>Historial</strong>: aparece el cierre forzado con su motivo y la lista de quién no cumplía.</li>
+  </ol>
+
+  <h4>Puntos 3 y 4 — Reporte semanal</h4>
+  <ol class="pasos">
+    <li>Entre como <strong>estudiante</strong>. En el menú aparece <strong>Reportes</strong>, que antes no veía.</li>
+    <li>Elija una semana del desplegable y pulse <strong>Descargar PDF</strong>. Solo se listan las semanas que tienen actividad.</li>
+    <li>El PDF trae sus actividades con fecha, horas y estado de validación.</li>
+    <li>Entre como <strong>coordinador</strong>: la misma tarjeta, pero con selectores de grupo y de estudiante.</li>
+    <li>Como <strong>tutor</strong>: solo aparecen sus propios grupos.</li>
+  </ol>
+
+  <h4>Punto 2 — Historial</h4>
+  <ol class="pasos">
+    <li>Como <strong>administrador</strong>, vaya a <strong>Configuraciones</strong> y cambie la meta de horas directas de 90 a 100. Guarde.</li>
+    <li>Vaya a <strong>Historial</strong>: la primera entrada dice quién lo cambió, cuándo, y <strong>de 90 a 100</strong>.</li>
+    <li>Pruebe los filtros por módulo, por fechas y por texto.</li>
+    <li>Entre como <strong>tutor</strong> o <strong>estudiante</strong>: el módulo no aparece, y escribir <code>/historial</code> a mano devuelve al panel.</li>
+    <li><strong>Deje la meta en 90 otra vez</strong> antes de seguir, o el resto de las pruebas no cuadrará.</li>
+  </ol>
+
+  <h4>Punto 7 — Notificaciones</h4>
+  <ol class="pasos">
+    <li>Como <strong>coordinador</strong>, dé de alta un estudiante en <strong>Registro de Usuarios</strong>.</li>
+    <li>Entre como <strong>administrador</strong> → <strong>Configuraciones</strong> → pestaña <strong>Notificaciones</strong>.</li>
+    <li>
+      Ahí está el correo de bienvenida. Sin un servidor de correo configurado
+      aparecerá como <strong>fallido</strong>, y la pantalla lo explica: es lo
+      esperado en una instalación local.
+    </li>
+    <li>Cierre sesión y entre con el estudiante nuevo: el sistema <strong>obliga a cambiar la clave</strong> antes de dejar hacer nada más.</li>
+  </ol>
+
+  <div class="aviso">
+    <strong>Para que los correos salgan de verdad</strong>
+    Hay que configurar un servidor de correo en <code>server/.env</code>
+    (<code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_USER</code>,
+    <code>SMTP_PASS</code>). Sin eso, la instalación local <strong>funciona
+    igual</strong> —fue pensada para operar sin internet— pero los avisos se
+    quedan en la cola. Una vez configurado, el botón «Reintentar las que faltan»
+    envía todo lo acumulado.
+  </div>
+
+  <h4>Punto 1 — Prueba de carga</h4>
+  <p>
+    Esta no se hace desde el navegador. Desde una terminal, en la carpeta
+    <code>server\</code>:
+  </p>
+<pre><code>npm run db:carga     &lt;- genera 60 estudiantes y 20 tutores en una base aparte
+npm run test:carga   &lt;- mide, con la API levantada contra esa base</code></pre>
+  <p>
+    El procedimiento completo y los resultados ya medidos están en
+    <code>docs/Prueba-de-Carga.md</code>.
+  </p>
+</section>
+
+<!-- ================= 6. VERIFICACIÓN AUTOMÁTICA ================= -->
+<section>
+  <h2>6. Verificación automática</h2>
+
+  <p>
+    Además del recorrido a mano, el proyecto se comprueba solo. Desde una
+    terminal:
+  </p>
+
+<pre><code>cd server
+npm run typecheck          &lt;- el código del servidor es consistente
+npm run typecheck:tests    &lt;- las pruebas también
+npm test                   &lt;- 573 pruebas, unos 3 minutos
+
+cd ../web
+npm run lint               &lt;- la web no tiene avisos
+npm run build              &lt;- la web compila</code></pre>
+
+  <h3>Qué cubren las pruebas nuevas</h3>
+
+  <table>
+    <thead><tr><th style="width:30%">Archivo</th><th class="num" style="width:12%">Pruebas</th><th>Qué vigila</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>historial.test.ts</code></td><td class="num">13</td>
+        <td>Que cada acción deje rastro y que guarde el valor anterior; filtros y paginación</td>
+      </tr>
+      <tr>
+        <td><code>tutores.test.ts</code></td><td class="num">17</td>
+        <td>Que los dos tutores validen horas del mismo grupo y que un tutor ajeno siga sin poder</td>
+      </tr>
+      <tr>
+        <td><code>aprobacion.test.ts</code></td><td class="num">17</td>
+        <td>El rechazo al aprobar sin horas, el forzado del administrador y el tope al editar</td>
+      </tr>
+      <tr>
+        <td><code>semanal.test.ts</code></td><td class="num">18</td>
+        <td>El cálculo de la semana y que un estudiante no pueda leer las actividades de otro</td>
+      </tr>
+      <tr>
+        <td><code>notificaciones.test.ts</code></td><td class="num">17</td>
+        <td>Que un servidor de correo caído no deshaga el alta; avisos y reintentos</td>
+      </tr>
+      <tr>
+        <td><code>permisos.test.ts</code></td><td class="num">334</td>
+        <td>Los 55 endpoints contra los 4 roles, más tokens ausentes, inválidos y falseados</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="nota">
+    <strong>Un error que encontró la verificación</strong>
+    Al probar la actualización de una base con datos, apareció un fallo que iba a
+    pasar desapercibido: la base de datos aceptaba un tutor sin tipo. La causa es
+    una particularidad de SQL —una comprobación que da «indefinido» se da por
+    buena— y la interfaz lo tapaba, porque sí exigía el tipo. Se corrigió antes
+    de entregar.
+  </div>
+</section>
+
+<!-- ================= 7. LO QUE CONVIENE SABER ================= -->
+<section>
+  <h2>7. Lo que conviene saber</h2>
+
+  <h3>7.1 Dos cambios de comportamiento</h3>
+
+  <table>
+    <thead><tr><th style="width:34%">Qué</th><th style="width:33%">Antes</th><th style="width:33%">Ahora</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>La clave que pone el coordinador al dar de alta</td>
+        <td>Quedaba definitiva. La coordinación conocía la clave con la que el estudiante se quedaba</td>
+        <td>Nace temporal: el sistema obliga a cambiarla en el primer ingreso</td>
+      </tr>
+      <tr>
+        <td>El módulo «Reportes» para el estudiante</td>
+        <td>No lo veía</td>
+        <td>Lo ve, pero solo con su reporte semanal. El consolidado, las actas y los certificados siguen siendo de gestión</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>7.2 El correo y la instalación sin internet</h3>
+
+  <p>
+    El sistema está pensado para funcionar en un equipo, sin conexión. El módulo
+    de notificaciones, por naturaleza, necesita un servidor de correo. Se
+    resolvió de forma que <strong>una cosa no estorbe a la otra</strong>: sin
+    servidor configurado todo lo demás funciona igual y los avisos quedan
+    guardados, listos para salir el día que se configure uno. Pero conviene
+    tenerlo claro: en la instalación local, tal cual, no sale ningún correo.
+  </p>
+
+  <h3>7.3 Si el programa crece</h3>
+
+  <p>
+    Para el uso previsto no hay que tocar nada. Si algún día se superan los
+    doscientos usuarios simultáneos, el informe de carga explica qué ajustar, en
+    orden de lo que más rinde: subir el número de conexiones a la base de datos
+    (una línea de configuración) y, si hiciera falta más, cambiar la forma en que
+    se generan los reportes para que no se construyan enteros en memoria.
+  </p>
+
+  <h3>7.4 Lo que sigue sin existir</h3>
+
+  <ul>
+    <li>Que un usuario recupere su clave por sí mismo: la sigue reiniciando el administrador.</li>
+    <li>Firma digital de los documentos: el acta deja los espacios para firmar a mano.</li>
+    <li>Asistencia y notas: se siguen gestionando por los canales habituales de la institución.</li>
+  </ul>
+
+  <div class="pie">
+    Informe de correcciones · Sistema de Gestión del Servicio Comunitario ·
+    Instituto Universitario Adventista de Venezuela · 31/10/2026.<br>
+    Documentos relacionados: <code>docs/Prueba-de-Carga.md</code>,
+    <code>docs/Guia-de-Usuario-IUNAV.pdf</code>,
+    <code>docs/Manual-Despliegue-Local.pdf</code>, <code>HANDOFF.md</code>.
+  </div>
+</section>
+
+</body>
+</html>

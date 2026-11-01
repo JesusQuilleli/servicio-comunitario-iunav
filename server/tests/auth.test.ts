@@ -214,7 +214,13 @@ describe('POST /api/auth/register', () => {
     const tutor = await api()
       .post('/api/auth/register')
       .set(auth(token))
-      .send({ ...nuevo, cedula: 'V-22222222', email: 'tutor-nuevo@test.local', rol: 'tutor' });
+      .send({
+        ...nuevo,
+        cedula: 'V-22222222',
+        email: 'tutor-nuevo@test.local',
+        rol: 'tutor',
+        tipoTutor: 'comunitario',
+      });
     expect(tutor.status).toBe(201);
     expect(tutor.body.usuario.rol).toBe('tutor');
   });

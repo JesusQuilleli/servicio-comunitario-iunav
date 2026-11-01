@@ -1,6 +1,7 @@
 import type { NextFunction, Response } from 'express';
 import { z } from 'zod';
 import { ApiError } from '../lib/errors.js';
+import { registrarAccion } from '../lib/historial.js';
 import { findUsuarioPorEmail } from '../models/usuario.model.js';
 import { actualizarPerfil } from '../models/usuario.model.js';
 import {
@@ -109,6 +110,22 @@ export async function resolver(
     if (!resuelta) {
       throw new ApiError(409, 'La solicitud ya fue resuelta');
     }
+
+    await registrarAccion(req, {
+      accion: body.accion === 'aprobar' ? 'solicitud.aprobar' : 'solicitud.rechazar',
+      entidad: 'solicitud',
+      idEntidad: solicitud.id_solicitud,
+      descripcion:
+        `${body.accion === 'aprobar' ? 'Aprobó' : 'Rechazó'} el cambio de ` +
+        `${CAMPO_EN_ESPANOL[solicitud.campo]} de "${solicitud.valor_anterior ?? 'sin definir'}" ` +
+        `a "${solicitud.valor_nuevo}"`,
+      datos: {
+        campo: solicitud.campo,
+        antes: solicitud.valor_anterior,
+        despues: solicitud.valor_nuevo,
+        comentario: body.comentario ?? null,
+      },
+    });
 
     res.json({
       solicitud: mapSolicitudPublica(resuelta),

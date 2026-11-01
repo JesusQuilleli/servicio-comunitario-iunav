@@ -2,7 +2,13 @@
 
 import { useRef, useState } from "react";
 import { CheckCircle2, Loader2, PenLine, Stamp, TriangleAlert } from "lucide-react";
-import { MAX_EVIDENCIA_MB, motivoEvidenciaInvalida, useArchivoUrl } from "@/lib/archivos";
+import {
+  MAX_DOCUMENTO_MB,
+  TIPOS_SOLO_IMAGEN,
+  mensajeEstadoArchivo,
+  motivoEvidenciaInvalida,
+  useArchivoUrl,
+} from "@/lib/archivos";
 import { api } from "@/lib/api";
 
 /**
@@ -33,7 +39,7 @@ export function FirmaSello({
 
   // Solo se descarga la imagen cuando hay una: son imagenes pequenas y el token
   // va en la cabecera, no en la URL.
-  const { url, cargando } = useArchivoUrl(rutaActual);
+  const { url, cargando, estado } = useArchivoUrl(rutaActual);
 
   const esSello = tipo === "sello";
 
@@ -44,7 +50,7 @@ export function FirmaSello({
       setArchivo(null);
       return;
     }
-    const motivo = motivoEvidenciaInvalida(elegido, MAX_EVIDENCIA_MB);
+    const motivo = motivoEvidenciaInvalida(elegido, MAX_DOCUMENTO_MB, TIPOS_SOLO_IMAGEN);
     if (motivo) {
       setArchivo(null);
       setError(motivo);
@@ -96,7 +102,7 @@ export function FirmaSello({
           className="h-12 w-auto max-w-32 rounded border border-border bg-white object-contain"
         />
       ) : (
-        <p className="text-xs text-muted-foreground">{rutaActual ? "Sin acceso al archivo" : "No cargada"}</p>
+        <p className="text-xs text-muted-foreground">{mensajeEstadoArchivo(estado) ?? "No cargada"}</p>
       )}
 
       {puedeSubir && (

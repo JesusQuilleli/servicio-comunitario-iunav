@@ -39,6 +39,8 @@ Hay más cuentas de ejemplo en la base de datos para probar grupos con varios in
 | [`docs/Manual-Instalacion-Sin-Kit.pdf`](docs/Manual-Instalacion-Sin-Kit.pdf) | Instalación manual con Node.js + PostgreSQL, sin el kit (para el tutor evaluador). |
 | [`docs/Guia-de-Usuario-IUNAV.pdf`](docs/Guia-de-Usuario-IUNAV.pdf) | Qué puede hacer cada rol. |
 | [`docs/Flujo-de-Uso-IUNAV.pdf`](docs/Flujo-de-Uso-IUNAV.pdf) | El ciclo completo del programa, por etapas. |
+| [`docs/Informe-de-Correcciones.pdf`](docs/Informe-de-Correcciones.pdf) | Qué pedía la revisión del proyecto, cómo se resolvió cada punto y cómo comprobarlo. |
+| [`docs/Prueba-de-Carga.md`](docs/Prueba-de-Carga.md) | Medición de rendimiento con 60 y con 1000 usuarios simultáneos. |
 | [`local/README.md`](local/README.md) | Detalles técnicos del kit local. |
 | [`HANDOFF.md`](HANDOFF.md) | Ficha técnica del proyecto. |
 
@@ -56,9 +58,13 @@ docs/     Manuales y guías (HTML + PDF)
 
 ## Qué incluye
 
-- **48 endpoints** con autenticación JWT y permisos por endpoint para 4 roles (administrador, coordinador, tutor, estudiante).
-- **9 tablas** en PostgreSQL, creadas por `server/sql/schema.sql`.
-- **449 pruebas automáticas** (Vitest + Supertest).
+- **54 endpoints** con autenticación JWT y permisos por endpoint para 4 roles (administrador, coordinador, tutor, estudiante).
+  Los tutores se dividen además en **académicos** y **comunitarios**: cada proyecto lleva uno de cada tipo y ambos validan horas.
+- **11 tablas** en PostgreSQL, creadas por `server/sql/schema.sql`.
+- **567 pruebas automáticas** (Vitest + Supertest).
+- **Historial de acciones** administrativas y de configuración, con autor, fecha y hora.
+- **Reportes semanales en PDF** por grupo o por estudiante; cada estudiante descarga el suyo.
+- **Notificaciones por correo**: bienvenida con la clave temporal y avisos de avance del servicio.
 - Datos de ejemplo idempotentes: reiniciar el sistema no borra lo que se haya creado.
 - Todo lo generado en local vive dentro de la carpeta del proyecto; desinstalar es borrar la carpeta.
 
@@ -88,7 +94,7 @@ Verificación:
 
 ```bash
 cd server
-npm test             # 449 pruebas
+npm test             # 567 pruebas
 npm run typecheck
 npm run typecheck:tests
 

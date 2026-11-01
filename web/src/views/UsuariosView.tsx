@@ -20,6 +20,7 @@ import { CargaMasivaEstudiantes } from "@/components/CargaMasivaEstudiantes";
 import { api } from "@/lib/api";
 import { useApiData } from "@/lib/useApiData";
 import { useAuthStore } from "@/stores/authStore";
+import { etiquetaDeRol } from "@/lib/types";
 import type { SolicitudCambio, UserRole, Usuario } from "@/lib/types";
 
 const rolBadge: Record<UserRole, "danger" | "warning" | "info" | "secondary"> = {
@@ -346,7 +347,9 @@ export function UsuariosView() {
                       <td className="px-4 py-3">{u.cedula}</td>
                       <td className="px-4 py-3">{u.email}</td>
                       <td className="px-4 py-3">
-                        <Badge variant={rolBadge[u.rol]}>{u.rol}</Badge>
+                        <Badge variant={rolBadge[u.rol]}>
+                          {etiquetaDeRol(u.rol, u.tipoTutor)}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={u.activo ? "success" : "outline"}>

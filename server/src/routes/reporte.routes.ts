@@ -10,6 +10,13 @@ router.use(requiereCambioDePassword);
 
 const gestion = requireRole('admin', 'coordinador', 'tutor');
 
+// El reporte semanal lo ve TODO el mundo, el estudiante incluido: la revision
+// pidio que cada estudiante pudiera acceder a su propio registro. Por eso no
+// lleva `requireRole`: el alcance se resuelve dentro del controlador segun
+// quien pregunta, igual que en `/busqueda` y `/archivos`.
+router.get('/semanas', reporte.semanasDisponibles);
+router.get('/semanal.pdf', reporte.reporteSemanalPdf);
+
 // Reportes de horas: el tutor solo ve sus propios estudiantes (el controlador
 // acota la consulta con su id, no con un filtro que el cliente pueda mover).
 // GET /api/reportes/consolidado-horas.pdf?periodoId=&grupoId=

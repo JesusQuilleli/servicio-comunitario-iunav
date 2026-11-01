@@ -271,7 +271,11 @@ describe('registro de usuarios', () => {
     expect(res.status).toBe(400);
   });
 
-  it('crea la cuenta con una clave valida y sin marca de temporal', async () => {
+  // La clave de un alta la escribe QUIEN DA DE ALTA, no el dueno de la cuenta,
+  // asi que nace marcada como temporal y el sistema obliga a cambiarla al
+  // entrar. Antes nacia definitiva, lo que dejaba a la coordinacion conociendo
+  // la clave con la que el estudiante se iba a quedar.
+  it('crea la cuenta con una clave valida y marcada como temporal', async () => {
     const res = await api()
       .post('/api/auth/register')
       .set(auth(await tokenDe('admin')))
@@ -284,7 +288,9 @@ describe('registro de usuarios', () => {
       });
 
     expect(res.status, JSON.stringify(res.body)).toBe(201);
-    expect(res.body.usuario.passwordTemporal).toBe(false);
+    expect(res.body.usuario.passwordTemporal).toBe(true);
+    // La clave sirve para entrar; lo que cambia es que al entrar hay que
+    // cambiarla antes de poder hacer nada mas.
     expect(await login('nueva@test.local', 'primeraClave9')).not.toBeNull();
   });
 });

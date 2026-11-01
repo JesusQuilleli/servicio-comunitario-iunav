@@ -1,4 +1,5 @@
 import { pool } from '../db/pool.js';
+import { esTutorDelGrupo } from '../lib/tutores.js';
 
 export interface Configuracion {
   horasDirectas: number;
@@ -72,13 +73,14 @@ export async function obtenerProyectoEstudiante(idEstudiante: string): Promise<{
     diapositivas: boolean;
   }>(
     `select g.id_grupo, g.nombre_proyecto, p.nombre_periodo,
-            t.nombre_completo as tutor_nombre, g.estado,
+            coalesce(ta.nombre_completo, tc.nombre_completo) as tutor_nombre, g.estado,
             (g.proyecto_escrito_url is not null) as proyecto_escrito,
             (g.diapositivas_url is not null) as diapositivas
      from integrantes_grupo ig
      join grupos_proyectos g on g.id_grupo = ig.id_grupo
      join periodos_academicos p on p.id_periodo = g.id_periodo
-     left join usuarios t on t.id_usuario = g.id_tutor
+     left join usuarios ta on ta.id_usuario = g.id_tutor_academico
+     left join usuarios tc on tc.id_usuario = g.id_tutor_comunitario
      where ig.id_estudiante = $1 and g.estado not in ('finalizado', 'suspendido')
      order by g.creado_en desc
      limit 1`,
@@ -152,7 +154,7 @@ export async function obtenerProyectosTutor(idTutor: string): Promise<{
     `select g.id_grupo, g.nombre_proyecto, p.nombre_periodo, g.estado
      from grupos_proyectos g
      join periodos_academicos p on p.id_periodo = g.id_periodo
-     where g.id_tutor = $1
+     where ${esTutorDelGrupo('g', 1)}
      order by p.nombre_periodo desc, g.creado_en desc`,
     [idTutor]
   );
@@ -170,7 +172,7 @@ export async function obtenerIntegrantesPorGrupo(idTutor: string): Promise<Map<s
      from integrantes_grupo ig
      join usuarios u on u.id_usuario = ig.id_estudiante
      join grupos_proyectos g on g.id_grupo = ig.id_grupo
-     where g.id_tutor = $1
+     where ${esTutorDelGrupo('g', 1)}
      order by u.nombre_completo asc`,
     [idTutor]
   );
@@ -201,35 +203,36 @@ export async function obtenerResumenTutor(idTutor: string): Promise<{
        coalesce((
          (select count(*) from bitacoras_comunitario b
           join grupos_proyectos g on g.id_grupo = b.id_grupo
-          where g.id_tutor = $1 and b.estado in ('pendiente', 'corregir')) +
+          where ${esTutorDelGrupo('g', 1)} and b.estado in ('pendiente', 'corregir')) +
          (select count(*) from control_servicios_institucionales c
           join integrantes_grupo ig on ig.id_estudiante = c.id_estudiante
           join grupos_proyectos g on g.id_grupo = ig.id_grupo
-          where g.id_tutor = $1 and c.estado in ('pendiente', 'corregir'))
+          where ${esTutorDelGrupo('g', 1)} and c.estado in ('pendiente', 'corregir'))
        ), 0)::text as pendientes,
        coalesce((
          (select count(*) from bitacoras_comunitario b
           join grupos_proyectos g on g.id_grupo = b.id_grupo
-          where g.id_tutor = $1 and b.estado = 'aprobado') +
+          where ${esTutorDelGrupo('g', 1)} and b.estado = 'aprobado') +
          (select count(*) from control_servicios_institucionales c
           join integrantes_grupo ig on ig.id_estudiante = c.id_estudiante
           join grupos_proyectos g on g.id_grupo = ig.id_grupo
-          where g.id_tutor = $1 and c.estado = 'aprobado')
+          where ${esTutorDelGrupo('g', 1)} and c.estado = 'aprobado')
        ), 0)::text as aprobadas,
        coalesce((
          (select count(*) from bitacoras_comunitario b
           join grupos_proyectos g on g.id_grupo = b.id_grupo
-          where g.id_tutor = $1 and b.estado = 'rechazado') +
+          where ${esTutorDelGrupo('g', 1)} and b.estado = 'rechazado') +
          (select count(*) from control_servicios_institucionales c
           join integrantes_grupo ig on ig.id_estudiante = c.id_estudiante
           join grupos_proyectos g on g.id_grupo = ig.id_grupo
-          where g.id_tutor = $1 and c.estado = 'rechazado')
+          where ${esTutorDelGrupo('g', 1)} and c.estado = 'rechazado')
        ), 0)::text as rechazadas,
        coalesce((select count(distinct ig.id_estudiante)
                  from integrantes_grupo ig
                  join grupos_proyectos g on g.id_grupo = ig.id_grupo
-                 where g.id_tutor = $1), 0)::text as estudiantes,
-       coalesce((select count(*) from grupos_proyectos where id_tutor = $1), 0)::text as proyectos`,
+                 where ${esTutorDelGrupo('g', 1)}), 0)::text as estudiantes,
+       coalesce((select count(*) from grupos_proyectos g
+                 where ${esTutorDelGrupo('g', 1)}), 0)::text as proyectos`,
     [idTutor]
   );
   return {
@@ -249,7 +252,7 @@ export async function obtenerPendientesTutor(idTutor: string): Promise<FilaPendi
      from bitacoras_comunitario b
      join grupos_proyectos g on g.id_grupo = b.id_grupo
      join usuarios u on u.id_usuario = b.id_estudiante
-     where g.id_tutor = $1 and b.estado in ('pendiente', 'corregir')
+     where ${esTutorDelGrupo('g', 1)} and b.estado in ('pendiente', 'corregir')
      union all
      select c.id_registro as id, u.nombre_completo as "estudianteNombre",
             c.tipo as tipo, null as semana, c.fecha_actividad::text as fecha,
@@ -258,7 +261,7 @@ export async function obtenerPendientesTutor(idTutor: string): Promise<FilaPendi
      join integrantes_grupo ig on ig.id_estudiante = c.id_estudiante
      join grupos_proyectos g on g.id_grupo = ig.id_grupo
      join usuarios u on u.id_usuario = c.id_estudiante
-     where g.id_tutor = $1 and c.estado in ('pendiente', 'corregir')
+     where ${esTutorDelGrupo('g', 1)} and c.estado in ('pendiente', 'corregir')
      order by fecha desc
      limit 8`,
     [idTutor]
@@ -288,7 +291,9 @@ export async function obtenerResumenGestion(): Promise<{
   }>(
     `select
        (select count(*) from usuarios where rol = 'estudiante' and activo)::text as estudiantes,
-       (select count(*) from usuarios where rol = 'tutor')::text as tutores,
+       -- El filtro activo faltaba aqui y si estaba en la linea de arriba: la
+       -- tarjeta de gestion contaba tutores dados de baja.
+       (select count(*) from usuarios where rol = 'tutor' and activo)::text as tutores,
        (select count(*) from grupos_proyectos where estado in ('en_curso', 'pendiente_aprobacion'))::text as "proyectosEnCurso",
        coalesce((
          (select coalesce(sum(horas_invertidas), 0) from bitacoras_comunitario where estado = 'aprobado') +
@@ -330,10 +335,12 @@ export async function obtenerProyectosPendientes(): Promise<{
     tutor_nombre: string | null;
     escenario: string;
   }>(
-    `select g.id_grupo, g.nombre_proyecto, t.nombre_completo as tutor_nombre,
+    `select g.id_grupo, g.nombre_proyecto,
+            coalesce(ta.nombre_completo, tc.nombre_completo) as tutor_nombre,
             (g.proyecto_escrito_url is not null)::text as escenario
      from grupos_proyectos g
-     left join usuarios t on t.id_usuario = g.id_tutor
+     left join usuarios ta on ta.id_usuario = g.id_tutor_academico
+     left join usuarios tc on tc.id_usuario = g.id_tutor_comunitario
      where g.estado = 'pendiente_aprobacion'
      order by g.creado_en desc`
   );
@@ -398,9 +405,13 @@ export async function obtenerActividadReciente(): Promise<{
       join usuarios u on u.id_usuario = c.id_estudiante)
      union all
      (select g.id_grupo::text as id, 'Creación de grupo/proyecto' as descripcion,
-             g.creado_en::text as fecha, 'inscripcion' as tipo, t.nombre_completo as usuario
+             g.creado_en::text as fecha, 'inscripcion' as tipo,
+             coalesce(ta.nombre_completo, tc.nombre_completo, 'Sin tutor asignado') as usuario
+      -- left join, no join interno: un proyecto sin tutor desaparecia de la
+      -- actividad reciente sin que nadie lo notara.
       from grupos_proyectos g
-      join usuarios t on t.id_usuario = g.id_tutor)
+      left join usuarios ta on ta.id_usuario = g.id_tutor_academico
+      left join usuarios tc on tc.id_usuario = g.id_tutor_comunitario)
      order by fecha desc
      limit 8`
   );

@@ -20,6 +20,11 @@ export const MAX_DOCUMENTO_MB = 25;
 
 const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
 export const TIPOS_EVIDENCIA = [...TIPOS_IMAGEN, "application/pdf"];
+/**
+ * La firma y el sello son imágenes por definición: el servidor rechaza el PDF
+ * en esas dos categorías (`server/src/config/almacenamiento.ts`).
+ */
+export const TIPOS_SOLO_IMAGEN = TIPOS_IMAGEN;
 
 const ETIQUETA_TIPO: Record<string, string> = {
   "image/jpeg": "JPG",
@@ -33,9 +38,13 @@ export function esEvidenciaValida(archivo: File, maxMb = MAX_EVIDENCIA_MB): bool
 }
 
 /** Motivo por el que no se admite el archivo, o `null` si vale. */
-export function motivoEvidenciaInvalida(archivo: File, maxMb = MAX_EVIDENCIA_MB): string | null {
-  if (!TIPOS_EVIDENCIA.includes(archivo.type)) {
-    const admitidos = TIPOS_EVIDENCIA.map((t) => ETIQUETA_TIPO[t]).join(", ");
+export function motivoEvidenciaInvalida(
+  archivo: File,
+  maxMb = MAX_EVIDENCIA_MB,
+  tipos: string[] = TIPOS_EVIDENCIA
+): string | null {
+  if (!tipos.includes(archivo.type)) {
+    const admitidos = tipos.map((t) => ETIQUETA_TIPO[t] ?? t).join(", ");
     return `Formato no admitido (${archivo.type || "desconocido"}). Se aceptan: ${admitidos}.`;
   }
   if (archivo.size > maxMb * 1024 * 1024) {
@@ -60,43 +69,88 @@ export function nombreArchivo(ruta: string): string {
 }
 
 /**
+ * Por qué no hay imagen que mostrar. Sirve para que la interfaz diga la verdad
+ * en vez de echarle siempre la culpa a los permisos.
+ */
+export type EstadoArchivo =
+  | "vacio"
+  | "cargando"
+  | "listo"
+  | "externa"
+  | "ausente"
+  | "denegado"
+  | "error";
+
+/**
  * Descarga un archivo protegido y devuelve un `blob:` URL listo para `<img src>`
  * o un `<a href>`. Libera el anterior cuando cambia la ruta o al desmontar.
  *
  * El estado guarda la ruta a la que pertenece la URL para poder derivar
  * "cargando" en vez de ponerlo desde el efecto.
  */
-export function useArchivoUrl(ruta: string | null): { url: string | null; cargando: boolean } {
-  const [descarga, setDescarga] = useState<{ ruta: string | null; url: string | null }>({
-    ruta: null,
-    url: null,
-  });
+export function useArchivoUrl(ruta: string | null): {
+  url: string | null;
+  cargando: boolean;
+  estado: EstadoArchivo;
+} {
+  const [descarga, setDescarga] = useState<{
+    ruta: string | null;
+    url: string | null;
+    estado: EstadoArchivo;
+  }>({ ruta: null, url: null, estado: "vacio" });
+
+  // Una ruta que no tiene la forma `carpeta/uuid.ext` no la sirve esta API: son
+  // los datos de ejemplo antiguos, que guardaban una URL externa. Pedirla sería
+  // un 404 garantizado.
+  const interna = esRutaArchivo(ruta);
 
   useEffect(() => {
-    if (!ruta) return;
+    if (!ruta || !interna) return;
 
     let vigente = true;
     let creado: string | null = null;
 
     api
-      .get(`/${ruta}`, { responseType: "blob" })
+      .get(`/archivos/${ruta}`, { responseType: "blob" })
       .then((res) => {
         if (!vigente) return;
         creado = URL.createObjectURL(res.data as Blob);
-        setDescarga({ ruta, url: creado });
+        setDescarga({ ruta, url: creado, estado: "listo" });
       })
-      .catch(() => {
-        // Sin acceso o ya no existe: la interfaz avisa, no rompe la vista.
-        if (vigente) setDescarga({ ruta, url: null });
+      .catch((err: unknown) => {
+        if (!vigente) return;
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        const estado: EstadoArchivo =
+          status === 404 ? "ausente" : status === 403 ? "denegado" : "error";
+        setDescarga({ ruta, url: null, estado });
       });
 
     return () => {
       vigente = false;
       if (creado) URL.revokeObjectURL(creado);
     };
-  }, [ruta]);
+  }, [ruta, interna]);
 
-  if (!ruta) return { url: null, cargando: false };
+  if (!ruta) return { url: null, cargando: false, estado: "vacio" };
+  if (!interna) return { url: null, cargando: false, estado: "externa" };
+
   const listo = descarga.ruta === ruta;
-  return { url: listo ? descarga.url : null, cargando: !listo };
+  if (!listo) return { url: null, cargando: true, estado: "cargando" };
+  return { url: descarga.url, cargando: false, estado: descarga.estado };
+}
+
+/** Frase para el usuario cuando no hay imagen que mostrar. */
+export function mensajeEstadoArchivo(estado: EstadoArchivo): string | null {
+  switch (estado) {
+    case "externa":
+      return "El archivo no está guardado en el sistema.";
+    case "ausente":
+      return "El archivo ya no está en el servidor.";
+    case "denegado":
+      return "No tienes permiso para ver este archivo.";
+    case "error":
+      return "No se pudo cargar el archivo.";
+    default:
+      return null;
+  }
 }

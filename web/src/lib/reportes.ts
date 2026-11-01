@@ -10,10 +10,23 @@ import { api } from "@/lib/api";
 
 export const RUTA_CONSOLIDADO_PDF = "consolidado-horas.pdf";
 export const RUTA_CONSOLIDADO_XLSX = "consolidado-horas.xlsx";
+export const RUTA_SEMANAL_PDF = "semanal.pdf";
 
 export interface FiltroReporte {
   periodoId?: number | null;
   grupoId?: string | null;
+  /** Solo del reporte semanal: `null` abarca todas las semanas del periodo. */
+  semana?: number | null;
+  estudianteId?: string | null;
+}
+
+/** Una semana del periodo que tiene al menos una actividad registrada. */
+export interface SemanaConActividad {
+  semana: number;
+  desde: string;
+  hasta: string;
+  actividades: number;
+  horas: number;
 }
 
 type Parametros = Record<string, number | string | null | undefined>;
@@ -94,4 +107,15 @@ export async function mensajeDeError(
 
   const mensaje = (cuerpo as { message?: string } | undefined)?.message;
   return mensaje ?? porDefecto;
+}
+
+/**
+ * Reporte semanal de actividades.
+ *
+ * Es el unico que tambien descarga el estudiante. No hace falta mandarle su
+ * propio `estudianteId`: el servidor lo fuerza al de la sesion, se mande lo que
+ * se mande.
+ */
+export function descargarReporteSemanal(filtros: FiltroReporte = {}): Promise<string> {
+  return descargarReporte(RUTA_SEMANAL_PDF, filtros);
 }

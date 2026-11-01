@@ -1,4 +1,5 @@
 import { pool } from '../db/pool.js';
+import { esTutorDelGrupo } from '../lib/tutores.js';
 import { ApiError } from '../lib/errors.js';
 import type { UserRole } from '../types.js';
 
@@ -71,7 +72,7 @@ async function tutorVigilaEstudiante(idTutor: string, idEstudiante: string): Pro
     `select count(*)::text as n
        from integrantes_grupo ig
        join grupos_proyectos g on g.id_grupo = ig.id_grupo
-      where ig.id_estudiante = $1 and g.id_tutor = $2`,
+      where ig.id_estudiante = $1 and ${esTutorDelGrupo('g', 2)}`,
     [idEstudiante, idTutor]
   );
   return Number(rows[0]?.n ?? 0) > 0;
@@ -80,7 +81,7 @@ async function tutorVigilaEstudiante(idTutor: string, idEstudiante: string): Pro
 /** ¿Este tutor supervisa el grupo indicado? */
 async function tutorVigilaGrupo(idTutor: string, idGrupo: string): Promise<boolean> {
   const { rows } = await pool.query<{ id_grupo: string }>(
-    'select id_grupo from grupos_proyectos where id_grupo = $1 and id_tutor = $2',
+    `select id_grupo from grupos_proyectos g where g.id_grupo = $1 and ${esTutorDelGrupo('g', 2)}`,
     [idGrupo, idTutor]
   );
   return rows.length > 0;

@@ -17,7 +17,8 @@ export async function generarActaPdf(d: DatosActa, generadoPor: string): Promise
     subtitulo: pdfSeguro(grupo.nombreProyecto),
     datos: [
       { etiqueta: 'Periodo', valor: periodo?.nombre ?? 'No asignado' },
-      { etiqueta: 'Tutor', valor: grupo.tutorNombre ?? 'No asignado' },
+      { etiqueta: 'Tutor Academico', valor: grupo.tutorAcademicoNombre ?? 'No asignado' },
+      { etiqueta: 'Tutor Comunitario', valor: grupo.tutorComunitarioNombre ?? 'No asignado' },
       { etiqueta: 'Coordinador', valor: grupo.coordinadorNombre ?? 'No asignado' },
       {
         etiqueta: 'Fechas',
@@ -91,14 +92,17 @@ export async function generarActaPdf(d: DatosActa, generadoPor: string): Promise
 
   const yFirmas = pdf.doc.y + 10;
   pdf.doc.font('Helvetica').fontSize(8).fillColor('#6b7280');
+  // Tres huecos de firma: los dos tutores del proyecto y la coordinacion. Con
+  // 40 de margen y 515 de ancho util, 170 por columna entra justo en A4.
   const pares: [string, string][] = [
-    ['Tutor', grupo.tutorNombre ?? ''],
+    ['Tutor Academico', grupo.tutorAcademicoNombre ?? ''],
+    ['Tutor Comunitario', grupo.tutorComunitarioNombre ?? ''],
     ['Coordinación', grupo.coordinadorNombre ?? ''],
   ];
   pares.forEach(([rol, nombre], i) => {
-    const x = 40 + i * 260;
-    pdf.doc.text('_______________________________', x, yFirmas);
-    pdf.doc.text(`${rol}${nombre ? `: ${pdfSeguro(nombre)}` : ''}`, x, yFirmas + 14);
+    const x = 40 + i * 172;
+    pdf.doc.text('____________________', x, yFirmas);
+    pdf.doc.text(`${rol}${nombre ? `: ${pdfSeguro(nombre)}` : ''}`, x, yFirmas + 14, { width: 165 });
   });
 
   return pdf.finalizar(generadoPor);
