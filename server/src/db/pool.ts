@@ -4,7 +4,7 @@ import { env } from '../config/env.js';
 export const pool = new Pool({
   connectionString: env.databaseUrl,
   ssl: env.dbSsl ? { rejectUnauthorized: false } : false,
-  max: 10,
+  max: env.dbPoolMax,
   /**
    * Sin este tope, un PostgreSQL que no responde deja la promesa esperando para
    * siempre: el health check se queda colgado en vez de reportar 503, y el

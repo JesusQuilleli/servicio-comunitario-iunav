@@ -11,6 +11,7 @@ import {
   Plus,
   RefreshCw,
   Settings,
+  Mail,
   Power,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Evidencia } from "@/components/Evidencia";
 import { SubirDocumentoPlantilla } from "@/components/SubirDocumentoPlantilla";
+import { PanelNotificaciones } from "@/components/PanelNotificaciones";
 import { api } from "@/lib/api";
 import { useApiData } from "@/lib/useApiData";
 import { useAuthStore } from "@/stores/authStore";
@@ -303,7 +305,21 @@ export function ConfiguracionesView() {
               <FileText className="h-3.5 w-3.5" />
               Plantillas
             </TabsTrigger>
+            {/* La bandeja de salida guarda el cuerpo de cada correo, y el de
+                bienvenida lleva la clave temporal: solo el administrador. */}
+            {esAdmin && (
+              <TabsTrigger value="notificaciones" className="gap-1.5">
+                <Mail className="h-3.5 w-3.5" />
+                Notificaciones
+              </TabsTrigger>
+            )}
           </TabsList>
+
+          {esAdmin && (
+            <TabsContent value="notificaciones" className="mt-4">
+              <PanelNotificaciones />
+            </TabsContent>
+          )}
 
           <TabsContent value="reglas" className="mt-4">
             <Card className="border-0 shadow-sm">
